@@ -7,21 +7,29 @@ import os
 import sys
 import subprocess
 import psutil
-import pyautogui
 import time
 from datetime import datetime
 import webbrowser
 import platform
 from config import Config
 
+# Handle GUI module imports gracefully
+try:
+    import pyautogui
+    GUI_AVAILABLE = True
+    pyautogui.FAILSAFE = True
+    pyautogui.PAUSE = 0.5
+except ImportError:
+    GUI_AVAILABLE = False
+    print("Warning: GUI features disabled - pyautogui not available")
+except Exception as e:
+    GUI_AVAILABLE = False
+    print(f"Warning: GUI features disabled - {e}")
+
 class PCController:
     def __init__(self):
         self.config = Config()
         self.system = platform.system().lower()
-        
-        # Configure pyautogui
-        pyautogui.FAILSAFE = True
-        pyautogui.PAUSE = 0.5
 
     def execute_command(self, command):
         """
@@ -195,6 +203,12 @@ class PCController:
 
     def handle_window_management(self, command):
         """Handle window management commands"""
+        if not GUI_AVAILABLE:
+            return {
+                'success': False,
+                'message': "Window management requires GUI access (not available in this environment)"
+            }
+        
         try:
             if 'close' in command:
                 pyautogui.hotkey('alt', 'f4')
@@ -222,6 +236,12 @@ class PCController:
 
     def handle_volume_control(self, command):
         """Handle volume control commands"""
+        if not GUI_AVAILABLE:
+            return {
+                'success': False,
+                'message': "Volume control requires GUI access (not available in this environment)"
+            }
+        
         try:
             if any(word in command for word in ['up', 'increase', 'raise']):
                 for _ in range(5):  # Increase volume by ~10%
@@ -256,6 +276,12 @@ class PCController:
 
     def take_screenshot(self):
         """Take a screenshot"""
+        if not GUI_AVAILABLE:
+            return {
+                'success': False,
+                'message': "Screenshot functionality requires GUI access (not available in this environment)"
+            }
+        
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"screenshot_{timestamp}.png"
@@ -324,6 +350,12 @@ class PCController:
 
     def handle_media_control(self, command):
         """Handle media control commands"""
+        if not GUI_AVAILABLE:
+            return {
+                'success': False,
+                'message': "Media control requires GUI access (not available in this environment)"
+            }
+        
         try:
             if 'play' in command or 'pause' in command:
                 pyautogui.press('playpause')

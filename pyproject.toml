@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "flask>=3.1.1",
     "psutil>=7.0.0",
+    "pyaudio>=0.2.14",
     "pyautogui>=0.9.54",
     "pyttsx3>=2.98",
     "requests>=2.32.3",
