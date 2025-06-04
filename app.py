@@ -18,6 +18,13 @@ from config import Config
 import traceback
 import os
 
+# Try to load environment variables if available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("Note: python-dotenv not available, using system environment variables")
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
@@ -47,7 +54,12 @@ class WebVoiceBackend:
         
         # State
         self.is_listening = False
+        self.wake_word_listening = False
         self.settings = self.load_settings()
+        
+        # Start background wake word detection if microphone is available
+        if self.microphone and self.wake_word_detector:
+            self.start_background_wake_word_detection()
         
         print("Wolf AI Web Backend initialized")
 
@@ -169,6 +181,35 @@ class WebVoiceBackend:
                 "message": error_msg
             }
 
+    def start_background_wake_word_detection(self):
+        """Start background wake word detection"""
+        def wake_word_loop():
+            self.wake_word_listening = True
+            print("Background wake word detection started - listening for 'Hey Wolf'...")
+            
+            while self.wake_word_listening:
+                try:
+                    if self.wake_word_detector and self.wake_word_detector.detect():
+                        print("Wake word detected! Starting voice recognition...")
+                        # Automatically start listening for commands
+                        result = self.listen_for_voice()
+                        if result["success"] and result["text"]:
+                            response = self.process_command(result["text"])
+                            print(f"Wake word command processed: {result['text']}")
+                    time.sleep(0.1)  # Small delay to prevent excessive CPU usage
+                except Exception as e:
+                    print(f"Wake word detection error: {e}")
+                    time.sleep(1)
+        
+        # Start wake word detection in background thread
+        wake_thread = threading.Thread(target=wake_word_loop, daemon=True)
+        wake_thread.start()
+
+    def stop_background_wake_word_detection(self):
+        """Stop background wake word detection"""
+        self.wake_word_listening = False
+        print("Background wake word detection stopped")
+
     def is_system_command(self, text):
         """Check if text is a system command"""
         system_keywords = [
@@ -257,6 +298,41 @@ def test_ollama():
         return jsonify(result)
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/wake-word/start', methods=['POST'])
+def start_wake_word():
+    """Start background wake word detection"""
+    try:
+        if backend.microphone and backend.wake_word_detector:
+            if not backend.wake_word_listening:
+                backend.start_background_wake_word_detection()
+                return jsonify({"success": True, "message": "Wake word detection started"})
+            else:
+                return jsonify({"success": True, "message": "Wake word detection already running"})
+        else:
+            return jsonify({"success": False, "error": "Microphone or wake word detector not available"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/wake-word/stop', methods=['POST'])
+def stop_wake_word():
+    """Stop background wake word detection"""
+    try:
+        backend.stop_background_wake_word_detection()
+        return jsonify({"success": True, "message": "Wake word detection stopped"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/wake-word/status', methods=['GET'])
+def wake_word_status():
+    """Get wake word detection status"""
+    try:
+        return jsonify({
+            "listening": backend.wake_word_listening,
+            "available": bool(backend.microphone and backend.wake_word_detector)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
     print("Starting Wolf AI Voice Assistant Web Server...")
