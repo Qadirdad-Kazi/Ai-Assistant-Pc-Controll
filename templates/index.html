@@ -676,7 +676,12 @@
                     addMessageToChat('user', result.text);
                     await sendCommand(result.text);
                 } else {
-                    showError(result.error || 'Voice recognition failed');
+                    // If microphone is not available, inform the user and suggest text input
+                    if (result.error && result.error.includes('microphone')) {
+                        addMessageToChat('assistant', 'Voice input is not available in this environment. Please use the text input below to interact with me.');
+                    } else {
+                        showError(result.error || 'Voice recognition failed');
+                    }
                 }
             } catch (error) {
                 showError('Voice input error: ' + error.message);
@@ -819,12 +824,14 @@
         function applyTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
             const themeIcon = document.querySelector('#theme-toggle i');
-            if (theme === 'dark') {
-                themeIcon.setAttribute('data-feather', 'sun');
-            } else {
-                themeIcon.setAttribute('data-feather', 'moon');
+            if (themeIcon) {
+                if (theme === 'dark') {
+                    themeIcon.setAttribute('data-feather', 'sun');
+                } else {
+                    themeIcon.setAttribute('data-feather', 'moon');
+                }
+                feather.replace();
             }
-            feather.replace();
         }
 
         // Utility Functions
