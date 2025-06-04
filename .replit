@@ -1,7 +1,8 @@
-modules = ["nodejs-20"]
+modules = ["nodejs-20", "python-3.11"]
 
 [nix]
 channel = "stable-24_05"
+packages = ["alsa-lib", "atk", "cairo", "espeak-ng", "gdk-pixbuf", "glib", "gtk3", "pango", "scrot", "xvfb-run"]
 
 [workflows]
 runButton = "Project"
@@ -21,8 +22,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm install electron speech-recognition pyttsx3 requests sqlite3 psutil pyautogui && npm start"
-waitForPort = 5000
+args = "electron ."
 
 [deployment]
-run = ["sh", "-c", "npm install electron speech-recognition pyttsx3 requests sqlite3 psutil pyautogui && npm start"]
+run = ["sh", "-c", "electron ."]
