@@ -47,6 +47,14 @@
                 </div>
             </div>
 
+            <!-- Text Input Container -->
+            <div class="text-input-container">
+                <input type="text" id="command-input" placeholder="Type your command...">
+                <button id="send-command-btn" class="icon-btn" title="Send Command">
+                    <i data-feather="send"></i>
+                </button>
+            </div>
+
             <!-- Voice Controls -->
             <div class="voice-controls">
                 <div class="voice-visualizer">
@@ -57,28 +65,26 @@
                     <button id="mic-btn" class="mic-button" title="Toggle Microphone">
                         <i data-feather="mic"></i>
                     </button>
+                    <button id="cancel-action-btn" class="icon-btn" title="Cancel Action">
+                        <i data-feather="x-circle"></i>
+                    </button>
                     <div class="status-indicator">
                         <span id="status-text">Ready</span>
                     </div>
                 </div>
 
+
+                <div class="mode-selector">
+                    <button id="ai-mode-btn" class="mode-btn active" title="AI Interaction Mode">
+                        <i data-feather="message-circle"></i> AI Mode
+                    </button>
+                    <button id="pc-control-mode-btn" class="mode-btn" title="PC Control Mode">
+                        <i data-feather="cpu"></i> PC Control
+                    </button>
+                </div>
+
                 <div class="quick-actions">
-                    <button class="quick-btn" data-command="What time is it?">
-                        <i data-feather="clock"></i>
-                        Time
-                    </button>
-                    <button class="quick-btn" data-command="Open Chrome">
-                        <i data-feather="chrome"></i>
-                        Chrome
-                    </button>
-                    <button class="quick-btn" data-command="Take a screenshot">
-                        <i data-feather="camera"></i>
-                        Screenshot
-                    </button>
-                    <button class="quick-btn" data-command="Show volume">
-                        <i data-feather="volume-2"></i>
-                        Volume
-                    </button>
+                    <!-- Quick action buttons removed as per user request -->
                 </div>
             </div>
         </main>

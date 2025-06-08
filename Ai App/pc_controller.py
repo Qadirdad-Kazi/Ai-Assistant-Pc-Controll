@@ -66,6 +66,62 @@ class PCController:
             # Media control commands
             elif any(word in command_lower for word in ['play', 'pause', 'stop', 'next', 'previous']):
                 return self.handle_media_control(command_lower)
+
+            # Mouse move command: "mouse move to X Y [duration DURATION]"
+            elif command_lower.startswith("mouse move to"):
+                parts = command_lower.split()
+                try:
+                    x = parts[3]
+                    y = parts[4]
+                    duration = 0.25 # default duration
+                    if len(parts) > 6 and parts[5] == "duration":
+                        duration = parts[6]
+                    return self.move_mouse_to_coordinates(x, y, duration)
+                except (IndexError, ValueError):
+                    return {'success': False, 'message': 'Invalid mouse move command. Use "mouse move to X Y [duration DURATION]"'}
+            
+            # Mouse click command: "mouse click [X Y] [button BUTTON] [clicks CLICKS]"
+            elif command_lower.startswith("mouse click"):
+                parts = command_lower.split()
+                x, y, button, clicks_num = None, None, 'left', 1
+                try:
+                    idx = 2
+                    # Check for coordinates
+                    if idx < len(parts) and parts[idx].isdigit() and idx + 1 < len(parts) and parts[idx+1].isdigit():
+                        x = parts[idx]
+                        y = parts[idx+1]
+                        idx += 2
+                    # Check for button
+                    if idx < len(parts) and parts[idx] == "button" and idx + 1 < len(parts):
+                        button = parts[idx+1]
+                        idx += 2
+                    # Check for clicks
+                    if idx < len(parts) and parts[idx] == "clicks" and idx + 1 < len(parts):
+                        clicks_num = parts[idx+1]
+                        idx += 2
+                    return self.click_mouse_button(x, y, button, clicks_num)
+                except (IndexError, ValueError):
+                     return {'success': False, 'message': 'Invalid mouse click command. Use "mouse click [X Y] [button BUTTON] [clicks CLICKS]"'}
+
+            # Type text command: "type TEXT_TO_TYPE"
+            elif command_lower.startswith("type"):
+                text_to_type = command_lower[len("type"):].strip()
+                if text_to_type:
+                    return self.type_keyboard_input(text_to_type)
+                else:
+                    return {'success': False, 'message': 'No text specified to type. Use "type YOUR_TEXT_HERE"'}
+
+            # Press keys command: "press KEY_OR_HOTKEY"
+            # For hotkeys, they should be space separated if multiple, e.g., "press ctrl shift esc"
+            elif command_lower.startswith("press"):
+                keys_to_press = command_lower[len("press"):].strip().split()
+                if keys_to_press:
+                    if len(keys_to_press) == 1:
+                        return self.press_special_keys(keys_to_press[0])
+                    else:
+                        return self.press_special_keys(keys_to_press) # Pass as a list for hotkey
+                else:
+                    return {'success': False, 'message': 'No key specified to press. Use "press KEY_NAME" or "press ctrl c"'}
             
             else:
                 return {
@@ -105,10 +161,27 @@ class PCController:
                 break
         
         if not app_to_launch:
-            return {
-                'success': False,
-                'message': "I couldn't identify which application to open."
-            }
+            # Try to extract app name directly from command if not in predefined list
+            command_parts = command.split()
+            launch_keywords = ['open', 'start', 'launch']
+            extracted_app_name = []
+            can_extract = False
+            for i, part in enumerate(command_parts):
+                if part in launch_keywords and i + 1 < len(command_parts):
+                    extracted_app_name = command_parts[i+1:]
+                    can_extract = True
+                    break
+        
+            if can_extract and extracted_app_name:
+                app_to_launch = " ".join(extracted_app_name)
+                # For macOS, try to capitalize for app names like 'Google Chrome'
+                if self.system == 'darwin':
+                    app_to_launch = app_to_launch.title()
+            else:
+                return {
+                    'success': False,
+                    'message': "I couldn't identify which application to open from your command."
+                }
         
         try:
             if self.system == 'windows':
@@ -347,6 +420,54 @@ class PCController:
                 'success': False,
                 'message': f"Time/date error: {str(e)}"
             }
+
+    def move_mouse_to_coordinates(self, x, y, duration=0.25):
+        """Move mouse to specified X, Y coordinates"""
+        if not GUI_AVAILABLE:
+            return {'success': False, 'message': 'GUI control (pyautogui) is not available.'}
+        try:
+            pyautogui.moveTo(int(x), int(y), duration=float(duration))
+            return {'success': True, 'message': f'Mouse moved to ({x}, {y})'}
+        except Exception as e:
+            return {'success': False, 'message': f'Error moving mouse: {str(e)}'}
+
+    def click_mouse_button(self, x=None, y=None, button='left', clicks=1, interval=0.1):
+        """Click mouse button at specified X, Y coordinates or current position"""
+        if not GUI_AVAILABLE:
+            return {'success': False, 'message': 'GUI control (pyautogui) is not available.'}
+        try:
+            if x is not None and y is not None:
+                pyautogui.click(int(x), int(y), button=button.lower(), clicks=int(clicks), interval=float(interval))
+            else:
+                pyautogui.click(button=button.lower(), clicks=int(clicks), interval=float(interval))
+            return {'success': True, 'message': f'{button.title()} click performed'}
+        except Exception as e:
+            return {'success': False, 'message': f'Error clicking mouse: {str(e)}'}
+
+    def type_keyboard_input(self, text_to_type, interval=0.01):
+        """Type the given text using the keyboard"""
+        if not GUI_AVAILABLE:
+            return {'success': False, 'message': 'GUI control (pyautogui) is not available.'}
+        try:
+            pyautogui.typewrite(text_to_type, interval=float(interval))
+            return {'success': True, 'message': f'Typed: {text_to_type}'}
+        except Exception as e:
+            return {'success': False, 'message': f'Error typing: {str(e)}'}
+
+    def press_special_keys(self, keys):
+        """Press special keys or a sequence of keys (hotkey)"""
+        if not GUI_AVAILABLE:
+            return {'success': False, 'message': 'GUI control (pyautogui) is not available.'}
+        try:
+            if isinstance(keys, list):
+                pyautogui.hotkey(*keys)
+                action = f'Pressed hotkey: {" + ".join(keys)}'
+            else:
+                pyautogui.press(keys)
+                action = f'Pressed key: {keys}'
+            return {'success': True, 'message': action}
+        except Exception as e:
+            return {'success': False, 'message': f'Error pressing keys: {str(e)}'}
 
     def handle_media_control(self, command):
         """Handle media control commands"""

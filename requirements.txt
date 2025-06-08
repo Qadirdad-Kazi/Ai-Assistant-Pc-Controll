@@ -1,0 +1,42 @@
+flask>=2.0.1
+flask-socketio>=5.1.1
+flask-cors>=3.0.10
+python-dotenv>=0.19.0
+speechrecognition>=3.8.1
+pyaudio>=0.2.11
+pyttsx3>=2.90
+pyautogui>=0.9.53
+psutil>=5.9.0
+pynput>=1.7.6
+schedule>=1.1.0
+requests>=2.26.0
+googletrans==3.1.0a0
+python-dateutil>=2.8.2
+pillow>=8.4.0
+numpy>=1.21.0
+sounddevice>=0.4.4
+soundfile>=0.10.3
+wavio>=0.0.7
+pydub>=0.25.1
+pywin32>=303; sys_platform == 'win32'
+pyobjc-core>=8.0; sys_platform == 'darwin'
+pyobjc-framework-Cocoa>=8.0; sys_platform == 'darwin'
+pyobjc-framework-AVFoundation>=8.0; sys_platform == 'darwin'
+pyobjc-framework-ApplicationServices>=8.0; sys_platform == 'darwin'
+pyobjc-framework-CoreServices>=8.0; sys_platform == 'darwin'
+pyobjc-framework-Quartz>=8.0; sys_platform == 'darwin'
+pygetwindow>=0.0.9
+keyboard>=0.13.5
+mouse>=0.7.1
+python-xlib>=0.31; sys_platform == 'linux'
+python-vlc>=3.0.11115
+python-mpv>=0.5.2
+python-mpv-jsonipc>=1.1.9
+pycaw>=20181226
+comtypes>=1.1.10; sys_platform == 'win32'
+pyinstaller>=4.10
+py2app>=0.28.0; sys_platform == 'darwin'
+setuptools>=58.0.4
+wheel>=0.37.0
+pip>=21.3.1
+websockets>=10.0

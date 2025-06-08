@@ -6,13 +6,15 @@ Handles communication with Ollama LLM for conversational AI responses
 import requests
 import json
 import os
+import time
 from config import Config
 
 class OllamaClient:
     def __init__(self):
         self.config = Config()
+        # Use the standard Ollama port
         self.base_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
-        self.model = os.getenv('OLLAMA_MODEL', 'llama2')
+        self.model = os.getenv('OLLAMA_MODEL', 'llama3.2')
         self.timeout = 30
         
         # System prompts for different languages
@@ -24,60 +26,120 @@ class OllamaClient:
             'ur': """آپ Wolf ہیں، ایک مددگار AI اسسٹنٹ۔ آپ دوستانہ، مختصر، اور پیشہ ورانہ ہیں۔
             اپنے جوابات مختصر لیکن معلوماتی رکھیں۔ آپ عام سوالات میں مدد کر سکتے ہیں۔"""
         }
+        
+        # Static responses for common queries
+        self.static_responses = {
+            'en': {
+                'hello': "Hello! I'm Wolf, your AI assistant. How can I help you today?",
+                'hi': "Hi there! I'm Wolf, your AI assistant. What can I do for you?",
+                'how are you': "I'm just a computer program, but I'm functioning perfectly! How can I assist you today?",
+                'what can you do': "I can answer questions, help with tasks, set reminders, control your PC, and more! Just ask me anything.",
+                'thank you': "You're welcome! Is there anything else I can help you with?",
+                'goodbye': "Goodbye! Have a great day!",
+                'what is your name': "I'm Wolf, your AI assistant. Nice to meet you!",
+                'who made you': "I was created by a team of developers to assist you with your tasks and questions.",
+                'what time is it': f"The current time is {time.strftime('%I:%M %p')}.",
+                'what day is it': f"Today is {time.strftime('%A, %B %d, %Y')}.",
+                'help': "I can help you with answering questions, setting reminders, controlling your PC, and more. Just tell me what you need!"
+            },
+            'ur': {
+                'ہیلو': "ہیلو! میں ولف ہوں، آپ کا ذاتی معاون۔ میں آپ کی کس طرح مدد کر سکتا ہوں؟",
+                'کیا حال ہے': "میں ایک کمپیوٹر پروگرام ہوں، لیکن میں بالکل ٹھیک کام کر رہا ہوں! آپ کیسے ہیں؟",
+                'تم کیا کر سکتے ہو': "میں سوالوں کے جواب دے سکتا ہوں، یادداشتیں بنا سکتا ہوں، اور آپ کے کمپیوٹر کو کنٹرول کر سکتا ہوں۔ مجھے کچھ بھی پوچھیں!",
+                'شکریہ': "آپ کا شکریہ! کیا میں آپ کی اور کسی چیز میں مدد کر سکتا ہوں؟",
+                'الوداع': "خدا حافظ! آپ کا دن اچھا گزرے!",
+                'تمہارا نام کیا ہے': "میرا نام ولف ہے، آپ کا ذاتی معاون۔ آپ سے مل کر خوشی ہوئی!"
+            }
+        }
 
+    def get_static_response(self, user_input, language='en'):
+        """
+        Check if there's a static response for the user input.
+        Returns the response if found, None otherwise.
+        """
+        user_input = user_input.lower().strip('?,.!؛؟،')
+        
+        # Check for exact matches first
+        if user_input in self.static_responses.get(language, {}):
+            return self.static_responses[language][user_input]
+            
+        # Check for partial matches
+        for question, answer in self.static_responses.get(language, {}).items():
+            if question in user_input:
+                return answer
+                
+        return None
+        
     def get_response(self, user_input, language='en'):
         """
-        Get AI response from Ollama
+        Get AI response, first checking static responses, then falling back to Ollama.
+        
+        Args:
+            user_input (str): The user's input text
+            language (str): Language code (default: 'en')
+            
+        Returns:
+            str: The AI's response
         """
+        # First, check if we have a static response
+        static_response = self.get_static_response(user_input, language)
+        if static_response:
+            return static_response
+            
+        # If no static response, use Ollama
+        system_prompt = self.system_prompts.get(language, self.system_prompts['en'])
+        
         try:
-            # Check if Ollama is available
-            if not self.is_ollama_available():
-                return self.get_fallback_response(user_input, language)
-            
-            # Prepare the prompt
-            system_prompt = self.system_prompts.get(language, self.system_prompts['en'])
-            
-            # Create the request payload
-            payload = {
+            # Prepare the request data
+            data = {
                 "model": self.model,
-                "prompt": f"System: {system_prompt}\n\nUser: {user_input}\n\nAssistant:",
+                "prompt": user_input,
+                "system": system_prompt,
                 "stream": False,
                 "options": {
                     "temperature": 0.7,
                     "top_p": 0.9,
-                    "max_tokens": 200,
-                    "stop": ["User:", "System:"]
+                    "num_ctx": 2048
                 }
             }
             
-            # Make the request
+            # Make the API request
+            print(f"Sending request to: {self.base_url}/api/generate")
+            print(f"Request data: {data}")
+            
             response = requests.post(
                 f"{self.base_url}/api/generate",
-                json=payload,
+                json=data,
+                headers={"Content-Type": "application/json"},
                 timeout=self.timeout
             )
             
-            if response.status_code == 200:
-                result = response.json()
-                ai_response = result.get('response', '').strip()
+            print(f"Response status code: {response.status_code}")
+            print(f"Response headers: {response.headers}")
+            print(f"Response content: {response.text[:500]}..." if len(response.text) > 500 else f"Response content: {response.text}")
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            # Handle both streaming and non-streaming responses
+            if isinstance(result, dict):
+                if 'response' in result:
+                    return result['response'].strip()
+            elif isinstance(result, list):
+                # Handle streaming response
+                full_response = ""
+                for chunk in result:
+                    if 'response' in chunk:
+                        full_response += chunk['response']
+                return full_response.strip() if full_response else ""
                 
-                if ai_response:
-                    return ai_response
-                else:
-                    return self.get_fallback_response(user_input, language)
-            else:
-                print(f"Ollama API error: {response.status_code}")
-                return self.get_fallback_response(user_input, language)
+            print(f"Unexpected response format: {result}")
                 
-        except requests.exceptions.ConnectionError:
-            print("Could not connect to Ollama")
-            return self.get_fallback_response(user_input, language)
-        except requests.exceptions.Timeout:
-            print("Ollama request timed out")
-            return self.get_fallback_response(user_input, language)
-        except Exception as e:
-            print(f"Ollama client error: {str(e)}")
-            return self.get_fallback_response(user_input, language)
+        except requests.exceptions.RequestException as e:
+            print(f"Ollama API error: {e}")
+            
+        # Fallback response if API call fails
+        return self.get_fallback_response(user_input, language)
 
     def is_ollama_available(self):
         """

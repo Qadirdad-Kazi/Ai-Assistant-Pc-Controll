@@ -1,9 +1,20 @@
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+process.on('uncaughtException', (error) => {
+  console.error('Main Uncaught Exception:', error);
+  // Optionally, you might want to quit the app or log to a file
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Main Unhandled Rejection at:', promise, 'reason:', reason);
+  // Optionally, you might want to quit the app or log to a file
+});
+
+const { app, BrowserWindow, ipcMain, Menu, systemPreferences } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 
 let mainWindow;
 let pythonProcess;
+let websocketProcess;
 
 function createWindow() {
   // Create the browser window
@@ -24,7 +35,7 @@ function createWindow() {
   });
 
   // Load the app
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
@@ -42,7 +53,48 @@ function createWindow() {
 
 function startPythonBackend() {
   try {
-    pythonProcess = spawn('python', ['voice_backend.py'], {
+    // Start the WebSocket server with unbuffered output
+    websocketProcess = spawn('/Users/qadirdadkazi/Desktop/Currently Not Working/VoiceCompanion/venv/bin/python', ['-u', 'websocket_server.py'], {
+      cwd: __dirname,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, PYTHONUNBUFFERED: '1' }
+    });
+
+    websocketProcess.stdout.on('data', (data) => {
+      const output = data.toString().trim();
+      if (output) {
+        console.log(`WebSocket: ${output}`);
+      }
+    });
+
+    websocketProcess.stderr.on('data', (data) => {
+      const error = data.toString().trim();
+      if (error) {
+        console.error(`WebSocket Error: ${error}`);
+        // Try to restart the WebSocket server if it crashes
+        if (error.includes('Address already in use')) {
+          console.log('Port 5000 is already in use. Trying to restart...');
+          setTimeout(() => {
+            if (websocketProcess) {
+              websocketProcess.kill();
+              startPythonBackend();
+            }
+          }, 2000);
+        }
+      }
+    });
+
+    websocketProcess.on('close', (code) => {
+      console.log(`WebSocket server exited with code ${code}`);
+      // Auto-restart the WebSocket server if it crashes
+      if (code !== 0) {
+        console.log('Restarting WebSocket server...');
+        setTimeout(() => startPythonBackend(), 2000);
+      }
+    });
+
+    // Start the voice backend
+    pythonProcess = spawn('/Users/qadirdadkazi/Desktop/Currently Not Working/VoiceCompanion/venv/bin/python', ['voice_backend.py'], {
       cwd: __dirname,
       stdio: ['pipe', 'pipe', 'pipe']
     });
@@ -71,11 +123,28 @@ function startPythonBackend() {
 }
 
 // App event listeners
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  try {
+    const microphoneAccess = await systemPreferences.askForMediaAccess('microphone');
+    if (microphoneAccess) {
+      console.log('Microphone access granted by user.');
+    } else {
+      console.error('Microphone access denied by user.');
+      // Optionally, inform the user through a dialog or by sending a message to renderer
+      // For now, we'll rely on the renderer to display the error based on its checks
+    }
+  } catch (error) {
+    console.error('Error requesting microphone permission:', error);
+  }
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (pythonProcess) {
     pythonProcess.kill();
+  }
+  if (websocketProcess) {
+    websocketProcess.kill();
   }
   if (process.platform !== 'darwin') {
     app.quit();
@@ -119,11 +188,13 @@ ipcMain.handle('toggle-listening', async (event, listening) => {
 
 ipcMain.handle('get-settings', async (event) => {
   // Return default settings for now
+  // TODO: Implement actual settings loading/saving from a file or store
   return {
     theme: 'dark',
     voiceGender: 'female',
     language: 'en',
-    wakeWord: 'Hey Wolf'
+    wakeWord: 'Hey Wolf',
+    alwaysListen: false // Ensure all expected fields are present
   };
 });
 

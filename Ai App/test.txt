@@ -1,0 +1,39 @@
+test Voice Commands
+Wake Word: Say "Hey Wolf" to activate the assistant
+Basic Commands:
+"What time is it?"
+"Take a screenshot"
+"Open Chrome" (or any other application)
+"What's the weather?"
+3. Test Text Input
+Click the microphone button to enable text input
+Type a command (e.g., "What's the time?")
+Press Enter to send
+4. Test Quick Action Buttons
+Click the quick action buttons at the bottom:
+⏰ Time
+🌐 Chrome
+📷 Screenshot
+🔊 Volume
+5. Test Settings
+Click the gear icon (⚙️) in the top-right corner
+Adjust settings:
+Toggle between light/dark theme
+Change voice gender
+Toggle "Always Listen" mode
+Click "Save Settings"
+6. Test Error Handling
+Try these scenarios:
+Deny microphone permission
+Speak when the microphone is off
+Enter an empty command
+7. Check Console for Errors
+Look for any error messages in the terminal where you ran npm start
+8. Test Auto-Scrolling
+Send multiple messages to ensure the chat scrolls to the latest message
+9. Test Wake Word
+Say "Hey Wolf" followed by a command
+The assistant should respond to the wake word
+10. Test Continuous Listening
+Enable "Always Listen" in settings
+The assistant should stay active for follow-up commands
