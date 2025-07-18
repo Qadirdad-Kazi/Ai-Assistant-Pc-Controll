@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wolf AI Assistant</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="static/css/face-animations.css">
+    <link rel="stylesheet" href="static/css/ui-enhancements.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -36,9 +38,16 @@
             <div class="chat-container">
                 <div id="chat-messages" class="chat-messages">
                     <div class="welcome-message">
-                        <div class="wolf-avatar">
-                            <i data-feather="zap"></i>
+                        <div class="assistant-face neutral" id="assistant-face">
+                            <div class="face">
+                                <div class="eyes">
+                                    <div class="eye left-eye"></div>
+                                    <div class="eye right-eye"></div>
+                                </div>
+                                <div class="mouth"></div>
+                            </div>
                         </div>
+                        <div class="status-indicator" id="assistant-status">Ready</div>
                         <div class="message-content">
                             <h3>Welcome to Wolf AI Assistant</h3>
                             <p>Say "Hey Wolf", "Hi Wolf", or "Hello Wolf" to wake me up, or click the microphone button to start talking.</p>
@@ -62,25 +71,27 @@
                 </div>
                 
                 <div class="control-buttons">
-                    <button id="mic-btn" class="mic-button" title="Toggle Microphone">
+                    <button id="mic-btn" class="mic-button" data-tooltip="Click to start/stop listening">
                         <i data-feather="mic"></i>
                     </button>
-                    <button id="cancel-action-btn" class="icon-btn" title="Cancel Action">
+                    <button id="cancel-action-btn" class="icon-btn" data-tooltip="Cancel current action">
                         <i data-feather="x-circle"></i>
                     </button>
                     <div class="status-indicator">
-                        <span id="status-text">Ready</span>
+                        <span id="status-text" class="badge">Ready</span>
                     </div>
                 </div>
 
 
                 <div class="mode-selector">
-                    <button id="ai-mode-btn" class="mode-btn active" title="AI Interaction Mode">
-                        <i data-feather="message-circle"></i> AI Mode
-                    </button>
-                    <button id="pc-control-mode-btn" class="mode-btn" title="PC Control Mode">
-                        <i data-feather="cpu"></i> PC Control
-                    </button>
+                    <div class="mode-buttons-container">
+                        <button id="ai-mode-btn" class="mode-btn active" data-tooltip="Chat with the AI assistant">
+                            <i data-feather="message-circle"></i> AI Mode
+                        </button>
+                        <button id="pc-control-mode-btn" class="mode-btn" data-tooltip="Control your PC with voice commands">
+                            <i data-feather="cpu"></i> PC Control
+                        </button>
+                    </div>
                 </div>
 
                 <div class="quick-actions">
@@ -137,6 +148,8 @@
         </div>
     </div>
 
+    <!-- Load face animations first -->
+    <script src="static/js/face-animations.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>

@@ -54,7 +54,10 @@ function createWindow() {
 function startPythonBackend() {
   try {
     // Start the WebSocket server with unbuffered output
-    websocketProcess = spawn('/Users/qadirdadkazi/Desktop/Currently Not Working/VoiceCompanion/venv/bin/python', ['-u', 'websocket_server.py'], {
+    const pythonPath = path.join(__dirname, '..', 'venv', 'bin', 'python');
+    console.log('Using Python from:', pythonPath);
+    
+    websocketProcess = spawn(pythonPath, ['-u', 'websocket_server.py'], {
       cwd: __dirname,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, PYTHONUNBUFFERED: '1' }
@@ -73,7 +76,7 @@ function startPythonBackend() {
         console.error(`WebSocket Error: ${error}`);
         // Try to restart the WebSocket server if it crashes
         if (error.includes('Address already in use')) {
-          console.log('Port 5000 is already in use. Trying to restart...');
+          console.log('Port 5001 is already in use. Trying to restart...');
           setTimeout(() => {
             if (websocketProcess) {
               websocketProcess.kill();
@@ -94,7 +97,7 @@ function startPythonBackend() {
     });
 
     // Start the voice backend
-    pythonProcess = spawn('/Users/qadirdadkazi/Desktop/Currently Not Working/VoiceCompanion/venv/bin/python', ['voice_backend.py'], {
+    pythonProcess = spawn(pythonPath, ['voice_backend.py'], {
       cwd: __dirname,
       stdio: ['pipe', 'pipe', 'pipe']
     });

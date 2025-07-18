@@ -11,7 +11,14 @@ import time
 from datetime import datetime
 import webbrowser
 import platform
+import pygetwindow as gw
+from PIL import ImageGrab, Image
+import pytesseract
 from config import Config
+
+# Configure Tesseract path if needed (for Windows)
+if platform.system() == 'Windows':
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # Handle GUI module imports gracefully
 try:
@@ -51,8 +58,10 @@ class PCController:
             elif 'volume' in command_lower:
                 return self.handle_volume_control(command_lower)
             
-            # Screenshot command
-            elif 'screenshot' in command_lower:
+            # Screenshot and screen scanning commands
+            elif 'screenshot' in command_lower or 'scan screen' in command_lower or 'what\'s on screen' in command_lower:
+                if 'scan' in command_lower or 'what\'s' in command_lower:
+                    return self.scan_screen()
                 return self.take_screenshot()
             
             # System control commands
@@ -354,36 +363,104 @@ class PCController:
                 'success': False,
                 'message': "Screenshot functionality requires GUI access (not available in this environment)"
             }
-        
-        try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"screenshot_{timestamp}.png"
             
             # Take screenshot
-            screenshot = pyautogui.screenshot()
-            
-            # Save to desktop or current directory
-            if self.system == 'windows':
-                desktop = os.path.join(os.path.expanduser('~'), 'Desktop')
+            if region:
+                screenshot = pyautogui.screenshot(region=region)
             else:
-                desktop = os.path.join(os.path.expanduser('~'), 'Desktop')
-            
-            if os.path.exists(desktop):
-                filepath = os.path.join(desktop, filename)
-            else:
-                filepath = filename
-            
+                screenshot = pyautogui.screenshot()
+                
             screenshot.save(filepath)
             
             return {
                 'success': True,
-                'message': f"Screenshot saved as {filename}"
+                'message': f'Screenshot saved as {filename}',
+                'filepath': filepath,
+                'type': 'screenshot'
             }
+            
         except Exception as e:
-            return {
-                'success': False,
-                'message': f"Screenshot error: {str(e)}"
+            return {'success': False, 'message': f'Error taking screenshot: {str(e)}'}
+            
+    def scan_screen(self, region=None, ocr=True):
+        """
+        Scan the screen content and optionally perform OCR
+        
+        Args:
+            region (tuple, optional): (left, top, width, height) of the region to scan.
+                                    If None, scans the entire screen.
+            ocr (bool): Whether to perform OCR on the captured image
+            
+        Returns:
+            dict: Result with success status, extracted text, and screenshot info
+        """
+        if not GUI_AVAILABLE:
+            return {'success': False, 'message': 'Screen scanning requires pyautogui'}
+            
+        try:
+            # First take a screenshot
+            result = self.take_screenshot(region)
+            if not result['success']:
+                return result
+                
+            response = {
+                'success': True,
+                'message': 'Screen scanned successfully',
+                'screenshot_path': result['filepath'],
+                'type': 'screen_scan'
             }
+            
+            # If OCR is enabled, extract text from the screenshot
+            if ocr:
+                try:
+                    # Use pytesseract to extract text
+                    text = pytesseract.image_to_string(Image.open(result['filepath']))
+                    if text.strip():
+                        response['extracted_text'] = text.strip()
+                        response['message'] = 'Text extracted from screen'
+                    else:
+                        response['extracted_text'] = ''
+                        response['message'] = 'No text detected on screen'
+                except Exception as e:
+                    response['message'] = f'Screen captured but could not extract text: {str(e)}'
+                    response['extracted_text'] = ''
+            
+            return response
+            
+        except Exception as e:
+            return {'success': False, 'message': f'Error scanning screen: {str(e)}'}
+            
+    def get_active_window_info(self):
+        """
+        Get information about the currently active window
+        
+        Returns:
+            dict: Information about the active window
+        """
+        if not GUI_AVAILABLE:
+            return {'success': False, 'message': 'Window info requires pygetwindow'}
+            
+        try:
+            window = gw.getActiveWindow()
+            if not window:
+                return {'success': False, 'message': 'No active window found'}
+                
+            return {
+                'success': True,
+                'window_title': window.title,
+                'window_rect': {
+                    'left': window.left,
+                    'top': window.top,
+                    'width': window.width,
+                    'height': window.height
+                },
+                'is_maximized': window.isMaximized,
+                'is_minimized': window.isMinimized,
+                'is_active': window.isActive
+            }
+            
+        except Exception as e:
+            return {'success': False, 'message': f'Error getting window info: {str(e)}'}
 
     def handle_system_control(self, command):
         """Handle system control commands (with safety confirmation)"""

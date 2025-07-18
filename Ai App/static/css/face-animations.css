@@ -1,0 +1,141 @@
+/* Face Container */
+.assistant-face {
+  width: 120px;
+  height: 120px;
+  margin: 20px auto;
+  position: relative;
+  border-radius: 50%;
+  background: hsl(var(--muted));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Face parts */
+.face {
+  position: relative;
+  width: 80%;
+  height: 80%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Eyes */
+.eyes {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.eye {
+  width: 20px;
+  height: 20px;
+  background: hsl(var(--foreground));
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+}
+
+.eye::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  left: 5px;
+  opacity: 0.8;
+}
+
+/* Mouth */
+.mouth {
+  width: 40px;
+  height: 20px;
+  border-bottom-left-radius: 50%;
+  border-bottom-right-radius: 50%;
+  border: 3px solid hsl(var(--foreground));
+  border-top: none;
+  transition: all 0.3s ease;
+}
+
+/* Emotion States */
+.assistant-face.happy .mouth {
+  height: 25px;
+  border-radius: 0 0 100px 100px;
+  transform: scale(0.8);
+}
+
+.assistant-face.sad .mouth {
+  border-radius: 100px 100px 0 0;
+  border-top: 3px solid hsl(var(--foreground));
+  border-bottom: none;
+  height: 15px;
+  transform: translateY(10px);
+}
+
+.assistant-face.neutral .mouth {
+  width: 30px;
+  height: 3px;
+  border-radius: 0;
+  border: none;
+  background: hsl(var(--foreground));
+  margin-top: 5px;
+}
+
+.assistant-face.surprised .mouth {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid hsl(var(--foreground));
+}
+
+.assistant-face.thinking .eyes {
+  animation: blink 0.5s infinite alternate;
+}
+
+.assistant-face.listening .eye {
+  animation: listening 2s infinite;
+}
+
+/* Animations */
+@keyframes blink {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.1); }
+}
+
+@keyframes listening {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Status indicator */
+.status-indicator {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 0.8em;
+  color: hsl(var(--muted-foreground));
+  min-height: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .assistant-face {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .eye {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .mouth {
+    width: 30px;
+  }
+}

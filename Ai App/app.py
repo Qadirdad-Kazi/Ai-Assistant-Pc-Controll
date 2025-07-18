@@ -46,11 +46,11 @@ CORS(app, resources={
     }
 })
 
-# Configure Socket.IO with CORS
+# Configure Socket.IO with CORS and explicit async_mode
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",  # Allow all origins for development
-    async_mode='eventlet',
+    cors_allowed_origins="*",
+    async_mode='eventlet',  # Using eventlet as the async mode
     logger=True,
     engineio_logger=True,
     ping_timeout=60,

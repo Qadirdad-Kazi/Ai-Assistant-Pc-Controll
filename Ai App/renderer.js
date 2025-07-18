@@ -23,6 +23,12 @@ let settings = {
     alwaysListen: false,
     theme: 'dark'
 };
+
+// Voice Controller
+let voiceController = null;
+
+// Face animations controller
+let faceAnimations;
 let audioContext;
 let analyser;
 let dataArray;
@@ -34,8 +40,15 @@ let commandInput, sendCommandBtn;
 let aiModeBtn, pcControlModeBtn, cancelActionBtn;
 let currentMode = 'ai'; // Default mode
 
+// Face animations will be loaded via script tag in HTML
+
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize face animations (loaded via script tag)
+    faceAnimations = window.assistantFace;
+    
+    // Initialize voice controller
+    await initializeVoiceController();
     if (typeof window.electronAPI === 'undefined') {
         console.error('CRITICAL: window.electronAPI is undefined. Preload script may not have run correctly or contextIsolation is not working as expected.');
         const body = document.querySelector('body');
@@ -95,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // WebSocket connection management
 function setupWebSocket() {
     // Use a direct WebSocket URL since we're in Electron
-    const wsUrl = 'ws://localhost:5000/ws';
+    const wsUrl = 'ws://localhost:5001/ws';
     console.log('Connecting to WebSocket:', wsUrl);
     
     socket = new WebSocket(wsUrl);
@@ -142,7 +155,7 @@ function setupWebSocket() {
             }, delay);
         } else {
             const errorMsg = `Connection lost after ${MAX_RECONNECT_ATTEMPTS} attempts. ` +
-                          `Please check if the backend server is running on port 5000.`;
+                          `Please check if the backend server is running on port 5001.`;
             showError(errorMsg);
             console.error(errorMsg);
         }
@@ -342,77 +355,197 @@ function handlePythonMessage(message) {
     }
 }
 
-// Voice Control Functions
-function toggleListening() {
+// Voice Controller Initialization
+async function initializeVoiceController() {
     try {
-        if (isListening) {
-            stopListening();
-        } else {
-            startListening();
-        }
+        // Load the voice controller script
+        const script = document.createElement('script');
+        script.src = 'voice/voice_controller.js';
+        script.type = 'text/javascript';
+        
+        // Wait for the script to load
+        await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('Failed to load voice controller'));
+            document.head.appendChild(script);
+        });
+        
+        // Initialize with settings from the UI or defaults
+        voiceController = new VoiceController({
+            wakeWord: settings.wakeWord || 'Hey Wolf',
+            speech_timeout: 5,
+            speech_phrase_limit: 10,
+            tts_rate: 200,
+            tts_volume: 1.0,
+            tts_voice: settings.voiceGender === 'male' ? 'Alex' : 'Samantha'
+        });
+        
+        // Set up event callbacks
+        setupVoiceControllerCallbacks();
+        
+        console.log('Voice controller initialized successfully');
     } catch (error) {
-        console.error('Error toggling listening state:', error);
-        showError('Failed to toggle voice input. Please try again.');
+        console.error('Failed to initialize voice controller:', error);
+        showError('Failed to initialize voice system: ' + (error.message || 'Unknown error'));
+    }
+}
+
+// Set up voice controller callbacks
+function setupVoiceControllerCallbacks() {
+    if (!voiceController) return;
+    
+    // Wake word detected
+    voiceController.register_callback('on_wake', () => {
+        console.log('Wake word detected!');
+        if (faceAnimations) {
+            faceAnimations.startListening();
+        }
+        updateStatus('Wake word detected, listening...');
+    });
+    
+    // Speech recognized
+    voiceController.register_callback('on_speech', (data) => {
+        console.log('Speech recognized:', data.text);
+        if (data.text) {
+            // Process the recognized text as a command
+            sendCommand(data.text);
+        }
+    });
+    
+    // TTS started
+    voiceController.register_callback('on_tts_start', (data) => {
+        console.log('TTS started:', data.text);
+        if (faceAnimations) {
+            faceAnimations.startTalking();
+        }
+    });
+    
+    // TTS ended
+    voiceController.register_callback('on_tts_end', () => {
+        console.log('TTS ended');
+        if (faceAnimations) {
+            faceAnimations.stopTalking();
+        }
+    });
+    
+    // Error occurred
+    voiceController.register_callback('on_error', (error) => {
+        console.error('Voice system error:', error);
+        showError(`Voice error: ${error.message || 'Unknown error'}`);
+    });
+}
+
+// Voice Control Functions
+async function toggleListening() {
+    try {
+        if (!voiceController) {
+            console.error('Voice controller not initialized');
+            showError('Voice system not ready');
+            return;
+        }
+        
+        // Toggle the listening state
+        const newListeningState = !isListening;
+        
+        // Update the UI immediately for better responsiveness
+        updateUIForListening(newListeningState);
+        
+        // Update face animation based on the new listening state
+        if (faceAnimations) {
+            if (newListeningState) {
+                faceAnimations.startListening();
+            } else {
+                faceAnimations.stopListening();
+            }
+        }
+        
+        // Update the listening state using the voice controller
+        voiceController.toggle_listening();
+        
+        // Update the global state
+        isListening = newListeningState;
+        
+        // Send the state to the backend via WebSocket
+        sendWebSocketMessage('toggle-listening', { 
+            listening: newListeningState,
+            wake_word: settings.wakeWord || 'Hey Wolf'
+        });
+        
+        // Log the state change
+        console.log(`Voice input ${newListeningState ? 'started' : 'stopped'}`);
+        updateStatus(newListeningState ? 'Listening...' : 'Ready');
+        
+    } catch (error) {
+        console.error('Error in toggleListening:', error);
+        showError('Error toggling voice input');
+        
+        // Reset the UI state on error
+        isListening = false;
+        updateUIForListening(false);
+        if (faceAnimations) {
+            faceAnimations.stopListening();
+        }
     }
 }
 
 async function startListening() {
     if (isListening) return;
     
-    try {
-        // Request microphone permission
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // Stop all tracks to release the microphone
-        stream.getTracks().forEach(track => track.stop());
-        
-        isListening = true;
-        updateStatus(currentMode === 'ai' ? 'Listening (AI Mode)...' : 'Listening (PC Control)...');
-        document.getElementById('mic-btn').classList.add('listening');
-        
+    isListening = true;
+    updateUIForListening(true);
+    
+    // Update face animation
+    if (faceAnimations) {
+        faceAnimations.startListening();
+    }
+    
+    // Update microphone button
+    const micBtn = document.getElementById('mic-btn');
+    if (micBtn) {
+        micBtn.classList.add('listening');
+        micBtn.setAttribute('title', 'Listening...');
         // Start audio visualization
         startWaveformAnimation();
-        
-        // Send start listening command to backend
-        const success = sendWebSocketMessage('start_listening');
-        
-        if (!success) {
-            throw new Error('Failed to connect to voice service');
-        }
-        
-        // Update UI
-        document.getElementById('mic-btn').setAttribute('title', 'Stop Listening');
-        
+    }
+    
+    try {
+        // Notify main process to start listening using the toggle-listening method
+        await window.electronAPI.toggleListening(true);
     } catch (error) {
         console.error('Error starting voice input:', error);
-        isListening = false;
-        stopWaveformAnimation();
-        
-        if (error.name === 'NotAllowedError') {
-            showError('Microphone access was denied. Please allow microphone access to use voice commands.');
-        } else if (error.name === 'NotFoundError') {
-            showError('No microphone found. Please connect a microphone and try again.');
-        } else {
-            showError('Failed to access microphone. Please check your settings and try again.');
-        }
+        showError('Error starting voice input');
+        stopListening();
     }
 }
 
-function stopListening() {
-    if (!isListening) return;
+async function stopListening() {
+    if (!isListening && !document.getElementById('mic-btn').classList.contains('listening')) return;
+    
+    isListening = false;
+    updateUIForListening(false);
+    
+    // Update microphone button
+    const micBtn = document.getElementById('mic-btn');
+    if (micBtn) {
+        micBtn.classList.remove('listening');
+        micBtn.setAttribute('title', 'Start Listening');
+    }
+    
+    // Stop audio visualization
+    stopWaveformAnimation();
     
     try {
-        isListening = false;
-        updateStatus('Processing...');
-        document.getElementById('mic-btn').classList.remove('listening');
-        document.getElementById('mic-btn').setAttribute('title', 'Start Listening');
-        
-        // Stop audio visualization
-        stopWaveformAnimation();
+        // Notify main process to stop listening
+        await window.electronAPI.toggleListening(false);
         
         // Send stop listening command to backend
         sendWebSocketMessage('stop_listening');
         
+        // Reset face animation if available
+        if (faceAnimations) {
+            faceAnimations.stopListening();
+            faceAnimations.setEmotion('neutral');
+        }
     } catch (error) {
         console.error('Error stopping voice input:', error);
         showError('Error stopping voice input');
@@ -533,23 +666,63 @@ function handleWakeWordDetected() {
     }, 2000);
 }
 
+/**
+ * Handles recognized speech from the voice recognition system
+ * @param {Object} data - The recognized speech data
+ * @param {string} data.text - The recognized text
+ * @param {number} data.confidence - The confidence score (0-1) of the recognition
+ * @param {number} data.timestamp - When the speech was recognized
+ */
 function handleSpeechRecognized(data) {
-    if (data && data.text) {
-        // Add user message to chat
-        addMessageToChat('user', data.text);
-        
-        // If always listen is enabled, keep listening
-        if (settings.alwaysListen) {
-            setTimeout(() => {
-                if (isListening) {
-                    sendWebSocketMessage('start_listening');
-                }
-            }, 500);
-        }
+    if (!data || !data.text) {
+        console.warn('Received empty or invalid speech recognition data:', data);
+        return;
+    }
+
+    console.log('[DEBUG] Speech recognized:', data.text);
+    
+    // Add visual feedback for recognized speech
+    const recognitionFeedback = document.createElement('div');
+    recognitionFeedback.className = 'recognition-feedback';
+    recognitionFeedback.innerHTML = `
+        <div class="recognition-text">
+            <i class="feather icon-mic" style="color: #4CAF50;"></i>
+            <span>Recognized: "${escapeHtml(data.text)}"</span>
+        </div>
+    `;
+    
+    // Add to chat container with animation
+    const chatContainer = document.getElementById('chat-messages');
+    chatContainer.appendChild(recognitionFeedback);
+    
+    // Scroll to show the new message
+    setTimeout(() => {
+        recognitionFeedback.style.opacity = '1';
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }, 10);
+    
+    // Add the actual message to chat
+    addMessageToChat('user', data.text, data.timestamp ? new Date(data.timestamp) : new Date());
+    
+    // If always listen is enabled, keep listening
+    if (settings.alwaysListen) {
+        setTimeout(() => {
+            if (isListening) {
+                console.log('[DEBUG] Re-starting listening (alwaysListen is true)');
+                sendWebSocketMessage('start_listening');
+            }
+        }, 500);
+    }
+    
+    // Process the command if we're in PC control mode
+    if (currentMode === 'pc_control' && data.text.trim()) {
+        console.log('[DEBUG] Sending command to backend:', data.text);
+        sendCommand(data.text);
     }
 }
 
 function handleAIResponse(data) {
+    const { response, isFinal, emotion } = data;
     try {
         showLoading(false);
         
@@ -796,6 +969,32 @@ async function saveSettings() {
 function toggleTheme() {
     currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
     applyTheme(currentTheme);
+}
+
+/**
+ * Updates the UI to reflect the current listening state
+ * @param {boolean} isListening - Whether the app is currently listening for voice input
+ */
+function updateUIForListening(isListening) {
+    const micBtn = document.getElementById('mic-btn');
+    if (!micBtn) return;
+    
+    // Update the microphone button state
+    if (isListening) {
+        micBtn.classList.add('listening');
+        micBtn.setAttribute('title', 'Stop Listening');
+        startWaveformAnimation();
+    } else {
+        micBtn.classList.remove('listening');
+        micBtn.setAttribute('title', 'Start Listening');
+        stopWaveformAnimation();
+    }
+    
+    // Update the global state
+    isListening = isListening;
+    
+    // Log the state change
+    console.log(`Voice input ${isListening ? 'started' : 'stopped'}`);
 }
 
 function applyTheme(theme) {

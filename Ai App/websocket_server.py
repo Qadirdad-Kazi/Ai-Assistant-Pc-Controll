@@ -10,7 +10,7 @@ import time
 from voice_backend import VoiceBackend
 
 class WebSocketServer:
-    def __init__(self, host='localhost', port=5000):
+    def __init__(self, host='localhost', port=5001):
         self.host = host
         self.port = port
         self.clients = set()
@@ -36,6 +36,17 @@ class WebSocketServer:
         else:
             print("WebSocketServer: Event loop not available to send message.")
 
+    async def send_error(self, websocket, error_message):
+        """Send an error message to a specific client"""
+        try:
+            await websocket.send(json.dumps({
+                "type": "error",
+                "data": error_message,
+                "timestamp": time.time()
+            }))
+        except Exception as e:
+            print(f"[WebSocket] Error sending error message: {e}")
+    
     async def broadcast(self, msg_type, data):
         """Send a message to all connected clients"""
         if not self.clients:
@@ -55,22 +66,112 @@ class WebSocketServer:
     
     async def handle_client(self, websocket, path=None):
         """Handle a new WebSocket connection"""
+        # Configure WebSocket settings
+        websocket.max_size = 20 * 1024 * 1024  # 20MB max message size for audio chunks
+        websocket.ping_interval = 20  # Send ping every 20 seconds
+        websocket.ping_timeout = 30   # Wait 30 seconds for pong response
+        
         await self.register(websocket)
+        client_ip = websocket.remote_address[0] if websocket.remote_address else 'unknown'
+        client_id = id(websocket)
+        print(f"[WebSocket] Client {client_id} connected from {client_ip}")
+        
         try:
+            # Send initial handshake
+            await websocket.send(json.dumps({
+                "type": "connection_established",
+                "data": {
+                    "client_id": client_id,
+                    "timestamp": time.time(),
+                    "max_message_size": websocket.max_size,
+                    "server_version": "1.0.0"
+                }
+            }))
+            
+            # Initialize audio buffer for this client
+            audio_buffer = bytearray()
+            
+            # Main message loop
             async for message in websocket:
                 try:
-                    data = json.loads(message)
-                    print(f"Received message: {data}")
+                    # Handle binary messages (audio data)
+                    if isinstance(message, (bytes, bytearray)):
+                        if not message:
+                            print("[WebSocket] Received empty binary message")
+                            continue
+                            
+                        message_size = len(message)
+                        print(f"[WebSocket] Received binary message: {message_size} bytes")
+                        
+                        # Forward binary data to the backend if it's a reasonable size
+                        if 0 < message_size <= 20 * 1024 * 1024:  # Up to 20MB
+                            try:
+                                # Add to audio buffer
+                                audio_buffer.extend(message)
+                                
+                                # If we have enough data, process it
+                                if len(audio_buffer) >= 4096:  # Process in 4KB chunks
+                                    chunk = bytes(audio_buffer[:4096])
+                                    audio_buffer = audio_buffer[4096:]
+                                    
+                                    if hasattr(self.backend, 'handle_audio_data'):
+                                        try:
+                                            # Process the audio chunk in a separate thread
+                                            threading.Thread(
+                                                target=self.backend.handle_audio_data,
+                                                args=(chunk,),
+                                                daemon=True
+                                            ).start()
+                                        except Exception as e:
+                                            print(f"[WebSocket] Error in audio processing thread: {e}")
+                                            
+                            except Exception as e:
+                                error_msg = f"Error processing audio data: {e}"
+                                print(f"[WebSocket] {error_msg}")
+                                await self.send_error(websocket, error_msg)
+                                
+                            # Clear buffer if it gets too large
+                            if len(audio_buffer) > 10 * 1024 * 1024:  # 10MB
+                                print("[WebSocket] Audio buffer too large, clearing")
+                                audio_buffer = bytearray()
+                                
+                        else:
+                            print(f"[WebSocket] Invalid audio data size: {message_size} bytes")
+                            
+                        # Send acknowledgment
+                        await websocket.send(json.dumps({
+                            "type": "audio_ack",
+                            "timestamp": time.time(),
+                            "buffer_size": len(audio_buffer)
+                        }))
+                        continue
+                    
+                    # Handle text messages (JSON commands)
+                    try:
+                        data = json.loads(message)
+                        print(f"[WebSocket] Received message: {data}")
+                        if not isinstance(data, dict) or 'type' not in data:
+                            print(f"[WebSocket] Invalid message format: {data}")
+                            continue
+                            
+                    except json.JSONDecodeError as e:
+                        print(f"[WebSocket] Invalid JSON received: {e}")
+                        await self.send_error(websocket, f"Invalid JSON: {str(e)}")
+                        continue
+                    
+                    # Process valid JSON messages
                     if isinstance(data, dict) and 'type' in data:
                         if data['type'] == 'start_listening':
                             self.backend.start_listening()
                         elif data['type'] == 'process_text' and 'text' in data:
                             self.backend.process_command(data['text'])
-                        elif data['type'] == 'text_command' and 'data' in data and 'command' in data['data']:
-                            command_text = data['data']['command']
+                        elif data['type'] == 'text_command' and 'command' in data:
+                            command_text = data['command']
                             print(f"Processing text command: {command_text}")
-                            # Assuming self.backend.process_command will handle execution and response
+                            # Process the command through the backend
                             self.backend.process_command(command_text)
+                            # Send acknowledgment back to client
+                            await self.broadcast("command_received", {"command": command_text, "status": "processing"})
                         elif data['type'] == 'set_operation_mode' and 'mode' in data:
                             print("DEBUG: Entered 'set_operation_mode' block in websocket_server.py")
                             new_mode = data['mode']
@@ -91,6 +192,13 @@ class WebSocketServer:
                             await websocket.send(json.dumps({
                                 'type': 'pong',
                                 'timestamp': time.time()
+                            }))
+                        elif data['type'] == 'toggle-listening' and 'listening' in data:
+                            # Forward the toggle-listening command to the backend
+                            print(f"[WebSocket] Forwarding toggle-listening: {data['listening']}")
+                            self.backend.handle_input(json.dumps({
+                                'type': 'toggle-listening',
+                                'data': {'listening': data['listening']}
                             }))
                 except json.JSONDecodeError as e:
                     print(f"Received invalid JSON: {message}")
