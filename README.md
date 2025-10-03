@@ -2,6 +2,18 @@
 
 VoiceCompanion is an intelligent voice assistant application built with Electron and Python. It allows users to interact with their computer using voice commands, switch between an AI conversational mode and a direct PC control mode, and also supports text-based commands.
 
+## Table of Contents
+- [Features](#features)
+- [PC Controller](#pc-controller)
+  - [System Control](#system-control)
+  - [Input Device Control](#input-device-control)
+  - [AI Integration](#ai-integration)
+- [Testing](#testing)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Development](#development)
+- [License](#license)
+
 ## Features
 
 *   **Dual Mode Operation:**
@@ -12,6 +24,27 @@ VoiceCompanion is an intelligent voice assistant application built with Electron
 *   **Real-time Transcription & TTS:** See your spoken words transcribed and hear responses spoken back.
 *   **Customizable Settings:** (If settings UI is fully functional) Adjust voice gender, language, theme, etc.
 *   **Cross-Platform:** Built with Electron for potential cross-platform compatibility (currently developed on macOS).
+
+## PC Controller
+
+The PC Controller module provides powerful system control capabilities through a simple API. It handles everything from application launching to system operations and input device control.
+
+### System Control
+- **Application Management**: Launch, close, and switch between applications
+- **Window Control**: Minimize, maximize, and close windows
+- **System Operations**: Shutdown, restart, sleep, and lock screen
+- **Media Control**: Play/pause, next/previous track, volume control
+- **Screenshots**: Capture full screen or specific regions with optional OCR
+
+### Input Device Control
+- **Mouse Control**: Move cursor, click, and drag
+- **Keyboard Input**: Type text and simulate key presses
+- **Hotkeys**: Execute keyboard shortcuts programmatically
+
+### AI Integration
+- **Natural Language Processing**: Understand and execute natural language commands
+- **Screen Analysis**: Extract text and information from screen content
+- **Task Automation**: Automate repetitive tasks using AI
 
 ## Available PC Control Commands
 
@@ -53,6 +86,178 @@ In **PC Control Mode**, you can use the following voice or text commands:
 - "System status" - Provides system information
 
 Note: Some commands may require specific applications to be installed or may work differently across operating systems.
+
+## Testing
+
+Comprehensive testing ensures the reliability and stability of the PC Controller. The test suite includes unit tests, integration tests, and end-to-end tests.
+
+### Running Tests
+
+```bash
+# Install test dependencies
+pip install pytest pytest-cov pytest-mock
+
+# Run all tests
+pytest tests/
+
+# Run with coverage report
+pytest --cov=pc_controller tests/
+```
+
+### Test Coverage
+
+We aim to maintain high test coverage for all critical components. Current coverage includes:
+- Application launching and management
+- Window control
+- Input device simulation
+- Error handling
+- Cross-platform compatibility
+
+For detailed testing documentation, see [TESTING.md](./TESTING.md).
+
+## Development
+
+### Prerequisites
+- Python 3.7+
+- Node.js and npm
+- System dependencies for Python packages (see below)
+
+### System Dependencies
+
+#### macOS
+```bash
+# Install Tesseract OCR
+brew install tesseract
+
+# Install Python development headers
+xcode-select --install
+```
+
+#### Linux (Debian/Ubuntu)
+```bash
+# Install Tesseract and Python development files
+sudo apt-get install tesseract-ocr libtesseract-dev python3-dev
+```
+
+#### Windows
+- Install [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki)
+- Add Tesseract to your system PATH
+- Install [Windows C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+
+### Development Setup
+
+1. Clone the repository
+2. Set up a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   pip install -r requirements-dev.txt  # For development
+   ```
+4. Install pre-commit hooks:
+   ```bash
+   pre-commit install
+   ```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Write tests for your changes
+5. Run tests and ensure they pass
+6. Submit a pull request
+
+## License
+
+[Specify your license here]
+
+## Acknowledgments
+
+- [PyAutoGUI](https://pyautogui.readthedocs.io/) for cross-platform GUI automation
+- [pytest](https://docs.pytest.org/) for testing
+- [Ollama](https://ollama.ai/) for AI capabilities
+
+## AI Task Capabilities
+
+VoiceCompanion can handle a wide range of tasks through its AI capabilities. Here are the main categories of tasks you can perform:
+
+### Daily Life Tasks
+
+#### Productivity & Organization
+- Create and manage to-do lists
+- Set reminders and calendar events
+- Generate shopping lists
+- Plan meals and find recipes
+- Manage personal schedules
+
+#### Communication
+- Draft and send emails
+- Write messages or social media posts
+- Create professional documents
+- Generate content outlines
+
+#### Information & Learning
+- Answer general knowledge questions
+- Explain complex concepts
+- Provide step-by-step guides
+- Recommend books, movies, or music
+- Help with language learning
+
+#### Personal Finance
+- Create basic budget spreadsheets
+- Track expenses
+- Calculate financial metrics
+- Convert currencies
+
+### Work-Related Tasks
+
+#### Development & Programming
+- Write and debug code
+- Create web applications
+- Generate automation scripts
+- Explain programming concepts
+- Help with algorithm design
+- Create API documentation
+
+#### Data Analysis
+- Process and analyze data
+- Generate reports
+- Create visualizations
+- Clean and transform datasets
+
+#### System Administration
+- Generate terminal commands
+- Create system scripts
+- Troubleshoot issues
+- Manage files and directories
+
+#### Business Operations
+- Create business documents
+- Draft proposals
+- Generate reports
+- Analyze business metrics
+
+### Specialized Operations
+
+#### File Operations
+- Create, read, update files
+- Organize files into directories
+- Search and process text in files
+
+#### Web Interactions
+- Open specific websites
+- Perform web searches
+- Extract information from web pages
+
+#### System Control
+- Control mouse and keyboard
+- Take screenshots
+- Manage applications
+- Automate repetitive tasks
 
 ## Tech Stack
 

@@ -21,8 +21,18 @@ let settings = {
     language: 'en',
     wakeWord: 'Hey Wolf',
     alwaysListen: false,
-    theme: 'dark'
+    theme: 'dark',
+    screenReader: {
+        enabled: false,
+        paused: false,
+        updateInterval: 2000 // 2 seconds
+    }
 };
+
+// Screen reader state
+let screenReaderActive = false;
+let screenReaderPaused = false;
+let screenReaderContent = '';
 
 // Voice Controller
 let voiceController = null;
@@ -46,6 +56,9 @@ let currentMode = 'ai'; // Default mode
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize face animations (loaded via script tag)
     faceAnimations = window.assistantFace;
+    
+    // Initialize screen reader controls
+    setupScreenReaderControls();
     
     // Initialize voice controller
     await initializeVoiceController();

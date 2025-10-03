@@ -8,9 +8,17 @@ process.on('unhandledRejection', (reason, promise) => {
   // Optionally, you might want to quit the app or log to a file
 });
 
-const { app, BrowserWindow, ipcMain, Menu, systemPreferences } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, systemPreferences, ipcRenderer } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
+const { PythonShell } = require('python-shell');
+
+// Screen reader state
+let screenReaderActive = false;
+let screenReaderPaused = false;
+let screenReaderInterval = null;
+let screenReaderPython = null;
 
 let mainWindow;
 let pythonProcess;
@@ -42,8 +50,18 @@ function createWindow() {
     mainWindow.show();
   });
 
-  // Handle window closed
+    // Handle window closed
   mainWindow.on('closed', () => {
+    // Clean up screen reader
+    if (screenReaderInterval) {
+      clearInterval(screenReaderInterval);
+      screenReaderInterval = null;
+    }
+    if (screenReaderPython) {
+      screenReaderPython.end(() => {
+        screenReaderPython = null;
+      });
+    }
     mainWindow = null;
   });
 
@@ -53,8 +71,24 @@ function createWindow() {
 
 function startPythonBackend() {
   try {
-    // Start the WebSocket server with unbuffered output
-    const pythonPath = path.join(__dirname, '..', 'venv', 'bin', 'python');
+    // Resolve Python path: prefer .venv, then venv, then fallback to python3 in PATH
+    const candidates = [
+      path.join(__dirname, '..', '.venv', 'bin', 'python'),
+      path.join(__dirname, '..', 'venv', 'bin', 'python'),
+      path.join(__dirname, '..', '.venv', 'bin', 'python3'),
+      path.join(__dirname, '..', 'venv', 'bin', 'python3'),
+      process.env.PYTHON_PATH || 'python3',
+      'python3'
+    ];
+
+    let pythonPath = candidates.find(p => {
+      try {
+        return fs.existsSync(p);
+      } catch (e) {
+        return false;
+      }
+    }) || 'python3';
+
     console.log('Using Python from:', pythonPath);
     
     websocketProcess = spawn(pythonPath, ['-u', 'websocket_server.py'], {
@@ -124,6 +158,127 @@ function startPythonBackend() {
     console.error('Failed to start Python backend:', error);
   }
 }
+
+// Screen Reader Functions
+function startScreenReader(interval = 2000) {
+  return new Promise((resolve, reject) => {
+    try {
+      if (screenReaderPython) {
+        screenReaderPython.end();
+      }
+
+      const options = {
+        mode: 'json',
+        pythonPath: 'python3', // or 'python' on Windows
+        scriptPath: __dirname,
+        args: ['--interval', interval]
+      };
+
+      screenReaderPython = PythonShell.run('screen_reader.py', options, (err, results) => {
+        if (err) {
+          console.error('Screen reader error:', err);
+          screenReaderActive = false;
+          mainWindow.webContents.send('screen-reader-update', {
+            success: false,
+            message: 'Failed to start screen reader',
+            type: 'screen_reader_error'
+          });
+          reject(err);
+        }
+      });
+
+      screenReaderPython.on('message', (message) => {
+        try {
+          const data = JSON.parse(message);
+          mainWindow.webContents.send('screen-reader-update', data);
+        } catch (e) {
+          console.error('Error parsing screen reader message:', e);
+        }
+      });
+
+      screenReaderActive = true;
+      screenReaderPaused = false;
+      
+      resolve({
+        success: true,
+        message: 'Screen reader started',
+        type: 'screen_reader',
+        status: 'started'
+      });
+    } catch (error) {
+      console.error('Error starting screen reader:', error);
+      reject(error);
+    }
+  });
+}
+
+function stopScreenReader() {
+  return new Promise((resolve) => {
+    if (screenReaderPython) {
+      screenReaderPython.end(() => {
+        screenReaderPython = null;
+        screenReaderActive = false;
+        screenReaderPaused = false;
+        resolve({
+          success: true,
+          message: 'Screen reader stopped',
+          type: 'screen_reader',
+          status: 'stopped'
+        });
+      });
+    } else {
+      screenReaderActive = false;
+      screenReaderPaused = false;
+      resolve({
+        success: true,
+        message: 'Screen reader was not running',
+        type: 'screen_reader',
+        status: 'stopped'
+      });
+    }
+  });
+}
+
+// IPC Handlers for screen reader
+ipcMain.handle('screen-reader', async (event, data) => {
+  try {
+    switch (data.action) {
+      case 'start':
+        return await startScreenReader(data.interval || 2000);
+      case 'stop':
+        return await stopScreenReader();
+      case 'toggle-pause':
+        screenReaderPaused = !screenReaderPaused;
+        return {
+          success: true,
+          message: screenReaderPaused ? 'Screen reader paused' : 'Screen reader resumed',
+          type: 'screen_reader',
+          status: screenReaderPaused ? 'paused' : 'resumed',
+          is_paused: screenReaderPaused
+        };
+      case 'status':
+        return {
+          success: true,
+          is_running: screenReaderActive,
+          is_paused: screenReaderPaused,
+          type: 'screen_reader_status'
+        };
+      default:
+        return {
+          success: false,
+          message: 'Invalid action',
+          type: 'screen_reader_error'
+        };
+    }
+  } catch (error) {
+    console.error('Screen reader IPC error:', error);
+    return {
+      success: false,
+      message: error.message,
+      type: 'screen_reader_error'
+    };
+  }
+});
 
 // App event listeners
 app.whenReady().then(async () => {

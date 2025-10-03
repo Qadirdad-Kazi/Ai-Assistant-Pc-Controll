@@ -381,27 +381,37 @@ body {
 .control-buttons {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap:/* Notifications */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 8px;
+    color: white;
+    background-color: #4CAF50;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    max-width: 350px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-left: 5px solid #2E7D32;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
-.mic-button {
-  width: 60px;
-  height: 60px;
-  border: none;
-  border-radius: 50%;
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(221 83% 63%));
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px hsla(var(--primary), 0.3);
+.notification.show {
+    transform: translateX(0);
+    opacity: 1;
+    animation: slideIn 0.5s forwards, fadeIn 0.3s ease-out;
 }
 
-.mic-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px hsla(var(--primary), 0.4);
+.notification.hide {
+    animation: slideOut 0.5s forwards, fadeOut 0.3s ease-out;
 }
 
 .mic-button.listening {
