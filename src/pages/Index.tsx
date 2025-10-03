@@ -1,9 +1,21 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Brain, Cpu } from "lucide-react";
-import AIMode from "@/components/AIMode";
+import dynamic from 'next/dynamic';
 import PCControlMode from "@/components/PCControlMode";
 import SettingsPage from "@/components/SettingsPage";
+
+// Dynamically import AIMode with SSR disabled
+const AIModeWrapper = dynamic(() => import("@/components/AIModeWrapper"), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-4">
+      <div className="h-10 bg-muted rounded animate-pulse"></div>
+      <div className="h-64 bg-muted rounded animate-pulse"></div>
+      <div className="h-10 bg-muted rounded animate-pulse"></div>
+    </div>
+  )
+});
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("ai");
@@ -46,7 +58,7 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="ai" className="animate-slide-in">
-            <AIMode />
+            <AIModeWrapper />
           </TabsContent>
 
           <TabsContent value="control" className="animate-slide-in">

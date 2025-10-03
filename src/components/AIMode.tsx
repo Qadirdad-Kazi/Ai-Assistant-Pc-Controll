@@ -1,16 +1,22 @@
+'use client';
+
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Mic, MicOff, Send, Volume2, VolumeX, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSafeSettings } from "@/hooks/useSafeSettings";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
+
 const AIMode = () => {
+  const [isMounted, setIsMounted] = useState(false);
+  const { settings, isInitialized } = useSafeSettings();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -19,6 +25,17 @@ const AIMode = () => {
   const { toast } = useToast();
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Set isMounted to true on mount (client-side only)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  // Get the model from settings with a default fallback
+  const model = settings?.model || 'llama3';
+  
+  // Check if we're still loading
+  const isLoadingState = !isMounted || !isInitialized;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -96,38 +113,43 @@ const AIMode = () => {
     if (!input.trim()) return;
 
     const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
 
     try {
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
-        mode: 'cors',
-        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage]
+          messages: updatedMessages,
+          model: model
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get response from AI');
+        const errorData = await response.text();
+        throw new Error(errorData || 'Failed to get response from AI');
       }
 
       const data = await response.json();
       
-      const assistantMessage: Message = { 
-        role: "assistant", 
-        content: data.content
+      // Add the assistant's response to the messages
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.content || 'I apologize, but I encountered an error processing your request.'
       };
       
-      setMessages((prev) => [...prev, assistantMessage]);
-      speak(data.content);
+      setMessages(prev => [...prev, assistantMessage]);
+      
+      // Speak the response if speech is enabled
+      if (settings.voiceEnabled && assistantMessage.content) {
+        speak(assistantMessage.content);
+      }
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An error occurred";
       
@@ -137,28 +159,36 @@ const AIMode = () => {
         variant: "destructive",
       });
       
-      const errorResponse: Message = {
-        role: "assistant",
-        content: `I encountered an error: ${errorMessage}`,
+      // Add an error message to the chat
+      const errorMessageObj: Message = {
+        role: 'assistant',
+        content: `I encountered an error: ${errorMessage}`
       };
-      setMessages((prev) => [...prev, errorResponse]);
+      setMessages(prev => [...prev, errorMessageObj]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Show loading state if not mounted or settings not initialized
+  if (isLoadingState) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto">
       <Card className="bg-card border-border shadow-glow p-6">
         {/* Chat Messages */}
         <div className="h-[500px] overflow-y-auto mb-4 space-y-4 pr-2">
           {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <div className="text-center">
-                <Brain className="w-16 h-16 mx-auto mb-4 animate-glow-pulse text-primary" />
-                <p className="text-lg">Ask me anything...</p>
-                <p className="text-sm mt-2">Use voice or text to interact</p>
-              </div>
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <Brain className="w-16 h-16 mx-auto mb-4 animate-glow-pulse text-primary" />
+              <p className="text-lg">Ask me anything...</p>
+              <p className="text-sm mt-2">Use voice or text to interact</p>
             </div>
           )}
           {messages.map((message, idx) => (

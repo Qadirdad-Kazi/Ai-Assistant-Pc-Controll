@@ -1,29 +1,15 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Monitor, Sun, Moon, Activity, Contrast, MoonStar, Save, Loader2, Check, X, Volume2, Mic, Zap, Palette, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Theme, useTheme, themes } from "@/contexts/theme-context";
-import { 
-  Settings, 
-  Save, 
-  Volume2, 
-  Mic, 
-  Zap, 
-  Loader2, 
-  Palette,
-  Sun,
-  Moon,
-  Monitor,
-  Activity,
-  Contrast,
-  MoonStar,
-  Check
-} from "lucide-react";
+import { Theme, useTheme } from "@/contexts/theme-context";
+import { useSafeSettings } from "@/hooks/useSafeSettings";
 
 interface OllamaModel {
   name: string;
@@ -41,94 +27,23 @@ interface OllamaModel {
   };
 }
 
-interface SettingsState {
-  // Voice Settings
-  voiceEnabled: boolean;
-  autoSpeak: boolean;
-  volume: number[];
-  micSensitivity: number[];
-  
-  // AI Settings
-  model: string;
-  
-  // Appearance Settings
-  theme: Theme;
-  accentColor: string;
-  uiDensity: string;
-  fontFamily: string;
-  fontSize: number;
-  lineHeight: number;
-  roundedCorners: boolean;
-  borderRadius: number;
-  animations: boolean;
-  reduceMotion: boolean;
-}
-
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
+  const { settings: localSettings, setSettings: setLocalSettings } = useSafeSettings();
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
-  // Initialize local settings with defaults
-  const [localSettings, setLocalSettings] = useState<SettingsState>(() => {
-    if (typeof window === 'undefined') {
-      return {
-        // Voice Settings
-        voiceEnabled: true,
-        autoSpeak: true,
-        volume: [80],
-        micSensitivity: [70],
-        
-        // AI Settings
-        model: "llama3",
-        
-        // Appearance Settings
-        theme: 'system',
-        accentColor: "blue",
-        uiDensity: "normal",
-        fontFamily: "sans",
-        fontSize: 16,
-        lineHeight: 1.5,
-        roundedCorners: true,
-        borderRadius: 0.5,
-        animations: true,
-        reduceMotion: false,
-      };
-    }
-
-    // Load settings from localStorage
-    const savedSettings = localStorage.getItem('app-settings');
-    const parsedSettings = savedSettings ? JSON.parse(savedSettings) : {};
-    
-    return {
-      // Voice Settings
-      voiceEnabled: parsedSettings.voiceEnabled ?? true,
-      autoSpeak: parsedSettings.autoSpeak ?? true,
-      volume: parsedSettings.volume ?? [80],
-      micSensitivity: parsedSettings.micSensitivity ?? [70],
-      
-      // AI Settings
-      model: parsedSettings.model || "llama3",
-      
-      // Appearance Settings
-      theme: (parsedSettings.theme || 'system') as Theme,
-      accentColor: parsedSettings.accentColor || "blue",
-      uiDensity: parsedSettings.uiDensity || "normal",
-      fontFamily: parsedSettings.fontFamily || "sans",
-      fontSize: parsedSettings.fontSize || 16,
-      lineHeight: parsedSettings.lineHeight || 1.5,
-      roundedCorners: parsedSettings.roundedCorners ?? true,
-      borderRadius: parsedSettings.borderRadius ?? 0.5,
-      animations: parsedSettings.animations ?? true,
-      reduceMotion: parsedSettings.reduceMotion ?? false,
-    };
-  });
-
+  // Alias for localSettings to match the rest of the component
+  const settings = localSettings;
+  const setSettings = setLocalSettings;
+  
   // Fetch available models from Ollama
   useEffect(() => {
     const fetchModels = async () => {
       try {
+        setIsLoading(true);
+        
         const response = await fetch('http://localhost:11434/api/tags');
         if (!response.ok) {
           throw new Error('Failed to fetch models');
@@ -176,24 +91,13 @@ const SettingsPage = () => {
     });
   };
   
-  // Save settings to localStorage when they change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const { theme: _, ...settingsToSave } = localSettings;
-      localStorage.setItem('app-settings', JSON.stringify(settingsToSave));
-      
-      // Apply theme to document
-      document.documentElement.setAttribute('data-theme', localSettings.theme);
-    }
-  }, [localSettings]);
-
-  // Update theme in local settings when theme changes
+  // Update theme in settings when theme changes
   useEffect(() => {
     if (theme !== localSettings.theme) {
-      setLocalSettings(prev => ({
-        ...prev,
+      setLocalSettings({
+        ...localSettings,
         theme: theme
-      }));
+      });
     }
   }, [theme]);
 

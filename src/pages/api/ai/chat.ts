@@ -6,13 +6,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { messages } = req.body;
+    const { messages, model = process.env.OLLAMA_MODEL || 'llama3.2:latest' } = req.body;
     
     // Get the last user message
     const userMessage = messages[messages.length - 1]?.content || '';
-    
-    // Default model to use if not specified in environment variables
-    const model = process.env.OLLAMA_MODEL || 'llama3';
     
     // Call the local Ollama API
     const response = await fetch('http://localhost:11434/api/chat', {
