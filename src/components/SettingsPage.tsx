@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeContext } from "@/App";
 import { 
   Settings, 
   Save, 
@@ -40,8 +41,34 @@ interface OllamaModel {
   };
 }
 
+interface SettingsState {
+  // Voice Settings
+  voiceEnabled: boolean;
+  autoSpeak: boolean;
+  volume: number[];
+  micSensitivity: number[];
+  
+  // AI Settings
+  model: string;
+  
+  // Appearance Settings
+  theme: string;
+  accentColor: string;
+  uiDensity: string;
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  roundedCorners: boolean;
+  borderRadius: number;
+  animations: boolean;
+  reduceMotion: boolean;
+}
+
 const SettingsPage = () => {
-  const [settings, setSettings] = useState({
+  const { theme, setTheme, settings, updateSettings } = useContext(ThemeContext);
+  
+  // Initialize local settings with defaults that match the expected shape
+  const defaultSettings: SettingsState = {
     // Voice Settings
     voiceEnabled: true,
     autoSpeak: true,
@@ -62,10 +89,32 @@ const SettingsPage = () => {
     borderRadius: 0.5,
     animations: true,
     reduceMotion: false,
+  };
+  
+  // Initialize local settings with context settings or defaults
+  const [localSettings, setLocalSettings] = useState<SettingsState>({
+    ...defaultSettings,
+    ...settings
+  });
+    theme: "system",
+    accentColor: "blue",
+    uiDensity: "normal",
+    fontFamily: "sans",
+    fontSize: 16,
+    lineHeight: 1.5,
+    roundedCorners: true,
+    borderRadius: 0.5,
+    animations: true,
+    reduceMotion: false,
   });
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Update local settings when context changes
+  useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings]);
 
   // Fetch available models from Ollama
   useEffect(() => {
@@ -95,19 +144,35 @@ const SettingsPage = () => {
       } finally {
         setIsLoading(false);
       }
-    };
 
     fetchModels();
   }, [toast]);
 
   const saveSettings = () => {
-    // In a real app, this would save to localStorage or backend
-    localStorage.setItem("jarisSettings", JSON.stringify(settings));
+    // Update settings in context
+    updateSettings(localSettings);
+    
+    // Update theme in context if it's different
+    if (localSettings.theme && localSettings.theme !== theme) {
+      setTheme(localSettings.theme);
+    }
+    
     toast({
-      title: "Settings Saved",
-      description: "Your preferences have been saved successfully.",
+      title: "Settings saved",
+      description: "Your settings have been saved successfully.",
     });
   };
+  
+  // Update local settings when context settings change
+  useEffect(() => {
+    setLocalSettings(prev => ({
+      ...prev,
+      ...settings,
+      // Keep the local state for volume and sensitivity if they exist
+      volume: prev.volume || [80],
+      micSensitivity: prev.micSensitivity || [70]
+    }));
+  }, [settings]);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -268,15 +333,19 @@ const SettingsPage = () => {
               ].map((theme) => (
                 <button
                   key={theme.value}
-                  onClick={() => setSettings({ ...settings, theme: theme.value })}
+                  onClick={() => {
+                    const newSettings = { ...localSettings, theme: theme.value };
+                    setLocalSettings(newSettings);
+                    setTheme(theme.value);
+                  }}
                   className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
-                    settings.theme === theme.value 
+                    localSettings.theme === theme.value 
                       ? 'border-primary bg-primary/10' 
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
                   <theme.icon className={`w-6 h-6 mb-2 ${
-                    settings.theme === theme.value ? 'text-primary' : 'text-muted-foreground'
+                    localSettings.theme === theme.value ? 'text-primary' : 'text-muted-foreground'
                   }`} />
                   <span className="text-sm">{theme.label}</span>
                 </button>
