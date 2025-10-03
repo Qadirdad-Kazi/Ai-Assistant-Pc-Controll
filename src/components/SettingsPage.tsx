@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { ThemeContext } from "@/App";
+import { Theme, useTheme, themes } from "@/contexts/theme-context";
 import { 
   Settings, 
   Save, 
@@ -52,7 +52,7 @@ interface SettingsState {
   model: string;
   
   // Appearance Settings
-  theme: string;
+  theme: Theme;
   accentColor: string;
   uiDensity: string;
   fontFamily: string;
@@ -65,56 +65,65 @@ interface SettingsState {
 }
 
 const SettingsPage = () => {
-  const { theme, setTheme, settings, updateSettings } = useContext(ThemeContext);
-  
-  // Initialize local settings with defaults that match the expected shape
-  const defaultSettings: SettingsState = {
-    // Voice Settings
-    voiceEnabled: true,
-    autoSpeak: true,
-    volume: [80],
-    micSensitivity: [70],
-    
-    // AI Settings
-    model: "llama3",
-    
-    // Appearance Settings
-    theme: "system",
-    accentColor: "blue",
-    uiDensity: "normal",
-    fontFamily: "sans",
-    fontSize: 16,
-    lineHeight: 1.5,
-    roundedCorners: true,
-    borderRadius: 0.5,
-    animations: true,
-    reduceMotion: false,
-  };
-  
-  // Initialize local settings with context settings or defaults
-  const [localSettings, setLocalSettings] = useState<SettingsState>({
-    ...defaultSettings,
-    ...settings
-  });
-    theme: "system",
-    accentColor: "blue",
-    uiDensity: "normal",
-    fontFamily: "sans",
-    fontSize: 16,
-    lineHeight: 1.5,
-    roundedCorners: true,
-    borderRadius: 0.5,
-    animations: true,
-    reduceMotion: false,
-  });
+  const { theme, setTheme } = useTheme();
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
-  // Update local settings when context changes
-  useEffect(() => {
-    setLocalSettings(settings);
-  }, [settings]);
+  // Initialize local settings with defaults
+  const [localSettings, setLocalSettings] = useState<SettingsState>(() => {
+    if (typeof window === 'undefined') {
+      return {
+        // Voice Settings
+        voiceEnabled: true,
+        autoSpeak: true,
+        volume: [80],
+        micSensitivity: [70],
+        
+        // AI Settings
+        model: "llama3",
+        
+        // Appearance Settings
+        theme: 'system',
+        accentColor: "blue",
+        uiDensity: "normal",
+        fontFamily: "sans",
+        fontSize: 16,
+        lineHeight: 1.5,
+        roundedCorners: true,
+        borderRadius: 0.5,
+        animations: true,
+        reduceMotion: false,
+      };
+    }
+
+    // Load settings from localStorage
+    const savedSettings = localStorage.getItem('app-settings');
+    const parsedSettings = savedSettings ? JSON.parse(savedSettings) : {};
+    
+    return {
+      // Voice Settings
+      voiceEnabled: parsedSettings.voiceEnabled ?? true,
+      autoSpeak: parsedSettings.autoSpeak ?? true,
+      volume: parsedSettings.volume ?? [80],
+      micSensitivity: parsedSettings.micSensitivity ?? [70],
+      
+      // AI Settings
+      model: parsedSettings.model || "llama3",
+      
+      // Appearance Settings
+      theme: (parsedSettings.theme || 'system') as Theme,
+      accentColor: parsedSettings.accentColor || "blue",
+      uiDensity: parsedSettings.uiDensity || "normal",
+      fontFamily: parsedSettings.fontFamily || "sans",
+      fontSize: parsedSettings.fontSize || 16,
+      lineHeight: parsedSettings.lineHeight || 1.5,
+      roundedCorners: parsedSettings.roundedCorners ?? true,
+      borderRadius: parsedSettings.borderRadius ?? 0.5,
+      animations: parsedSettings.animations ?? true,
+      reduceMotion: parsedSettings.reduceMotion ?? false,
+    };
+  });
 
   // Fetch available models from Ollama
   useEffect(() => {
@@ -128,8 +137,8 @@ const SettingsPage = () => {
         setModels(data.models || []);
         
         // Set the first model as default if none is selected
-        if (data.models?.length > 0 && !settings.model) {
-          setSettings(prev => ({
+        if (data.models?.length > 0 && !localSettings.model) {
+          setLocalSettings(prev => ({
             ...prev,
             model: data.models[0].name
           }));
@@ -144,17 +153,21 @@ const SettingsPage = () => {
       } finally {
         setIsLoading(false);
       }
+    };
 
     fetchModels();
-  }, [toast]);
+  }, [toast, localSettings.model]);
 
   const saveSettings = () => {
-    // Update settings in context
-    updateSettings(localSettings);
-    
-    // Update theme in context if it's different
+    // Update theme if it was changed
     if (localSettings.theme && localSettings.theme !== theme) {
       setTheme(localSettings.theme);
+    }
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      const { theme: _, ...settingsToSave } = localSettings;
+      localStorage.setItem('app-settings', JSON.stringify(settingsToSave));
     }
     
     toast({
@@ -163,16 +176,26 @@ const SettingsPage = () => {
     });
   };
   
-  // Update local settings when context settings change
+  // Save settings to localStorage when they change
   useEffect(() => {
-    setLocalSettings(prev => ({
-      ...prev,
-      ...settings,
-      // Keep the local state for volume and sensitivity if they exist
-      volume: prev.volume || [80],
-      micSensitivity: prev.micSensitivity || [70]
-    }));
-  }, [settings]);
+    if (typeof window !== 'undefined') {
+      const { theme: _, ...settingsToSave } = localSettings;
+      localStorage.setItem('app-settings', JSON.stringify(settingsToSave));
+      
+      // Apply theme to document
+      document.documentElement.setAttribute('data-theme', localSettings.theme);
+    }
+  }, [localSettings]);
+
+  // Update theme in local settings when theme changes
+  useEffect(() => {
+    if (theme !== localSettings.theme) {
+      setLocalSettings(prev => ({
+        ...prev,
+        theme: theme
+      }));
+    }
+  }, [theme]);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -199,8 +222,8 @@ const SettingsPage = () => {
             </div>
             <Switch
               id="voice-enabled"
-              checked={settings.voiceEnabled}
-              onCheckedChange={(checked) => setSettings({ ...settings, voiceEnabled: checked })}
+              checked={localSettings.voiceEnabled}
+              onCheckedChange={(checked) => setLocalSettings(prev => ({ ...prev, voiceEnabled: checked }))}
             />
           </div>
 
@@ -211,17 +234,17 @@ const SettingsPage = () => {
             </div>
             <Switch
               id="auto-speak"
-              checked={settings.autoSpeak}
-              onCheckedChange={(checked) => setSettings({ ...settings, autoSpeak: checked })}
+              checked={localSettings.autoSpeak}
+              onCheckedChange={(checked) => setLocalSettings(prev => ({ ...prev, autoSpeak: checked }))}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="volume">Output Volume: {settings.volume[0]}%</Label>
+            <Label htmlFor="volume">Output Volume: {localSettings.volume[0]}%</Label>
             <Slider
               id="volume"
-              value={settings.volume}
-              onValueChange={(value) => setSettings({ ...settings, volume: value })}
+              value={localSettings.volume}
+              onValueChange={(value) => setLocalSettings(prev => ({ ...prev, volume: value }))}
               max={100}
               step={1}
               className="w-full"
@@ -229,11 +252,11 @@ const SettingsPage = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mic-sensitivity">Microphone Sensitivity: {settings.micSensitivity[0]}%</Label>
+            <Label htmlFor="mic-sensitivity">Microphone Sensitivity: {localSettings.micSensitivity[0]}%</Label>
             <Slider
               id="mic-sensitivity"
-              value={settings.micSensitivity}
-              onValueChange={(value) => setSettings({ ...settings, micSensitivity: value })}
+              value={localSettings.micSensitivity}
+              onValueChange={(value) => setLocalSettings(prev => ({ ...prev, micSensitivity: value }))}
               max={100}
               step={1}
               className="w-full"
@@ -261,8 +284,8 @@ const SettingsPage = () => {
               )}
             </div>
             <Select
-              value={settings.model}
-              onValueChange={(value) => setSettings({ ...settings, model: value })}
+              value={localSettings.model}
+              onValueChange={(value) => setLocalSettings(prev => ({ ...prev, model: value }))}
               disabled={isLoading}
             >
               <SelectTrigger id="model" className="bg-secondary border-border">
@@ -334,9 +357,9 @@ const SettingsPage = () => {
                 <button
                   key={theme.value}
                   onClick={() => {
-                    const newSettings = { ...localSettings, theme: theme.value };
+                    const newSettings = { ...localSettings, theme: theme.value as Theme };
                     setLocalSettings(newSettings);
-                    setTheme(theme.value);
+                    setTheme(theme.value as Theme);
                   }}
                   className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
                     localSettings.theme === theme.value 
@@ -367,9 +390,9 @@ const SettingsPage = () => {
               ].map((color) => (
                 <button
                   key={color.value}
-                  onClick={() => setSettings({ ...settings, accentColor: color.value })}
+                  onClick={() => setLocalSettings(prev => ({ ...prev, accentColor: color.value }))}
                   className={`w-10 h-10 rounded-full ${color.color} border-2 ${
-                    settings.accentColor === color.value 
+                    localSettings.accentColor === color.value 
                       ? 'ring-2 ring-offset-2 ring-primary' 
                       : 'border-transparent hover:ring-2 hover:ring-offset-2 hover:ring-primary/50'
                   }`}
@@ -390,9 +413,9 @@ const SettingsPage = () => {
               ].map((density) => (
                 <Button
                   key={density.value}
-                  variant={settings.uiDensity === density.value ? 'default' : 'outline'}
+                  variant={localSettings.uiDensity === density.value ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setSettings({ ...settings, uiDensity: density.value })}
+                  onClick={() => setLocalSettings(prev => ({ ...prev, uiDensity: density.value }))}
                 >
                   {density.label}
                 </Button>
@@ -405,8 +428,8 @@ const SettingsPage = () => {
             <div className="space-y-2">
               <Label>Font Family</Label>
               <Select
-                value={settings.fontFamily}
-                onValueChange={(value) => setSettings({ ...settings, fontFamily: value })}
+                value={localSettings.fontFamily}
+                onValueChange={(value) => setLocalSettings(prev => ({ ...prev, fontFamily: value }))}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select font" />
@@ -423,25 +446,25 @@ const SettingsPage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="font-size">Font Size: {settings.fontSize}px</Label>
+                <Label htmlFor="font-size">Font Size: {localSettings.fontSize}px</Label>
                 <Slider
                   id="font-size"
                   min={12}
                   max={24}
                   step={1}
-                  value={[settings.fontSize]}
-                  onValueChange={(value) => setSettings({ ...settings, fontSize: value[0] })}
+                  value={[localSettings.fontSize]}
+                  onValueChange={(value) => setLocalSettings(prev => ({ ...prev, fontSize: value[0] }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="line-height">Line Height: {settings.lineHeight}</Label>
+                <Label htmlFor="line-height">Line Height: {localSettings.lineHeight}</Label>
                 <Slider
                   id="line-height"
                   min={1}
                   max={3}
                   step={0.1}
-                  value={[settings.lineHeight]}
-                  onValueChange={(value) => setSettings({ ...settings, lineHeight: value[0] })}
+                  value={[localSettings.lineHeight]}
+                  onValueChange={(value) => setLocalSettings(prev => ({ ...prev, lineHeight: value[0] }))}
                 />
               </div>
             </div>
@@ -455,20 +478,20 @@ const SettingsPage = () => {
                 <p className="text-sm text-muted-foreground">Enable rounded corners for UI elements</p>
               </div>
               <Switch
-                checked={settings.roundedCorners}
-                onCheckedChange={(checked) => setSettings({ ...settings, roundedCorners: checked })}
+                checked={localSettings.roundedCorners}
+                onCheckedChange={(checked) => setLocalSettings(prev => ({ ...prev, roundedCorners: checked }))}
               />
             </div>
 
-            {settings.roundedCorners && (
+            {localSettings.roundedCorners && (
               <div className="pl-8 space-y-2">
-                <Label>Border Radius: {settings.borderRadius}rem</Label>
+                <Label>Border Radius: {localSettings.borderRadius}rem</Label>
                 <Slider
                   min={0}
                   max={2}
                   step={0.1}
-                  value={[settings.borderRadius]}
-                  onValueChange={(value) => setSettings({ ...settings, borderRadius: value[0] })}
+                  value={[localSettings.borderRadius]}
+                  onValueChange={(value) => setLocalSettings(prev => ({ ...prev, borderRadius: value[0] }))}
                 />
               </div>
             )}
@@ -479,8 +502,8 @@ const SettingsPage = () => {
                 <p className="text-sm text-muted-foreground">Enable UI animations and transitions</p>
               </div>
               <Switch
-                checked={settings.animations}
-                onCheckedChange={(checked) => setSettings({ ...settings, animations: checked })}
+                checked={localSettings.animations}
+                onCheckedChange={(checked) => setLocalSettings(prev => ({ ...prev, animations: checked }))}
               />
             </div>
 
@@ -490,8 +513,8 @@ const SettingsPage = () => {
                 <p className="text-sm text-muted-foreground">Reduce or remove animations</p>
               </div>
               <Switch
-                checked={settings.reduceMotion}
-                onCheckedChange={(checked) => setSettings({ ...settings, reduceMotion: checked })}
+                checked={localSettings.reduceMotion}
+                onCheckedChange={(checked) => setLocalSettings(prev => ({ ...prev, reduceMotion: checked }))}
               />
             </div>
           </div>
