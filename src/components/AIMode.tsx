@@ -8,6 +8,39 @@ import { Mic, MicOff, Send, Volume2, VolumeX, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSafeSettings } from "@/hooks/useSafeSettings";
 
+// Type definitions for Web Speech API
+declare global {
+  interface Window {
+    webkitSpeechRecognition: new () => ISpeechRecognition;
+    SpeechRecognition: new () => ISpeechRecognition;
+  }
+}
+
+interface ISpeechRecognitionEvent extends Event {
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+}
+
+interface ISpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface ISpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: ISpeechRecognitionEvent) => void) | null;
+  onerror: ((event: ISpeechRecognitionErrorEvent | Event) => void) | null;
+  onend: (() => void) | null;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -23,7 +56,7 @@ const AIMode = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Set isMounted to true on mount (client-side only)
@@ -48,18 +81,29 @@ const AIMode = () => {
   // Initialize speech recognition
   useEffect(() => {
     if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      const SpeechRecognition = (window as Window & {
+        webkitSpeechRecognition?: new () => ISpeechRecognition;
+        SpeechRecognition?: new () => ISpeechRecognition;
+      }).webkitSpeechRecognition || (window as Window & {
+        SpeechRecognition?: new () => ISpeechRecognition;
+      }).SpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        console.error('Speech recognition not available');
+        return;
+      }
+      
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
 
-      recognitionRef.current.onresult = (event: any) => {
+      recognitionRef.current.onresult = (event: ISpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
         setIsListening(false);
       };
 
-      recognitionRef.current.onerror = () => {
+      recognitionRef.current.onerror = (event: Event | ISpeechRecognitionErrorEvent) => {
         setIsListening(false);
         toast({
           title: "Voice input error",
@@ -273,7 +317,6 @@ const AIMode = () => {
               </span>
             )}
           </div>
-          <span>Powered by Lovable AI</span>
         </div>
       </Card>
     </div>

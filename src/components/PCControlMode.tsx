@@ -6,9 +6,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Terminal, FolderOpen, FileCode, Play, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+interface CommandParameters {
+  [key: string]: string | number | boolean | string[] | undefined;
+}
+
 interface CommandResult {
   action: string;
-  parameters: any;
+  parameters: CommandParameters;
   message: string;
   executable: boolean;
   code?: string;
@@ -18,8 +22,8 @@ interface CommandResult {
 const PCControlMode = () => {
   const [command, setCommand] = useState("");
   const [output, setOutput] = useState<string[]>([
-    "JARIS PC Control - AI-Powered System Ready",
-    "Type commands to control your system with AI assistance",
+    "JARIS PC Control - Ready",
+    "Type commands to control your system",
     "Examples:",
     "  • 'create folder MyProject'",
     "  • 'create file app.py with a Flask hello world'",

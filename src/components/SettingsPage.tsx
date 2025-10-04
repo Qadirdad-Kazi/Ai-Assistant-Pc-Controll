@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -73,10 +73,10 @@ const SettingsPage = () => {
     fetchModels();
   }, [toast, localSettings.model]);
 
-  const saveSettings = () => {
+  const saveSettings = useCallback(() => {
     // Update theme if it was changed
     if (localSettings.theme && localSettings.theme !== theme) {
-      setTheme(localSettings.theme);
+      setTheme(localSettings.theme as Theme);
     }
     
     // Save to localStorage
@@ -89,17 +89,17 @@ const SettingsPage = () => {
       title: "Settings saved",
       description: "Your settings have been saved successfully.",
     });
-  };
+  }, [localSettings, theme, setTheme, toast]);
   
   // Update theme in settings when theme changes
   useEffect(() => {
     if (theme !== localSettings.theme) {
-      setLocalSettings({
-        ...localSettings,
-        theme: theme
-      });
+      setLocalSettings(prevSettings => ({
+        ...prevSettings,
+        theme: theme as Theme
+      }));
     }
-  }, [theme]);
+  }, [theme, localSettings.theme, setLocalSettings]);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -434,8 +434,7 @@ const SettingsPage = () => {
       {/* Info */}
       <Card className="p-4 bg-secondary/50 border-border">
         <p className="text-sm text-muted-foreground">
-          Settings are saved locally. The AI is powered by Lovable Cloud for seamless integration 
-          without external setup.
+          Settings are saved locally for your convenience.
         </p>
       </Card>
     </div>
