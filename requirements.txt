@@ -1,0 +1,18 @@
+# JARIS AI Assistant Requirements
+# Core dependencies
+requests>=2.31.0
+speechrecognition>=3.10.0
+pyttsx3>=2.90
+pyaudio>=0.2.11
+
+# GUI dependencies (tkinter is included with Python)
+# No additional GUI dependencies needed as we use tkinter
+
+# Optional: For better voice recognition
+# pocketsphinx>=0.1.15  # For offline speech recognition
+# vosk>=0.3.45  # Alternative speech recognition engine
+
+# Development dependencies (optional)
+# pytest>=7.4.0
+# black>=23.0.0
+# flake8>=6.0.0
