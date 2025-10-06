@@ -1,7 +1,7 @@
 #!/bin/bash
-# JARIS Launcher Script
+# JARIS Web GUI Launcher Script
 
-echo "🚀 Starting JARIS..."
+echo "🚀 Starting JARIS Web GUI..."
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
@@ -10,6 +10,6 @@ if [ ! -d "venv" ]; then
     exit 1
 fi
 
-# Activate virtual environment and run JARIS
+# Activate virtual environment and run JARIS Web GUI
 source venv/bin/activate
-python jaris_ai_assistant.py
+python3 jaris_web_gui.py
