@@ -40,10 +40,18 @@ class JarvisWeb:
         
         # Initialize voice components
         self.recognizer = sr.Recognizer()
-        self.microphone = sr.Microphone()
+        self.microphone = None
         self.tts_engine = None
         self.listening_thread = None
         self.stop_listening = False
+        
+        # Try to initialize microphone (optional)
+        try:
+            self.microphone = sr.Microphone()
+            print("Microphone initialized successfully")
+        except Exception as e:
+            print(f"Microphone not available: {e}")
+            print("Voice features will be disabled")
         
         try:
             self.tts_engine = pyttsx3.init()
@@ -71,6 +79,9 @@ class JarvisWeb:
         """Listen for voice input"""
         if not self.settings['voice_enabled']:
             return "Voice input is disabled"
+        
+        if not self.microphone:
+            return "Microphone not available"
             
         try:
             with self.microphone as source:
@@ -90,6 +101,9 @@ class JarvisWeb:
     
     def start_continuous_listening(self):
         """Start continuous listening mode"""
+        if not self.microphone:
+            return "Microphone not available"
+        
         if self.settings['continuous_listening']:
             return "Already listening continuously"
         
@@ -113,6 +127,9 @@ class JarvisWeb:
     
     def _continuous_listen_loop(self):
         """Continuous listening loop"""
+        if not self.microphone:
+            return
+            
         while not self.stop_listening and self.settings['continuous_listening']:
             try:
                 with self.microphone as source:
@@ -1536,12 +1553,12 @@ def create_templates():
 </body>
 </html>'''
     
-    with open('templates/index.html', 'w') as f:
+    with open('templates/index.html', 'w', encoding='utf-8') as f:
         f.write(html_content)
 
 def main():
     """Main entry point"""
-    print("🚀 Starting JARIS Web GUI...")
+    print("Starting JARIS Web GUI...")
     print("Make sure Ollama is running on localhost:11434")
     
     # Create templates
@@ -1549,10 +1566,10 @@ def main():
     
     # Start the web server
     port = 8080
-    print("\n🌐 JARIS Web GUI will be available at:")
+    print("\nJARIS Web GUI will be available at:")
     print(f"   http://localhost:{port}")
-    print("\n📱 Open your browser and navigate to the URL above")
-    print("🛑 Press Ctrl+C to stop the server")
+    print("\nOpen your browser and navigate to the URL above")
+    print("Press Ctrl+C to stop the server")
     
     # Open browser automatically
     def open_browser():
@@ -1564,9 +1581,9 @@ def main():
     try:
         app.run(host='0.0.0.0', port=port, debug=False)
     except KeyboardInterrupt:
-        print("\n👋 JARIS Web GUI stopped")
+        print("\nJARIS Web GUI stopped")
     except Exception as e:
-        print(f"❌ Error starting JARIS Web GUI: {e}")
+        print(f"Error starting JARIS Web GUI: {e}")
 
 if __name__ == "__main__":
     main()
