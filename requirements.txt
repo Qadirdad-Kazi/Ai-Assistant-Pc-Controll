@@ -1,14 +1,19 @@
-# AiNest AI Assistant Requirements
+# JARIS AI Desktop Assistant Requirements
 # Core dependencies
 requests>=2.31.0
 flask>=2.3.0
 flask-cors>=4.0.0
 psutil>=5.9.0
+eel>=0.16.0
 
-# Voice dependencies (optional - for GUI version)
+# Voice dependencies
 speechrecognition>=3.10.0
 pyttsx3>=2.90
 pyaudio>=0.2.11
+
+# PC Control dependencies
+pyautogui>=0.9.54
+pyperclip>=1.8.2
 
 # Optional: For better voice recognition
 # pocketsphinx>=0.1.15  # For offline speech recognition

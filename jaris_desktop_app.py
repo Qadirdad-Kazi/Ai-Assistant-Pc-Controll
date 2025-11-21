@@ -14,7 +14,9 @@ import requests
 import speech_recognition as sr
 import pyttsx3
 import psutil
+import pyautogui
 from datetime import datetime
+from jaris_pc_control import JARISPCControl
 
 # Initialize Eel
 eel.init('desktop_app')
@@ -54,6 +56,9 @@ class AiNestDesktop:
             print("🔊 TTS engine initialized successfully")
         except Exception as e:
             print(f"⚠️ TTS initialization failed: {e}")
+        
+        # Initialize PC Control
+        self.pc_control = JARISPCControl()
         
         # Detect available Ollama models
         self.detect_available_models()
@@ -105,6 +110,11 @@ def send_message(message):
     try:
         if not message.strip():
             return {"error": "Empty message"}
+        
+        # Check if this is a PC control command
+        pc_control_result = check_pc_control_command(message)
+        if pc_control_result:
+            return pc_control_result
         
         # Add to conversation history
         jarvis.conversation_history.append({"role": "user", "content": message})
@@ -267,6 +277,134 @@ def get_system_status():
         }
     except Exception as e:
         return {"error": f"Failed to get status: {e}"}
+
+def check_pc_control_command(message):
+    """Check if message is a PC control command and execute it"""
+    try:
+        # Define PC control keywords
+        pc_control_keywords = [
+            'system info', 'computer info', 'hardware info',
+            'create folder', 'make directory', 'new folder',
+            'list files', 'show files', 'directory contents',
+            'delete file', 'remove file',
+            'open application', 'launch app', 'start program', 'open',
+            'close application', 'quit app', 'kill process', 'close',
+            'take screenshot', 'capture screen', 'screenshot',
+            'minimize window', 'maximize window',
+            'copy text', 'paste text', 'clipboard',
+            'volume up', 'volume down', 'mute',
+            'running processes', 'memory usage', 'cpu usage',
+            'open website', 'browse to', 'visit site',
+            'search google', 'google search'
+        ]
+        
+        message_lower = message.lower()
+        
+        # Check if any PC control keywords are in the message
+        is_pc_command = any(keyword in message_lower for keyword in pc_control_keywords)
+        
+        if is_pc_command:
+            # Execute PC control command
+            result = jarvis.pc_control.execute_command(message)
+            
+            if result.get("success"):
+                # Format success response for chat
+                response_text = result.get("message", "Command executed successfully")
+                
+                # Add detailed information if available
+                if "system" in result:
+                    sys_info = result["system"]
+                    response_text += f"\n\nSystem Information:\n"
+                    response_text += f"• OS: {sys_info.get('os')} {sys_info.get('version')}\n"
+                    response_text += f"• CPU: {sys_info.get('processor')}\n"
+                    response_text += f"• Cores: {sys_info.get('cpu_cores')} physical, {sys_info.get('logical_cores')} logical\n"
+                    response_text += f"• CPU Usage: {sys_info.get('cpu_usage')}\n"
+                    
+                    if "memory" in result:
+                        mem_info = result["memory"]
+                        response_text += f"• Memory: {mem_info.get('used')} / {mem_info.get('total')} ({mem_info.get('percentage')})\n"
+                    
+                    if "disk" in result:
+                        disk_info = result["disk"]
+                        response_text += f"• Disk: {disk_info.get('used')} / {disk_info.get('total')} ({disk_info.get('percentage')})"
+                
+                elif "files" in result:
+                    response_text += f"\n\nDirectory: {result.get('path')}\n"
+                    response_text += f"Folders: {len(result.get('folders', []))}, Files: {len(result.get('files', []))}\n\n"
+                    
+                    folders = result.get("folders", [])[:5]  # Show first 5 folders
+                    files = result.get("files", [])[:5]      # Show first 5 files
+                    
+                    if folders:
+                        response_text += "📁 Folders:\n"
+                        for folder in folders:
+                            response_text += f"  • {folder['name']}\n"
+                    
+                    if files:
+                        response_text += "📄 Files:\n"
+                        for file in files:
+                            size_kb = file['size'] // 1024 if file['size'] > 1024 else file['size']
+                            unit = "KB" if file['size'] > 1024 else "B"
+                            response_text += f"  • {file['name']} ({size_kb} {unit})\n"
+                
+                elif "processes" in result:
+                    processes = result["processes"][:5]  # Show top 5 processes
+                    response_text += "\n\nTop Processes by CPU Usage:\n"
+                    for proc in processes:
+                        response_text += f"• {proc['name']} (PID: {proc['pid']}) - CPU: {proc['cpu_percent']:.1f}%\n"
+                
+                elif "memory" in result:
+                    mem_info = result["memory"]
+                    response_text += f"\n\nMemory Usage:\n"
+                    response_text += f"• Total: {mem_info.get('total')}\n"
+                    response_text += f"• Used: {mem_info.get('used')} ({mem_info.get('percentage')})\n"
+                    response_text += f"• Available: {mem_info.get('available')}"
+                
+                elif "cpu" in result:
+                    cpu_info = result["cpu"]
+                    response_text += f"\n\nCPU Usage:\n"
+                    response_text += f"• Average: {cpu_info.get('average')}\n"
+                    response_text += f"• Cores: {cpu_info.get('cores')}"
+                
+                return {
+                    "success": True,
+                    "response": response_text,
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    "pc_control": True
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("error", "PC control command failed"),
+                    "pc_control": True
+                }
+        
+        return None  # Not a PC control command
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"PC control error: {str(e)}",
+            "pc_control": True
+        }
+
+@eel.expose
+def execute_pc_command(command):
+    """Execute a specific PC control command"""
+    try:
+        result = jarvis.pc_control.execute_command(command)
+        return result
+    except Exception as e:
+        return {"success": False, "error": f"Failed to execute PC command: {str(e)}"}
+
+@eel.expose
+def get_available_pc_commands():
+    """Get list of available PC control commands"""
+    try:
+        commands = jarvis.pc_control.get_available_commands()
+        return {"success": True, "commands": commands}
+    except Exception as e:
+        return {"success": False, "error": f"Failed to get PC commands: {str(e)}"}
 
 def main():
     """Main function to start the desktop app"""
