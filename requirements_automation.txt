@@ -1,4 +1,4 @@
-# JARIS Cursor AI Agent - Automation Dependencies
+# AiNest Cursor AI Agent - Automation Dependencies
 # Core dependencies
 requests>=2.31.0
 flask>=2.3.0

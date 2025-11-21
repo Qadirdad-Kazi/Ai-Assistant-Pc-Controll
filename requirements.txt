@@ -1,4 +1,4 @@
-# JARIS AI Assistant Requirements
+# AiNest AI Assistant Requirements
 # Core dependencies
 requests>=2.31.0
 flask>=2.3.0

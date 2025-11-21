@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-JARIS AI Agent - Enhanced Desktop Automation
-Integrates with JARIS for natural language programming automation
+AiNest AI Agent - Enhanced Desktop Automation
+Integrates with AiNest for natural language programming automation
 """
 
 import os
@@ -16,9 +16,9 @@ import pyperclip
 from pathlib import Path
 from typing import Dict, List, Any
 
-class JARISAIAgent:
+class AiNestAIAgent:
     def __init__(self):
-        """Initialize JARIS AI Agent"""
+        """Initialize AiNest AI Agent"""
         self.settings = {
             "ollama_url": "http://localhost:11434",
             "model": "llama3.2:latest",
@@ -31,7 +31,7 @@ class JARISAIAgent:
         pyautogui.FAILSAFE = True
         pyautogui.PAUSE = 0.1
         
-        print("🤖 JARIS AI Agent initialized")
+        print("🤖 AiNest AI Agent initialized")
         print(f"📁 VS Code path: {self.settings['vscode_path']}")
     
     def _find_vscode_path(self) -> str:
@@ -44,7 +44,7 @@ class JARISAIAgent:
             return "code"
     
     def interpret_with_ai(self, command: str) -> Dict[str, Any]:
-        """Use JARIS AI to interpret commands"""
+        """Use AiNest AI to interpret commands"""
         try:
             system_prompt = """You are a desktop automation assistant. Interpret natural language programming commands and return JSON with:
             {
@@ -497,10 +497,10 @@ export default LoginForm;""",
 
 def main():
     """Main function"""
-    print("🤖 JARIS AI Agent - Desktop Automation")
+    print("🤖 AiNest AI Agent - Desktop Automation")
     print("=" * 60)
     
-    agent = JARISAIAgent()
+    agent = AiNestAIAgent()
     
     # Interactive mode
     while True:

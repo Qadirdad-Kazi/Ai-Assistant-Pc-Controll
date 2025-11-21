@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AiNest - AI Desktop Assistant</title>
+    <script type="text/javascript" src="/eel.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            width: 95%;
+            height: 95vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+        }
+
+        .status-dot.error {
+            background: #dc3545;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.assistant .message-avatar {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .message-content {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            max-width: 70%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message-timestamp {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-text {
+            flex: 1;
+            min-height: 50px;
+            max-height: 120px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-text:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-voice {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+            color: white;
+        }
+
+        .btn-voice:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-voice.listening {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .loading {
+            display: none;
+            color: #6c757d;
+            font-style: italic;
+            padding: 10px 0;
+        }
+
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        /* Settings Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #333;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #e9ecef;
+            padding-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AiNest AI Assistant</h1>
+            <p>Your intelligent desktop companion</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">Ready</span>
+            </div>
+            <div>
+                <span id="conversation-count">0 messages</span>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <div class="message assistant">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        <div>Hello! I'm AiNest, your AI assistant. How can I help you today?</div>
+                        <div class="message-timestamp" id="welcome-time"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                🤖 AiNest is thinking...
+            </div>
+
+            <div class="input-container">
+                <div class="input-row">
+                    <textarea 
+                        class="input-text" 
+                        id="message-input" 
+                        placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+                        rows="1"
+                    ></textarea>
+                    <button class="btn btn-primary" id="send-btn" onclick="sendMessage()">
+                        📤 Send
+                    </button>
+                </div>
+
+                <div class="controls">
+                    <button class="btn btn-voice" id="voice-btn" onclick="startVoiceInput()">
+                        🎤 Voice
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearChat()">
+                        🗑️ Clear
+                    </button>
+                    <button class="btn btn-secondary" onclick="openSettings()">
+                        ⚙️ Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Settings</h2>
+            </div>
+            
+            <form id="settings-form">
+                <div class="form-group">
+                    <label for="ollama-url">Ollama URL:</label>
+                    <input type="text" id="ollama-url" value="http://localhost:11434">
+                </div>
+                
+                <div class="form-group">
+                    <label for="model">AI Model:</label>
+                    <div style="display: flex; gap: 10px; align-items: flex-end;">
+                        <select id="model" style="flex: 1;">
+                            <option value="llama3.2:latest">llama3.2:latest (Default)</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" onclick="refreshModels()">🔄</button>
+                    </div>
+                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                        Auto-detected from available Ollama models
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="voice-enabled">
+                        <label for="voice-enabled">Enable Voice Input</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="auto-speak">
+                        <label for="auto-speak">Auto-speak AI responses</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="volume">TTS Volume:</label>
+                    <input type="range" id="volume" min="0" max="1" step="0.1" value="0.8">
+                </div>
+            </form>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveSettings()">💾 Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSettings = {};
+        let isProcessing = false;
+
+        // Initialize the app
+        window.onload = function() {
+            document.getElementById('welcome-time').textContent = new Date().toLocaleTimeString();
+            loadSettings();
+            updateStatus();
+            setupEventListeners();
+        };
+
+        function setupEventListeners() {
+            // Enter key handling
+            document.getElementById('message-input').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                } else if (e.key === 'Enter' && e.shiftKey) {
+                    // Allow default behavior for Shift+Enter (new line)
+                }
+            });
+
+            // Auto-resize textarea
+            document.getElementById('message-input').addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+        }
+
+        async function loadSettings() {
+            try {
+                currentSettings = await eel.get_settings()();
+                
+                document.getElementById('ollama-url').value = currentSettings.ollama_url;
+                document.getElementById('voice-enabled').checked = currentSettings.voice_enabled;
+                document.getElementById('auto-speak').checked = currentSettings.auto_speak;
+                document.getElementById('volume').value = currentSettings.volume;
+                
+                // Load available models
+                await loadAvailableModels();
+                
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+        }
+
+        async function loadAvailableModels() {
+            try {
+                const modelData = await eel.get_available_models()();
+                const modelSelect = document.getElementById('model');
+                
+                // Clear existing options
+                modelSelect.innerHTML = '';
+                
+                if (modelData.models && modelData.models.length > 0) {
+                    modelData.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        if (model === modelData.current_model) {
+                            option.selected = true;
+                        }
+                        modelSelect.appendChild(option);
+                    });
+                } else {
+                    // No models available
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No models available - Install with: ollama pull llama3.2';
+                    option.disabled = true;
+                    modelSelect.appendChild(option);
+                }
+            } catch (error) {
+                console.error('Failed to load models:', error);
+            }
+        }
+
+        async function updateStatus() {
+            try {
+                const status = await eel.get_system_status()();
+                const statusDot = document.getElementById('status-dot');
+                const statusText = document.getElementById('status-text');
+                const conversationCount = document.getElementById('conversation-count');
+
+                if (status.ollama_status === 'Running') {
+                    statusDot.className = 'status-dot';
+                    statusText.textContent = `Ready - ${status.current_model || 'No model'}`;
+                } else {
+                    statusDot.className = 'status-dot error';
+                    statusText.textContent = 'Ollama not running';
+                }
+
+                conversationCount.textContent = `${status.conversation_length} messages`;
+            } catch (error) {
+                console.error('Failed to get status:', error);
+            }
+        }
+
+        async function sendMessage() {
+            if (isProcessing) return;
+
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            isProcessing = true;
+            input.value = '';
+            input.style.height = 'auto';
+
+            // Add user message to chat
+            addMessage('user', message, '👤');
+
+            // Show loading indicator
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('send-btn').disabled = true;
+
+            try {
+                const response = await eel.send_message(message)();
+                
+                if (response.success) {
+                    addMessage('assistant', response.response, '🤖');
+                } else {
+                    addErrorMessage(response.error);
+                }
+            } catch (error) {
+                addErrorMessage('Failed to send message: ' + error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('send-btn').disabled = false;
+                isProcessing = false;
+                updateStatus();
+            }
+        }
+
+        async function startVoiceInput() {
+            const voiceBtn = document.getElementById('voice-btn');
+            
+            if (!currentSettings.voice_enabled) {
+                addErrorMessage('Voice input is disabled. Enable it in settings.');
+                return;
+            }
+
+            voiceBtn.classList.add('listening');
+            voiceBtn.innerHTML = '🔴 Listening...';
+            voiceBtn.disabled = true;
+
+            try {
+                const result = await eel.start_voice_input()();
+                
+                if (result.success) {
+                    document.getElementById('message-input').value = result.text;
+                    addMessage('system', `Voice input: "${result.text}"`, '🎤');
+                } else {
+                    addErrorMessage('Voice input error: ' + result.error);
+                }
+            } catch (error) {
+                addErrorMessage('Voice input failed: ' + error);
+            } finally {
+                voiceBtn.classList.remove('listening');
+                voiceBtn.innerHTML = '🎤 Voice';
+                voiceBtn.disabled = false;
+            }
+        }
+
+        function addMessage(type, content, avatar) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <div>${content}</div>
+                    <div class="message-timestamp">${timestamp}</div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addErrorMessage(error) {
+            const chatMessages = document.getElementById('chat-messages');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = error;
+            chatMessages.appendChild(errorDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function clearChat() {
+            if (confirm('Are you sure you want to clear the chat history?')) {
+                try {
+                    await eel.clear_conversation()();
+                    document.getElementById('chat-messages').innerHTML = `
+                        <div class="message assistant">
+                            <div class="message-avatar">🤖</div>
+                            <div class="message-content">
+                                <div>Chat cleared. How can I help you?</div>
+                                <div class="message-timestamp">${new Date().toLocaleTimeString()}</div>
+                            </div>
+                        </div>
+                    `;
+                    updateStatus();
+                } catch (error) {
+                    addErrorMessage('Failed to clear chat: ' + error);
+                }
+            }
+        }
+
+        function openSettings() {
+            document.getElementById('settings-modal').style.display = 'block';
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        async function refreshModels() {
+            try {
+                addMessage('system', 'Refreshing available models...', '🔄');
+                await loadAvailableModels();
+                addMessage('system', 'Models refreshed successfully!', '✅');
+            } catch (error) {
+                addErrorMessage('Failed to refresh models: ' + error);
+            }
+        }
+
+        async function saveSettings() {
+            const settings = {
+                ollama_url: document.getElementById('ollama-url').value,
+                model: document.getElementById('model').value,
+                voice_enabled: document.getElementById('voice-enabled').checked,
+                auto_speak: document.getElementById('auto-speak').checked,
+                volume: parseFloat(document.getElementById('volume').value)
+            };
+
+            try {
+                const result = await eel.save_settings(settings)();
+                if (result.success) {
+                    currentSettings = { ...currentSettings, ...settings };
+                    closeSettings();
+                    addMessage('system', 'Settings saved successfully!', '⚙️');
+                    updateStatus(); // Refresh status to show new model
+                } else {
+                    alert('Failed to save settings: ' + result.error);
+                }
+            } catch (error) {
+                alert('Failed to save settings: ' + error);
+            }
+        }
+
+        // Update status periodically
+        setInterval(updateStatus, 10000);
+    </script>
+</body>
+</html>
