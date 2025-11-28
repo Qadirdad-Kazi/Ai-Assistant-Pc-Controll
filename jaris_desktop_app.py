@@ -293,6 +293,9 @@ def check_pc_control_command(message):
             'minimize window', 'maximize window',
             'copy text', 'paste text', 'clipboard',
             'volume up', 'volume down', 'mute',
+            'play music', 'pause music', 'play/pause', 'media play',
+            'next track', 'next song', 'skip song',
+            'previous track', 'previous song', 'last song',
             'running processes', 'memory usage', 'cpu usage',
             'open website', 'browse to', 'visit site',
             'search google', 'google search'
@@ -306,78 +309,7 @@ def check_pc_control_command(message):
         if is_pc_command:
             # Execute PC control command
             result = jarvis.pc_control.execute_command(message)
-            
-            if result.get("success"):
-                # Format success response for chat
-                response_text = result.get("message", "Command executed successfully")
-                
-                # Add detailed information if available
-                if "system" in result:
-                    sys_info = result["system"]
-                    response_text += f"\n\nSystem Information:\n"
-                    response_text += f"• OS: {sys_info.get('os')} {sys_info.get('version')}\n"
-                    response_text += f"• CPU: {sys_info.get('processor')}\n"
-                    response_text += f"• Cores: {sys_info.get('cpu_cores')} physical, {sys_info.get('logical_cores')} logical\n"
-                    response_text += f"• CPU Usage: {sys_info.get('cpu_usage')}\n"
-                    
-                    if "memory" in result:
-                        mem_info = result["memory"]
-                        response_text += f"• Memory: {mem_info.get('used')} / {mem_info.get('total')} ({mem_info.get('percentage')})\n"
-                    
-                    if "disk" in result:
-                        disk_info = result["disk"]
-                        response_text += f"• Disk: {disk_info.get('used')} / {disk_info.get('total')} ({disk_info.get('percentage')})"
-                
-                elif "files" in result:
-                    response_text += f"\n\nDirectory: {result.get('path')}\n"
-                    response_text += f"Folders: {len(result.get('folders', []))}, Files: {len(result.get('files', []))}\n\n"
-                    
-                    folders = result.get("folders", [])[:5]  # Show first 5 folders
-                    files = result.get("files", [])[:5]      # Show first 5 files
-                    
-                    if folders:
-                        response_text += "📁 Folders:\n"
-                        for folder in folders:
-                            response_text += f"  • {folder['name']}\n"
-                    
-                    if files:
-                        response_text += "📄 Files:\n"
-                        for file in files:
-                            size_kb = file['size'] // 1024 if file['size'] > 1024 else file['size']
-                            unit = "KB" if file['size'] > 1024 else "B"
-                            response_text += f"  • {file['name']} ({size_kb} {unit})\n"
-                
-                elif "processes" in result:
-                    processes = result["processes"][:5]  # Show top 5 processes
-                    response_text += "\n\nTop Processes by CPU Usage:\n"
-                    for proc in processes:
-                        response_text += f"• {proc['name']} (PID: {proc['pid']}) - CPU: {proc['cpu_percent']:.1f}%\n"
-                
-                elif "memory" in result:
-                    mem_info = result["memory"]
-                    response_text += f"\n\nMemory Usage:\n"
-                    response_text += f"• Total: {mem_info.get('total')}\n"
-                    response_text += f"• Used: {mem_info.get('used')} ({mem_info.get('percentage')})\n"
-                    response_text += f"• Available: {mem_info.get('available')}"
-                
-                elif "cpu" in result:
-                    cpu_info = result["cpu"]
-                    response_text += f"\n\nCPU Usage:\n"
-                    response_text += f"• Average: {cpu_info.get('average')}\n"
-                    response_text += f"• Cores: {cpu_info.get('cores')}"
-                
-                return {
-                    "success": True,
-                    "response": response_text,
-                    "timestamp": datetime.now().strftime("%H:%M:%S"),
-                    "pc_control": True
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": result.get("error", "PC control command failed"),
-                    "pc_control": True
-                }
+            return format_pc_control_response(result, message)
         
         return None  # Not a PC control command
         
@@ -388,12 +320,120 @@ def check_pc_control_command(message):
             "pc_control": True
         }
 
+def format_pc_control_response(result, command=""):
+    """Format PC control result into a chat response"""
+    if result.get("success"):
+        # Format success response for chat
+        response_text = result.get("message", "Command executed successfully")
+        
+        # Add detailed information if available
+        if "system" in result:
+            sys_info = result["system"]
+            response_text += f"\n\nSystem Information:\n"
+            response_text += f"• OS: {sys_info.get('os')} {sys_info.get('version')}\n"
+            response_text += f"• CPU: {sys_info.get('processor')}\n"
+            response_text += f"• Cores: {sys_info.get('cpu_cores')} physical, {sys_info.get('logical_cores')} logical\n"
+            response_text += f"• CPU Usage: {sys_info.get('cpu_usage')}\n"
+            
+            if "memory" in result:
+                mem_info = result["memory"]
+                response_text += f"• Memory: {mem_info.get('used')} / {mem_info.get('total')} ({mem_info.get('percentage')})\n"
+            
+            if "disk" in result:
+                disk_info = result["disk"]
+                response_text += f"• Disk: {disk_info.get('used')} / {disk_info.get('total')} ({disk_info.get('percentage')})"
+        
+        elif "files" in result:
+            response_text += f"\n\nDirectory: {result.get('path')}\n"
+            response_text += f"Folders: {len(result.get('folders', []))}, Files: {len(result.get('files', []))}\n\n"
+            
+            folders = result.get("folders", [])[:5]  # Show first 5 folders
+            files = result.get("files", [])[:5]      # Show first 5 files
+            
+            if folders:
+                response_text += "📁 Folders:\n"
+                for folder in folders:
+                    response_text += f"  • {folder['name']}\n"
+            
+            if files:
+                response_text += "📄 Files:\n"
+                for file in files:
+                    size_kb = file['size'] // 1024 if file['size'] > 1024 else file['size']
+                    unit = "KB" if file['size'] > 1024 else "B"
+                    response_text += f"  • {file['name']} ({size_kb} {unit})\n"
+        
+        elif "processes" in result:
+            processes = result["processes"][:5]  # Show top 5 processes
+            response_text += "\n\nTop Processes by CPU Usage:\n"
+            for proc in processes:
+                response_text += f"• {proc['name']} (PID: {proc['pid']}) - CPU: {proc['cpu_percent']:.1f}%\n"
+        
+        elif "memory" in result:
+            mem_info = result["memory"]
+            response_text += f"\n\nMemory Usage:\n"
+            response_text += f"• Total: {mem_info.get('total')}\n"
+            response_text += f"• Used: {mem_info.get('used')} ({mem_info.get('percentage')})\n"
+            response_text += f"• Available: {mem_info.get('available')}"
+        
+        elif "cpu" in result:
+            cpu_info = result["cpu"]
+            response_text += f"\n\nCPU Usage:\n"
+            response_text += f"• Average: {cpu_info.get('average')}\n"
+            response_text += f"• Cores: {cpu_info.get('cores')}"
+        
+        # Handle screenshot specifically
+        if "screenshot" in command.lower() and "path" in result:
+            try:
+                # Copy screenshot to web assets
+                import shutil
+                original_path = result["path"]
+                filename = os.path.basename(original_path)
+                web_assets_dir = os.path.join(os.path.dirname(__file__), 'desktop_app', 'assets', 'screenshots')
+                
+                if not os.path.exists(web_assets_dir):
+                    os.makedirs(web_assets_dir)
+                    
+                target_path = os.path.join(web_assets_dir, filename)
+                shutil.copy2(original_path, target_path)
+                
+                # Add image URL to response
+                return {
+                    "success": True,
+                    "response": response_text,
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    "pc_control": True,
+                    "image_url": f"assets/screenshots/{filename}"
+                }
+            except Exception as e:
+                print(f"Failed to copy screenshot: {e}")
+        
+        return {
+            "success": True,
+            "response": response_text,
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "pc_control": True
+        }
+    else:
+        return {
+            "success": False,
+            "error": result.get("error", "PC control command failed"),
+            "pc_control": True
+        }
+
 @eel.expose
 def execute_pc_command(command):
     """Execute a specific PC control command"""
     try:
         result = jarvis.pc_control.execute_command(command)
-        return result
+        formatted_result = format_pc_control_response(result, command)
+        
+        # Speak response if enabled
+        if jarvis.settings["auto_speak"] and jarvis.tts_engine and formatted_result.get("success"):
+            # Speak only the main message, not the detailed stats to avoid being too verbose
+            text_to_speak = result.get("message", "Command executed")
+            threading.Thread(target=speak_text, args=(text_to_speak,), daemon=True).start()
+            
+        return formatted_result
     except Exception as e:
         return {"success": False, "error": f"Failed to execute PC command: {str(e)}"}
 

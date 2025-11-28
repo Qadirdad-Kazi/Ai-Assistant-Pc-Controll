@@ -54,17 +54,20 @@ class JARISPCControl:
         elif any(keyword in command_lower for keyword in ["move file", "rename file"]):
             return self.move_file_from_command(command)
         
-        # Application Control
-        elif any(keyword in command_lower for keyword in ["open application", "launch app", "start program"]):
-            return self.open_application_from_command(command)
-        elif any(keyword in command_lower for keyword in ["close application", "quit app", "kill process"]):
-            return self.close_application_from_command(command)
-        
         # Web Browsing
         elif any(keyword in command_lower for keyword in ["open website", "browse to", "visit site"]):
             return self.open_website_from_command(command)
         elif "search google for" in command_lower or "google search" in command_lower:
             return self.google_search_from_command(command)
+
+        # Application Control
+        elif any(keyword in command_lower for keyword in ["open application", "launch app", "start program", "open "]):
+            return self.open_application_from_command(command)
+        elif any(keyword in command_lower for keyword in ["close application", "quit app", "kill process"]):
+            return self.close_application_from_command(command)
+        # Check if the command is just an application name
+        elif command_lower in self.app_commands or command_lower in ["calculator", "notepad", "terminal", "browser", "notes", "spotify", "music"]:
+            return self.open_application_from_command(f"open {command_lower}")
         
         # Screen and Window Control
         elif any(keyword in command_lower for keyword in ["take screenshot", "capture screen"]):
@@ -89,6 +92,12 @@ class JARISPCControl:
             return self.volume_down()
         elif "mute" in command_lower:
             return self.toggle_mute()
+        elif any(keyword in command_lower for keyword in ["play music", "pause music", "play/pause", "media play"]):
+            return self.media_play_pause()
+        elif any(keyword in command_lower for keyword in ["next track", "next song", "skip song"]):
+            return self.media_next()
+        elif any(keyword in command_lower for keyword in ["previous track", "previous song", "last song"]):
+            return self.media_previous()
         
         # Process Management
         elif "running processes" in command_lower or "task list" in command_lower:
@@ -145,10 +154,27 @@ class JARISPCControl:
         try:
             # Extract folder name from command
             words = command.split()
-            if "create folder" in command.lower():
-                idx = words.index("folder") if "folder" in words else words.index("directory")
-                folder_name = " ".join(words[idx+1:]) if len(words) > idx+1 else "NewFolder"
+            command_lower = command.lower()
+            
+            if "create folder" in command_lower:
+                idx = command_lower.split().index("folder")
+                folder_name = " ".join(words[idx+1:])
+            elif "make directory" in command_lower:
+                idx = command_lower.split().index("directory")
+                folder_name = " ".join(words[idx+1:])
+            elif "new folder" in command_lower:
+                idx = command_lower.split().index("folder")
+                folder_name = " ".join(words[idx+1:])
             else:
+                folder_name = "NewFolder"
+            
+            # Clean up folder name (remove "called" or "named" if present)
+            if folder_name.lower().startswith("called "):
+                folder_name = folder_name[7:]
+            elif folder_name.lower().startswith("named "):
+                folder_name = folder_name[6:]
+            
+            if not folder_name:
                 folder_name = "NewFolder"
             
             # Create in current user's desktop or home directory
@@ -214,14 +240,30 @@ class JARISPCControl:
         """Open application from natural language command"""
         try:
             command_lower = command.lower()
+            words = command.split()
             app_name = ""
             
             # Extract application name
             if "open" in command_lower:
-                words = command.split()
-                idx = words.index("open") if "open" in [w.lower() for w in words] else -1
-                if idx >= 0 and len(words) > idx + 1:
-                    app_name = " ".join(words[idx+1:])
+                idx = command_lower.split().index("open")
+                app_name = " ".join(words[idx+1:])
+            elif "launch" in command_lower:
+                idx = command_lower.split().index("launch")
+                app_name = " ".join(words[idx+1:])
+            elif "start" in command_lower:
+                idx = command_lower.split().index("start")
+                app_name = " ".join(words[idx+1:])
+            
+            # Clean up app name
+            if app_name.lower().startswith("the "):
+                app_name = app_name[4:]
+            
+            if app_name.lower().startswith("application "):
+                app_name = app_name[12:]
+            elif app_name.lower().startswith("app "):
+                app_name = app_name[4:]
+            elif app_name.lower().startswith("program "):
+                app_name = app_name[8:]
             
             if not app_name:
                 return {"success": False, "error": "No application name specified"}
@@ -238,13 +280,21 @@ class JARISPCControl:
             }
             
             app_to_launch = app_name.strip()
+            found_in_map = False
+            
             for key, commands in app_commands.items():
                 if key in app_name.lower():
                     if platform.system() == "Darwin":  # macOS
                         app_to_launch = commands[0]
                     else:
                         app_to_launch = commands[1] if len(commands) > 1 else commands[0]
+                    found_in_map = True
                     break
+            
+            # If not found in map, try to use the name as is (capitalized for macOS)
+            if not found_in_map and platform.system() == "Darwin":
+                # Capitalize first letter of each word for better chance of matching
+                app_to_launch = app_name.title()
             
             if platform.system() == "Darwin":
                 subprocess.run(["open", "-a", app_to_launch], check=True)
@@ -385,7 +435,9 @@ class JARISPCControl:
         """Increase system volume"""
         try:
             if platform.system() == "Darwin":
-                pyautogui.press('volumeup')
+                # Use AppleScript for macOS
+                script = "set volume output volume (output volume of (get volume settings) + 10)"
+                subprocess.run(["osascript", "-e", script])
             elif platform.system() == "Windows":
                 pyautogui.press('volumeup')
             else:
@@ -399,7 +451,9 @@ class JARISPCControl:
         """Decrease system volume"""
         try:
             if platform.system() == "Darwin":
-                pyautogui.press('volumedown')
+                # Use AppleScript for macOS
+                script = "set volume output volume (output volume of (get volume settings) - 10)"
+                subprocess.run(["osascript", "-e", script])
             elif platform.system() == "Windows":
                 pyautogui.press('volumedown')
             else:
@@ -413,7 +467,9 @@ class JARISPCControl:
         """Toggle system mute"""
         try:
             if platform.system() == "Darwin":
-                pyautogui.press('volumemute')
+                # Use AppleScript for macOS
+                script = "set volume output muted not (output muted of (get volume settings))"
+                subprocess.run(["osascript", "-e", script])
             elif platform.system() == "Windows":
                 pyautogui.press('volumemute')
             else:
@@ -422,6 +478,42 @@ class JARISPCControl:
             return {"success": True, "message": "Volume mute toggled"}
         except Exception as e:
             return {"success": False, "error": f"Failed to toggle mute: {str(e)}"}
+
+    def media_play_pause(self) -> Dict[str, Any]:
+        """Toggle media play/pause"""
+        try:
+            if platform.system() == "Darwin":
+                # Use AppleScript key code 100 (F8/Play/Pause)
+                subprocess.run(["osascript", "-e", 'tell application "System Events" to key code 100'])
+            else:
+                pyautogui.press('playpause')
+            return {"success": True, "message": "Toggled media play/pause"}
+        except Exception as e:
+            return {"success": False, "error": f"Failed to toggle media: {str(e)}"}
+
+    def media_next(self) -> Dict[str, Any]:
+        """Skip to next track"""
+        try:
+            if platform.system() == "Darwin":
+                # Use AppleScript key code 101 (F9/Next)
+                subprocess.run(["osascript", "-e", 'tell application "System Events" to key code 101'])
+            else:
+                pyautogui.press('nexttrack')
+            return {"success": True, "message": "Skipped to next track"}
+        except Exception as e:
+            return {"success": False, "error": f"Failed to skip track: {str(e)}"}
+
+    def media_previous(self) -> Dict[str, Any]:
+        """Go to previous track"""
+        try:
+            if platform.system() == "Darwin":
+                # Use AppleScript key code 98 (F7/Previous)
+                subprocess.run(["osascript", "-e", 'tell application "System Events" to key code 98'])
+            else:
+                pyautogui.press('prevtrack')
+            return {"success": True, "message": "Went to previous track"}
+        except Exception as e:
+            return {"success": False, "error": f"Failed to go to previous track: {str(e)}"}
     
     def list_running_processes(self) -> Dict[str, Any]:
         """List currently running processes"""
@@ -483,24 +575,42 @@ class JARISPCControl:
             return {"success": False, "error": f"Failed to get CPU usage: {str(e)}"}
     
     def minimize_windows(self) -> Dict[str, Any]:
-        """Minimize all windows"""
+        """Minimize current window"""
         try:
             if platform.system() == "Darwin":
-                pyautogui.hotkey('cmd', 'm')
+                # Use AppleScript to minimize the frontmost window
+                script = '''
+                tell application "System Events"
+                    set frontProcess to first process whose frontmost is true
+                    tell frontProcess
+                        set value of attribute "AXMinimized" of window 1 to true
+                    end tell
+                end tell
+                '''
+                subprocess.run(["osascript", "-e", script])
             elif platform.system() == "Windows":
-                pyautogui.hotkey('win', 'd')
+                pyautogui.hotkey('win', 'down') # Minimize current window
             else:
                 pyautogui.hotkey('ctrl', 'alt', 'd')
             
-            return {"success": True, "message": "Minimized windows"}
+            return {"success": True, "message": "Minimized window"}
         except Exception as e:
-            return {"success": False, "error": f"Failed to minimize windows: {str(e)}"}
+            return {"success": False, "error": f"Failed to minimize window: {str(e)}"}
     
     def maximize_window(self) -> Dict[str, Any]:
         """Maximize current window"""
         try:
             if platform.system() == "Darwin":
-                pyautogui.hotkey('cmd', 'ctrl', 'f')
+                # Use AppleScript to toggle Full Screen
+                script = '''
+                tell application "System Events"
+                    set frontProcess to first process whose frontmost is true
+                    tell frontProcess
+                        set value of attribute "AXFullScreen" of window 1 to not (value of attribute "AXFullScreen" of window 1)
+                    end tell
+                end tell
+                '''
+                subprocess.run(["osascript", "-e", script])
             elif platform.system() == "Windows":
                 pyautogui.hotkey('win', 'up')
             else:
@@ -520,6 +630,13 @@ class JARISPCControl:
             if "delete" in [w.lower() for w in words]:
                 idx = next(i for i, w in enumerate(words) if w.lower() == "delete")
                 filename = " ".join(words[idx+1:])
+            elif "remove" in [w.lower() for w in words]:
+                idx = next(i for i, w in enumerate(words) if w.lower() == "remove")
+                filename = " ".join(words[idx+1:])
+            
+            # Remove "file" if it's the first word of filename
+            if filename.lower().startswith("file "):
+                filename = filename[5:]
             
             if not filename:
                 return {"success": False, "error": "No filename specified"}
@@ -653,5 +770,6 @@ class JARISPCControl:
             "Window Control: 'minimize window', 'maximize window'",
             "Clipboard: 'copy text [text]', 'paste text', 'show clipboard'",
             "Volume Control: 'volume up', 'volume down', 'mute'",
+            "Media Control: 'play music', 'next track', 'previous track'",
             "System Monitoring: 'running processes', 'memory usage', 'cpu usage'"
         ]

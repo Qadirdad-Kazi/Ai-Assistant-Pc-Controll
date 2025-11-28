@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -224,9 +225,17 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         .controls {
@@ -296,7 +305,8 @@
             color: #555;
         }
 
-        .form-group input, .form-group select {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e9ecef;
@@ -305,7 +315,8 @@
             transition: border-color 0.3s ease;
         }
 
-        .form-group input:focus, .form-group select:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
             border-color: #4facfe;
         }
@@ -391,6 +402,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -425,12 +437,9 @@
 
             <div class="input-container">
                 <div class="input-row">
-                    <textarea 
-                        class="input-text" 
-                        id="message-input" 
+                    <textarea class="input-text" id="message-input"
                         placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
-                        rows="1"
-                    ></textarea>
+                        rows="1"></textarea>
                     <button class="btn btn-primary" id="send-btn" onclick="sendMessage()">
                         📤 Send
                     </button>
@@ -460,13 +469,13 @@
             <div class="modal-header">
                 <h2>⚙️ Settings</h2>
             </div>
-            
+
             <form id="settings-form">
                 <div class="form-group">
                     <label for="ollama-url">Ollama URL:</label>
                     <input type="text" id="ollama-url" value="http://localhost:11434">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="model">AI Model:</label>
                     <div style="display: flex; gap: 10px; align-items: flex-end;">
@@ -479,27 +488,27 @@
                         Auto-detected from available Ollama models
                     </small>
                 </div>
-                
+
                 <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="voice-enabled">
                         <label for="voice-enabled">Enable Voice Input</label>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="auto-speak">
                         <label for="auto-speak">Auto-speak AI responses</label>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="volume">TTS Volume:</label>
                     <input type="range" id="volume" min="0" max="1" step="0.1" value="0.8">
                 </div>
             </form>
-            
+
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
                 <button class="btn btn-primary" onclick="saveSettings()">💾 Save</button>
@@ -507,93 +516,14 @@
         </div>
     </div>
 
-    <!-- PC Commands Modal -->
-    <div class="modal" id="pc-commands-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>💻 PC Control Commands</h2>
-            </div>
-            
-            <div class="pc-commands-grid">
-                <div class="command-category">
-                    <h3>📊 System Information</h3>
-                    <ul>
-                        <li><code>system info</code> - Get computer information</li>
-                        <li><code>memory usage</code> - Check RAM usage</li>
-                        <li><code>cpu usage</code> - Check processor usage</li>
-                        <li><code>running processes</code> - List active programs</li>
-                    </ul>
-                </div>
-
-                <div class="command-category">
-                    <h3>📁 File Operations</h3>
-                    <ul>
-                        <li><code>create folder MyFolder</code> - Create new folder</li>
-                        <li><code>list files</code> - Show current directory</li>
-                        <li><code>list files desktop</code> - Show desktop files</li>
-                        <li><code>delete file filename.txt</code> - Delete a file</li>
-                    </ul>
-                </div>
-
-                <div class="command-category">
-                    <h3>🚀 Applications</h3>
-                    <ul>
-                        <li><code>open calculator</code> - Launch Calculator</li>
-                        <li><code>open terminal</code> - Open Terminal</li>
-                        <li><code>open browser</code> - Launch web browser</li>
-                        <li><code>close calculator</code> - Quit application</li>
-                    </ul>
-                </div>
-
-                <div class="command-category">
-                    <h3>🌐 Web Browsing</h3>
-                    <ul>
-                        <li><code>open website google.com</code> - Visit website</li>
-                        <li><code>search google for AI news</code> - Google search</li>
-                    </ul>
-                </div>
-
-                <div class="command-category">
-                    <h3>🖼️ Screen & Windows</h3>
-                    <ul>
-                        <li><code>take screenshot</code> - Capture screen</li>
-                        <li><code>minimize window</code> - Minimize current window</li>
-                        <li><code>maximize window</code> - Maximize current window</li>
-                    </ul>
-                </div>
-
-                <div class="command-category">
-                    <h3>🔊 Volume Control</h3>
-                    <ul>
-                        <li><code>volume up</code> - Increase volume</li>
-                        <li><code>volume down</code> - Decrease volume</li>
-                        <li><code>mute</code> - Toggle mute</li>
-                    </ul>
-                </div>
-
-                <div class="command-category">
-                    <h3>📋 Clipboard</h3>
-                    <ul>
-                        <li><code>copy text Hello World</code> - Copy to clipboard</li>
-                        <li><code>paste text</code> - Paste from clipboard</li>
-                        <li><code>show clipboard</code> - Show clipboard content</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closePCCommands()">Close</button>
-                <button class="btn btn-primary" onclick="testPCCommand()">🧪 Test Command</button>
-            </div>
-        </div>
-    </div>
+    <!-- PC Commands Modal removed (moved to separate window) -->
 
     <script>
         let currentSettings = {};
         let isProcessing = false;
 
         // Initialize the app
-        window.onload = function() {
+        window.onload = function () {
             document.getElementById('welcome-time').textContent = new Date().toLocaleTimeString();
             loadSettings();
             updateStatus();
@@ -602,7 +532,7 @@
 
         function setupEventListeners() {
             // Enter key handling
-            document.getElementById('message-input').addEventListener('keydown', function(e) {
+            document.getElementById('message-input').addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
@@ -612,7 +542,7 @@
             });
 
             // Auto-resize textarea
-            document.getElementById('message-input').addEventListener('input', function() {
+            document.getElementById('message-input').addEventListener('input', function () {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
@@ -621,15 +551,15 @@
         async function loadSettings() {
             try {
                 currentSettings = await eel.get_settings()();
-                
+
                 document.getElementById('ollama-url').value = currentSettings.ollama_url;
                 document.getElementById('voice-enabled').checked = currentSettings.voice_enabled;
                 document.getElementById('auto-speak').checked = currentSettings.auto_speak;
                 document.getElementById('volume').value = currentSettings.volume;
-                
+
                 // Load available models
                 await loadAvailableModels();
-                
+
             } catch (error) {
                 console.error('Failed to load settings:', error);
             }
@@ -639,10 +569,10 @@
             try {
                 const modelData = await eel.get_available_models()();
                 const modelSelect = document.getElementById('model');
-                
+
                 // Clear existing options
                 modelSelect.innerHTML = '';
-                
+
                 if (modelData.models && modelData.models.length > 0) {
                     modelData.models.forEach(model => {
                         const option = document.createElement('option');
@@ -692,7 +622,7 @@
 
             const input = document.getElementById('message-input');
             const message = input.value.trim();
-            
+
             if (!message) return;
 
             isProcessing = true;
@@ -708,7 +638,7 @@
 
             try {
                 const response = await eel.send_message(message)();
-                
+
                 if (response.success) {
                     addMessage('assistant', response.response, '🤖');
                 } else {
@@ -726,7 +656,7 @@
 
         async function startVoiceInput() {
             const voiceBtn = document.getElementById('voice-btn');
-            
+
             if (!currentSettings.voice_enabled) {
                 addErrorMessage('Voice input is disabled. Enable it in settings.');
                 return;
@@ -738,7 +668,7 @@
 
             try {
                 const result = await eel.start_voice_input()();
-                
+
                 if (result.success) {
                     document.getElementById('message-input').value = result.text;
                     addMessage('system', `Voice input: "${result.text}"`, '🎤');
@@ -754,21 +684,27 @@
             }
         }
 
-        function addMessage(type, content, avatar) {
+        function addMessage(type, content, avatar, imageUrl = null) {
             const chatMessages = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
-            
+
             const timestamp = new Date().toLocaleTimeString();
-            
+
+            let imageHtml = '';
+            if (imageUrl) {
+                imageHtml = `<div style="margin-top: 10px;"><img src="${imageUrl}" style="max-width: 100%; border-radius: 10px; cursor: pointer;" onclick="window.open(this.src, '_blank')"></div>`;
+            }
+
             messageDiv.innerHTML = `
                 <div class="message-avatar">${avatar}</div>
                 <div class="message-content">
                     <div>${content}</div>
+                    ${imageHtml}
                     <div class="message-timestamp">${timestamp}</div>
                 </div>
             `;
-            
+
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -845,36 +781,16 @@
         }
 
         function showPCCommands() {
-            document.getElementById('pc-commands-modal').style.display = 'block';
-        }
-
-        function closePCCommands() {
-            document.getElementById('pc-commands-modal').style.display = 'none';
-        }
-
-        async function testPCCommand() {
-            const testCommands = [
-                'system info',
-                'list files desktop', 
-                'memory usage',
-                'take screenshot'
-            ];
-            
-            const randomCommand = testCommands[Math.floor(Math.random() * testCommands.length)];
-            document.getElementById('message-input').value = randomCommand;
-            closePCCommands();
-            addMessage('system', `Testing PC command: "${randomCommand}"`, '🧪');
+            // Open PC Control Panel in a new window
+            window.open('pc_controls.html', 'PC Controls', 'width=900,height=700,menubar=no,toolbar=no');
         }
 
         // Close modals when clicking outside
-        window.addEventListener('click', function(event) {
+        window.addEventListener('click', function (event) {
             const settingsModal = document.getElementById('settings-modal');
-            const pcCommandsModal = document.getElementById('pc-commands-modal');
-            
+
             if (event.target === settingsModal) {
                 closeSettings();
-            } else if (event.target === pcCommandsModal) {
-                closePCCommands();
             }
         });
 
@@ -884,7 +800,7 @@
 
             const input = document.getElementById('message-input');
             const message = input.value.trim();
-            
+
             if (!message) return;
 
             isProcessing = true;
@@ -900,11 +816,11 @@
 
             try {
                 const response = await eel.send_message(message)();
-                
+
                 if (response.success) {
                     // Check if it's a PC control response
                     if (response.pc_control) {
-                        addMessage('system', response.response, '💻');
+                        addMessage('system', response.response, '💻', response.image_url);
                     } else {
                         addMessage('assistant', response.response, '🤖');
                     }
@@ -925,4 +841,5 @@
         setInterval(updateStatus, 10000);
     </script>
 </body>
+
 </html>
