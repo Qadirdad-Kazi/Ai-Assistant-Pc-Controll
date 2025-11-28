@@ -32,6 +32,20 @@ class JARISPCControl:
         pyautogui.FAILSAFE = True
         pyautogui.PAUSE = 0.1
         
+        # Common application mappings
+        self.app_commands = {
+            "calculator": ["Calculator", "calc"],
+            "notepad": ["TextEdit", "notepad"],
+            "terminal": ["Terminal", "cmd"],
+            "browser": ["Safari", "chrome", "firefox"],
+            "finder": ["Finder", "explorer"],
+            "vscode": ["Visual Studio Code", "code"],
+            "vs code": ["Visual Studio Code", "code"],
+            "notes": ["Notes", "notepad"],
+            "spotify": ["Spotify", "spotify"],
+            "music": ["Music", "wmplayer"]
+        }
+        
         print(f"🖥️ PC Control initialized for {self.system_info['os']}")
     
     def execute_command(self, command: str) -> Dict[str, Any]:
@@ -268,21 +282,10 @@ class JARISPCControl:
             if not app_name:
                 return {"success": False, "error": "No application name specified"}
             
-            # Common application mappings
-            app_commands = {
-                "calculator": ["Calculator", "calc"],
-                "notepad": ["TextEdit", "notepad"],
-                "terminal": ["Terminal", "cmd"],
-                "browser": ["Safari", "chrome", "firefox"],
-                "finder": ["Finder", "explorer"],
-                "vscode": ["Visual Studio Code", "code"],
-                "vs code": ["Visual Studio Code", "code"]
-            }
-            
             app_to_launch = app_name.strip()
             found_in_map = False
             
-            for key, commands in app_commands.items():
+            for key, commands in self.app_commands.items():
                 if key in app_name.lower():
                     if platform.system() == "Darwin":  # macOS
                         app_to_launch = commands[0]
