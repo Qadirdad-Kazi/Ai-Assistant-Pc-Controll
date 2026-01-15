@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <!-- Load Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="container">
         <!-- Header Section -->
@@ -22,7 +24,7 @@
                     <p id="system-status-msg">Adaptive Intelligence System</p>
                 </div>
             </div>
-            
+
             <nav class="nav-tabs">
                 <button class="nav-tab active" onclick="switchMode('ai')">AI Assistant</button>
                 <button class="nav-tab" onclick="switchMode('pc')">PC Control</button>
@@ -71,16 +73,20 @@
             <section class="input-area">
                 <div class="input-wrapper">
                     <div class="textarea-container">
-                        <textarea class="message-input" id="msg-input" 
-                                 placeholder="Transmit command..." rows="1"></textarea>
+                        <textarea class="message-input" id="msg-input" placeholder="Transmit command..."
+                            rows="1"></textarea>
                     </div>
-                    
+
                     <div class="action-buttons">
                         <button class="icon-btn" id="voice-btn" onclick="startVoiceInput()" title="Voice Interaction">
                             🎤
                         </button>
+                        <button class="icon-btn danger" id="kill-btn" onclick="killAI()" title="Abort Protocol"
+                            style="display: none;">
+                            <span>⏹</span>
+                        </button>
                         <button class="icon-btn primary" id="send-btn" onclick="transmitMessage()" title="Send Command">
-                             <span>➤</span>
+                            <span>➤</span>
                         </button>
                     </div>
                 </div>
@@ -101,13 +107,13 @@
             <div class="modal-header">
                 <h2>⚙️ Configuration</h2>
             </div>
-            
+
             <form id="settings-form">
                 <div class="form-group">
                     <label>Neural Engine URL</label>
                     <input type="text" class="form-input" id="ollama-url" value="http://localhost:11434">
                 </div>
-                
+
                 <div class="form-group">
                     <label>Active Model</label>
                     <select class="form-input" id="model-select">
@@ -141,7 +147,7 @@
         let isTransmitting = false;
         let activeMode = 'ai';
 
-        window.onload = function() {
+        window.onload = function () {
             document.getElementById('welcome-time').textContent = new Date().toLocaleTimeString();
             syncSettings();
             refreshStatus();
@@ -157,7 +163,7 @@
                 }
             });
 
-            input.addEventListener('input', function() {
+            input.addEventListener('input', function () {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 200) + 'px';
             });
@@ -170,7 +176,7 @@
                 document.getElementById('voice-toggle').checked = settings.voice_enabled;
                 document.getElementById('audio-toggle').checked = settings.auto_speak;
                 document.getElementById('volume-slider').value = settings.volume;
-                
+
                 const modelData = await eel.get_available_models()();
                 const select = document.getElementById('model-select');
                 select.innerHTML = '';
@@ -204,10 +210,11 @@
             isTransmitting = true;
             input.value = '';
             input.style.height = 'auto';
-            
+
             appendMessage('user', content);
             document.getElementById('loading').style.display = 'flex';
-            
+            document.getElementById('kill-btn').style.display = 'flex';
+
             try {
                 const response = await eel.send_message(content)();
                 if (response.success) {
@@ -219,8 +226,22 @@
                 appendMessage('assistant', 'Transmission failure.');
             } finally {
                 document.getElementById('loading').style.display = 'none';
+                document.getElementById('kill-btn').style.display = 'none';
                 isTransmitting = false;
                 refreshStatus();
+            }
+        }
+
+        async function killAI() {
+            if (!isTransmitting) return;
+            try {
+                await eel.kill_ai_process()();
+                appendMessage('assistant', 'Protocol terminated by user. Neural links severed.');
+            } catch (err) { console.error('Kill error:', err); }
+            finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('kill-btn').style.display = 'none';
+                isTransmitting = false;
             }
         }
 
@@ -228,9 +249,9 @@
             const container = document.getElementById('chat-messages');
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${type}`;
-            
+
             const avatarImg = type === 'assistant' ? 'assets/wolf_avatar.png' : 'https://ui-avatars.com/api/?name=User&background=1e2a3a&color=fff';
-            
+
             let html = `
                 <div class="message-avatar">
                     <img src="${avatarImg}" alt="${type}">
@@ -241,7 +262,7 @@
                     <span class="message-timestamp">${new Date().toLocaleTimeString()}</span>
                 </div>
             `;
-            
+
             msgDiv.innerHTML = html;
             container.appendChild(msgDiv);
             container.scrollTop = container.scrollHeight;
@@ -265,7 +286,7 @@
             document.querySelectorAll('.nav-tab').forEach(t => {
                 t.classList.toggle('active', t.textContent.toLowerCase().includes(mode));
             });
-            
+
             if (mode === 'pc') {
                 eel.get_available_pc_commands()().then(res => {
                     const helpText = "System recognized control protocols: " + res.commands.slice(0, 3).join(', ') + "... Use keywords to execute.";
@@ -309,4 +330,5 @@
         }
     </script>
 </body>
+
 </html>

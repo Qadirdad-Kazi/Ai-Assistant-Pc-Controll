@@ -32,7 +32,7 @@ class WolfPCControl:
         pyautogui.FAILSAFE = True
         pyautogui.PAUSE = 0.1
         
-        # Common application mappings
+        # Application mappings
         self.app_commands = {
             "calculator": ["Calculator", "calc"],
             "notepad": ["TextEdit", "notepad"],
@@ -46,87 +46,84 @@ class WolfPCControl:
             "music": ["Music", "wmplayer"]
         }
         
-        print(f"🖥️ PC Control initialized for {self.system_info['os']}")
+        # Command Registry: Map keywords to handler methods
+        self.command_map = {
+            "system_info": ["system info", "computer info", "hardware info", "diagnostic", "status"],
+            "files_create": ["create folder", "make directory", "new folder", "mkdir"],
+            "files_list": ["list files", "show files", "directory contents", "ls"],
+            "files_delete": ["delete file", "remove file", "delete folder", "rm"],
+            "files_copy": ["copy file", "duplicate file", "cp"],
+            "files_move": ["move file", "rename file", "mv"],
+            "web_open": ["open website", "browse to", "visit site", "go to"],
+            "web_search": ["search google", "google search", "lookup"],
+            "app_open": ["open application", "launch app", "start program", "open "],
+            "app_close": ["close application", "quit app", "kill process", "stop app"],
+            "screen_shot": ["take screenshot", "capture screen", "snapshot"],
+            "window_min": ["minimize window", "minimize all", "hide windows"],
+            "window_max": ["maximize window", "fullscreen"],
+            "clip_copy": ["copy text", "clipboard copy", "copy to clipboard"],
+            "clip_paste": ["paste text", "clipboard paste", "paste from clipboard"],
+            "clip_show": ["show clipboard", "get clipboard"],
+            "audio_vol_up": ["volume up", "increase volume", "louder"],
+            "audio_vol_down": ["volume down", "decrease volume", "quieter"],
+            "audio_mute": ["mute", "unmute", "silence"],
+            "media_toggle": ["play music", "pause music", "play/pause", "media play", "resume"],
+            "media_next": ["next track", "next song", "skip song"],
+            "media_prev": ["previous track", "previous song", "last song", "back track"],
+            "monitor_proc": ["running processes", "task list", "top processes"],
+            "monitor_mem": ["memory usage", "ram usage", "memory status"],
+            "monitor_cpu": ["cpu usage", "processor load", "cpu status"]
+        }
+        
+        print(f"🖥️ Wolf PC Control initialized for {self.system_info['os']}")
     
     def execute_command(self, command: str) -> Dict[str, Any]:
         """Execute PC control command based on natural language input"""
-        command_lower = command.lower().strip()
+        cmd_input = command.lower().strip()
         
-        # System Information Commands
-        if any(keyword in command_lower for keyword in ["system info", "computer info", "hardware info"]):
-            return self.get_system_info()
+        # 1. Try exact keyword matching via dispatcher
+        for action, keywords in self.command_map.items():
+            if any(k in cmd_input for k in keywords):
+                handler = getattr(self, f"_handle_{action}", None)
+                if handler:
+                    return handler(command)
         
-        # File and Directory Operations
-        elif any(keyword in command_lower for keyword in ["create folder", "make directory", "new folder"]):
-            return self.create_folder_from_command(command)
-        elif any(keyword in command_lower for keyword in ["list files", "show files", "directory contents"]):
-            return self.list_files_from_command(command)
-        elif any(keyword in command_lower for keyword in ["delete file", "remove file"]):
-            return self.delete_file_from_command(command)
-        elif any(keyword in command_lower for keyword in ["copy file", "duplicate file"]):
-            return self.copy_file_from_command(command)
-        elif any(keyword in command_lower for keyword in ["move file", "rename file"]):
-            return self.move_file_from_command(command)
-        
-        # Web Browsing
-        elif any(keyword in command_lower for keyword in ["open website", "browse to", "visit site"]):
-            return self.open_website_from_command(command)
-        elif "search google for" in command_lower or "google search" in command_lower:
-            return self.google_search_from_command(command)
+        # 2. Check for naked application names (e.g., "open calculator")
+        if cmd_input.startswith("open ") or cmd_input in self.app_commands:
+            return self._handle_app_open(command)
+            
+        return {
+            "success": False,
+            "error": f"Protocol unrecognized: '{command}'",
+            "available_commands": self.get_available_commands()
+        }
 
-        # Application Control
-        elif any(keyword in command_lower for keyword in ["open application", "launch app", "start program", "open "]):
-            return self.open_application_from_command(command)
-        elif any(keyword in command_lower for keyword in ["close application", "quit app", "kill process"]):
-            return self.close_application_from_command(command)
-        # Check if the command is just an application name
-        elif command_lower in self.app_commands or command_lower in ["calculator", "notepad", "terminal", "browser", "notes", "spotify", "music"]:
-            return self.open_application_from_command(f"open {command_lower}")
-        
-        # Screen and Window Control
-        elif any(keyword in command_lower for keyword in ["take screenshot", "capture screen"]):
-            return self.take_screenshot()
-        elif any(keyword in command_lower for keyword in ["minimize window", "minimize all"]):
-            return self.minimize_windows()
-        elif any(keyword in command_lower for keyword in ["maximize window"]):
-            return self.maximize_window()
-        
-        # Clipboard Operations
-        elif any(keyword in command_lower for keyword in ["copy text", "clipboard copy"]):
-            return self.copy_to_clipboard_from_command(command)
-        elif any(keyword in command_lower for keyword in ["paste text", "clipboard paste"]):
-            return self.paste_from_clipboard()
-        elif "show clipboard" in command_lower:
-            return self.get_clipboard_content()
-        
-        # Volume and Media Control
-        elif any(keyword in command_lower for keyword in ["volume up", "increase volume"]):
-            return self.volume_up()
-        elif any(keyword in command_lower for keyword in ["volume down", "decrease volume"]):
-            return self.volume_down()
-        elif "mute" in command_lower:
-            return self.toggle_mute()
-        elif any(keyword in command_lower for keyword in ["play music", "pause music", "play/pause", "media play"]):
-            return self.media_play_pause()
-        elif any(keyword in command_lower for keyword in ["next track", "next song", "skip song"]):
-            return self.media_next()
-        elif any(keyword in command_lower for keyword in ["previous track", "previous song", "last song"]):
-            return self.media_previous()
-        
-        # Process Management
-        elif "running processes" in command_lower or "task list" in command_lower:
-            return self.list_running_processes()
-        elif "memory usage" in command_lower or "ram usage" in command_lower:
-            return self.get_memory_usage()
-        elif "cpu usage" in command_lower:
-            return self.get_cpu_usage()
-        
-        else:
-            return {
-                "success": False,
-                "error": f"Command not recognized: {command}",
-                "available_commands": self.get_available_commands()
-            }
+    # Handler Methods (Internal)
+    def _handle_system_info(self, cmd): return self.get_system_info()
+    def _handle_files_create(self, cmd): return self.create_folder_from_command(cmd)
+    def _handle_files_list(self, cmd): return self.list_files_from_command(cmd)
+    def _handle_files_delete(self, cmd): return self.delete_file_from_command(cmd)
+    def _handle_files_copy(self, cmd): return self.copy_file_from_command(cmd)
+    def _handle_files_move(self, cmd): return self.move_file_from_command(cmd)
+    def _handle_web_open(self, cmd): return self.open_website_from_command(cmd)
+    def _handle_web_search(self, cmd): return self.google_search_from_command(cmd)
+    def _handle_app_open(self, cmd): return self.open_application_from_command(cmd)
+    def _handle_app_close(self, cmd): return self.close_application_from_command(cmd)
+    def _handle_screen_shot(self, cmd): return self.take_screenshot()
+    def _handle_window_min(self, cmd): return self.minimize_windows()
+    def _handle_window_max(self, cmd): return self.maximize_window()
+    def _handle_clip_copy(self, cmd): return self.copy_to_clipboard_from_command(cmd)
+    def _handle_clip_paste(self, cmd): return self.paste_from_clipboard()
+    def _handle_clip_show(self, cmd): return self.get_clipboard_content()
+    def _handle_audio_vol_up(self, cmd): return self.volume_up()
+    def _handle_audio_vol_down(self, cmd): return self.volume_down()
+    def _handle_audio_mute(self, cmd): return self.toggle_mute()
+    def _handle_media_toggle(self, cmd): return self.media_play_pause()
+    def _handle_media_next(self, cmd): return self.media_next()
+    def _handle_media_prev(self, cmd): return self.media_previous()
+    def _handle_monitor_proc(self, cmd): return self.list_running_processes()
+    def _handle_monitor_mem(self, cmd): return self.get_memory_usage()
+    def _handle_monitor_cpu(self, cmd): return self.get_cpu_usage()
     
     def get_system_info(self) -> Dict[str, Any]:
         """Get comprehensive system information"""
@@ -164,49 +161,64 @@ class WolfPCControl:
             return {"success": False, "error": f"Failed to get system info: {str(e)}"}
     
     def create_folder_from_command(self, command: str) -> Dict[str, Any]:
-        """Create folder from natural language command"""
+        """Create folder from natural language command with precise name extraction"""
         try:
-            # Extract folder name from command
-            words = command.split()
             command_lower = command.lower()
+            words = command.split()
             
-            if "create folder" in command_lower:
-                idx = command_lower.split().index("folder")
-                folder_name = " ".join(words[idx+1:])
-            elif "make directory" in command_lower:
-                idx = command_lower.split().index("directory")
-                folder_name = " ".join(words[idx+1:])
-            elif "new folder" in command_lower:
-                idx = command_lower.split().index("folder")
-                folder_name = " ".join(words[idx+1:])
-            else:
-                folder_name = "NewFolder"
+            # Determine target parent directory
+            target_parent = Path.home()
+            if "desktop" in command_lower:
+                target_parent = Path.home() / "Desktop"
+            elif "downloads" in command_lower:
+                target_parent = Path.home() / "Downloads"
+            elif "documents" in command_lower:
+                target_parent = Path.home() / "Documents"
             
-            # Clean up folder name (remove "called" or "named" if present)
-            if folder_name.lower().startswith("called "):
-                folder_name = folder_name[7:]
-            elif folder_name.lower().startswith("named "):
-                folder_name = folder_name[6:]
+            # Fallback to home if specialized folder doesn't exist
+            if not target_parent.exists():
+                target_parent = Path.home()
+
+            folder_name = ""
             
+            # Pattern 1: "... named [Name]" or "... called [Name]"
+            if "named " in command_lower:
+                idx = command_lower.rfind("named ") + 6
+                folder_name = command[idx:].strip()
+            elif "called " in command_lower:
+                idx = command_lower.rfind("called ") + 7
+                folder_name = command[idx:].strip()
+            
+            # Pattern 2: "create folder [Name] on ..." or "create [Name] folder"
             if not folder_name:
+                # Look for text between 'folder' and 'on' OR after 'folder'
+                if "folder" in command_lower:
+                    parts = command_lower.split("folder")
+                    after_folder = command[len(parts[0])+6:].strip()
+                    
+                    if " on " in after_folder.lower():
+                        folder_name = after_folder[:after_folder.lower().find(" on ")].strip()
+                    else:
+                        folder_name = after_folder
+            
+            # Clean up punctuation from the end (common in speech)
+            if folder_name.endswith(('.', '!', '?')):
+                folder_name = folder_name[:-1]
+            
+            if not folder_name or folder_name.lower() in ["desktop", "downloads", "documents"]:
                 folder_name = "NewFolder"
             
-            # Create in current user's desktop or home directory
-            desktop_path = Path.home() / "Desktop"
-            if desktop_path.exists():
-                folder_path = desktop_path / folder_name
-            else:
-                folder_path = Path.home() / folder_name
-            
+            folder_path = target_parent / folder_name
             folder_path.mkdir(parents=True, exist_ok=True)
             
             return {
                 "success": True,
-                "message": f"Created folder: {folder_path}",
-                "path": str(folder_path)
+                "message": f"Successfully initialized protocol: Folder '{folder_name}' created at {target_parent}.",
+                "path": str(folder_path),
+                "folder_name": folder_name
             }
         except Exception as e:
-            return {"success": False, "error": f"Failed to create folder: {str(e)}"}
+            return {"success": False, "error": f"Folder creation protocol failed: {str(e)}"}
     
     def list_files_from_command(self, command: str) -> Dict[str, Any]:
         """List files in directory from command"""

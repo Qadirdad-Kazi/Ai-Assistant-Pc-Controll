@@ -375,6 +375,17 @@ body {
     box-shadow: 0 8px 25px rgba(0, 210, 255, 0.4);
 }
 
+.icon-btn.danger {
+    background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.icon-btn.danger:hover {
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px) scale(1.05);
+}
+
 .icon-btn.voice-active {
     background: #ef4444;
     animation: glow-red 1.5s infinite;
