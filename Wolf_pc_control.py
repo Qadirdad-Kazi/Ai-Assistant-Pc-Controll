@@ -156,7 +156,7 @@ class WolfPCControl:
         dest = self._resolve_path(location)
         path = dest / name
         path.mkdir(parents=True, exist_ok=True)
-        return {"success": True, "message": f"Done. {name} has been created on your {dest.name}.", "path": str(path)}
+        return {"success": True, "message": f"{name} folder is ready on your {dest.name}.", "path": str(path)}
 
     def action_create_file(self, name: str, content: str = "", location: str = "Desktop") -> Dict[str, Any]:
         dest = self._resolve_path(location)
@@ -372,40 +372,45 @@ class WolfPCControl:
         except Exception as e:
             return {"success": False, "error": f"I cannot calculate that: {str(e)}"}
 
-    def action_automate_vscode(self, file_name: str, code: str, folder_name: Optional[str] = None) -> Dict[str, Any]:
-        """GUIAgent for VS Code automation: Creates workspace/folder and handles file writing"""
+    def action_automate_vscode(self, files: List[Dict[str, str]], folder_name: Optional[str] = None) -> Dict[str, Any]:
+        """GUIAgent for VS Code automation: Handles multiple file creation in a workspace"""
         try:
-            # 1. Workspace Preparation (Human-like: Create a dedicated home for the code)
+            # 1. Project Setup
             project_folder = folder_name or "Wolf_Automation"
             project_path = Path.home() / "Desktop" / project_folder
             project_path.mkdir(parents=True, exist_ok=True)
             
-            # 2. Open Folder in VS Code (Native MacOS call)
-            # This ensures VS Code opens in the context of the folder
+            # 2. Open Workspace
             subprocess.run(["open", "-a", "Visual Studio Code", str(project_path)])
-            time.sleep(3) # Wait for VS Code to initialize the folder view
-            
+            time.sleep(3) 
             self._bring_to_front("Visual Studio Code")
             
-            # 3. Create New File (Cmd+N)
-            pyautogui.hotkey('command', 'n')
-            time.sleep(1)
+            file_names = []
+            for file_data in files:
+                name = file_data.get("name")
+                code = file_data.get("code", "")
+                if not name: continue
+                
+                # 3. Create New File (Cmd+N)
+                pyautogui.hotkey('command', 'n')
+                time.sleep(1)
+                
+                # 4. Typing Code
+                self._human_type(code, interval=0.005) # Faster for large blocks
+                
+                # 5. Save Routine
+                pyautogui.hotkey('command', 's')
+                time.sleep(2.0)
+                self._human_type(name)
+                time.sleep(0.5)
+                pyautogui.press('enter')
+                time.sleep(1)
+                file_names.append(name)
             
-            # 4. Human-like Typing
-            self._human_type(code, interval=0.01)
-            
-            # 5. Native Save Routine (Cmd+S)
-            pyautogui.hotkey('command', 's')
-            time.sleep(1.5)
-            
-            # Type the filename and confirm
-            self._human_type(file_name)
-            pyautogui.press('enter')
-            time.sleep(1)
-            
+            file_str = ", ".join(file_names)
             return {
                 "success": True, 
-                "message": f"VS Code workspace '{project_folder}' is now open. '{file_name}' has been created and saved inside it."
+                "message": f"{file_str} have been created and opened in VS Code."
             }
         except Exception as e:
             return {"success": False, "error": f"VS Code automation failed: {str(e)}"}
@@ -486,17 +491,23 @@ class WolfPCControl:
     def execute_command(self, command: str) -> Dict[str, Any]:
         """High-level natural language entry point"""
         # 1. Parse into Structured Map
-        norm = self._parse_to_normalized(command)
+        norm = self._wolf_intent_parse(command)
         if norm:
             return self.execute_structured_action(norm["action"], norm["params"])
             
         return {"success": False, "error": "I cannot execute this action"}
 
-    def _parse_to_normalized(self, command: str) -> Optional[Dict[str, Any]]:
+    def _wolf_intent_parse(self, command: str) -> Optional[Dict[str, Any]]:
         """Natural Language to Structured JSON Parser"""
         cmd_lower = command.lower().strip()
         
-        # Conjunction Splitter
+        # 1. Complex Task Detection (Force fallback to AI for 'Human-like' automation)
+        is_vscode_task = ("vscode" in cmd_lower or "vs code" in cmd_lower or "visual studio" in cmd_lower)
+        is_complex = any(k in cmd_lower for k in ["create", "file", "code", "script", "write", "save"])
+        if is_vscode_task and is_complex:
+            return None 
+
+        # 2. Conjunction Splitter
         segments = []
         for conj in [" and then ", " after that ", " then ", " and "]:
             if conj in cmd_lower:

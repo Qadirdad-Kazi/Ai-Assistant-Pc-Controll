@@ -128,15 +128,12 @@ class WolfDesktop:
             Analyze the user request and convert it into a sequential JSON step object.
             
             RULES:
-            1. Actions: create_folder, create_file, copy, move, paste, delete, open_app, close_app, navigate, screenshot, volume, media, calculate, automate_vscode, automate_browser.
-            2. Extract file/folder names EXACTLY. No filler like "from", "on", "then".
-            3. Use "it" for step parameters if the user uses a pronoun.
-            4. For 'create_file', params: {{"name": "test.txt", "content": "hello", "location": "Desktop"}}.
-            5. For 'calculate', params: {{"expression": "25+17"}}. Use this for math.
-            6. For 'automate_vscode', params: {{"file_name": "app.py", "code": "print('hello')", "folder_name": "ProjectFolder"}}.
-            7. For 'automate_browser', params: {{"url": "google.com", "prompt": "search for wolves"}}.
-            8. For 'volume', params: {{"direction": "up"|"down"|"mute"}}.
-            9. Output ONLY clean JSON.
+            1. Actions: create_folder, copy, move, paste, delete, open_app, close_app, navigate, screenshot, volume, media, calculate, automate_vscode, automate_browser.
+            2. Extract file/folder names EXACTLY.
+            3. For 'automate_vscode', params: {{"files": [{{"name": "index.html", "code": "..."}}, {{"name": "style.css", "code": "..."}}], "folder_name": "BlogProject"}}.
+            4. For 'automate_browser', params: {{"url": "google.com", "prompt": "..."}}.
+            5. For 'calculate', params: {{"expression": "2+2"}}.
+            6. Output ONLY clean JSON.
             
             Format:
             {{
