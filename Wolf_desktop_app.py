@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AiNest - Desktop Application
+Wolf - Desktop Application
 A modern desktop app using Eel (web technologies in a desktop window)
 """
 
@@ -16,12 +16,12 @@ import pyttsx3
 import psutil
 import pyautogui
 from datetime import datetime
-from jaris_pc_control import JARISPCControl
+from Wolf_pc_control import WolfPCControl
 
 # Initialize Eel
 eel.init('desktop_app')
 
-class AiNestDesktop:
+class WolfDesktop:
     def __init__(self):
         self.settings = {
             "model": "llama3.2:latest",
@@ -58,7 +58,7 @@ class AiNestDesktop:
             print(f"⚠️ TTS initialization failed: {e}")
         
         # Initialize PC Control
-        self.pc_control = JARISPCControl()
+        self.pc_control = WolfPCControl()
         
         # Detect available Ollama models
         self.detect_available_models()
@@ -102,7 +102,7 @@ class AiNestDesktop:
             print(f"⚠️ Model detection failed: {e}")
 
 # Create global instance
-jarvis = AiNestDesktop()
+wolf = WolfDesktop()
 
 @eel.expose
 def send_message(message):
@@ -117,31 +117,31 @@ def send_message(message):
             return pc_control_result
         
         # Add to conversation history
-        jarvis.conversation_history.append({"role": "user", "content": message})
+        wolf.conversation_history.append({"role": "user", "content": message})
         
         # Prepare request to Ollama
         payload = {
-            "model": jarvis.settings["model"],
-            "messages": jarvis.conversation_history,
+            "model": wolf.settings["model"],
+            "messages": wolf.conversation_history,
             "stream": False
         }
         
         response = requests.post(
-            f"{jarvis.settings['ollama_url']}/api/chat",
+            f"{wolf.settings['ollama_url']}/api/chat",
             json=payload,
             timeout=30
         )
         
         # Handle model not found error by auto-detecting available models
         if response.status_code == 404 and "not found" in response.text.lower():
-            print(f"⚠️ Model '{jarvis.settings['model']}' not found, detecting available models...")
-            jarvis.detect_available_models()
+            print(f"⚠️ Model '{wolf.settings['model']}' not found, detecting available models...")
+            wolf.detect_available_models()
             
-            if jarvis.available_models:
+            if wolf.available_models:
                 # Retry with the new detected model
-                payload["model"] = jarvis.settings["model"]
+                payload["model"] = wolf.settings["model"]
                 response = requests.post(
-                    f"{jarvis.settings['ollama_url']}/api/chat",
+                    f"{wolf.settings['ollama_url']}/api/chat",
                     json=payload,
                     timeout=30
                 )
@@ -151,10 +151,10 @@ def send_message(message):
             ai_response = result["message"]["content"]
             
             # Add AI response to conversation history
-            jarvis.conversation_history.append({"role": "assistant", "content": ai_response})
+            wolf.conversation_history.append({"role": "assistant", "content": ai_response})
             
             # Speak response if enabled
-            if jarvis.settings["auto_speak"] and jarvis.tts_engine:
+            if wolf.settings["auto_speak"] and wolf.tts_engine:
                 threading.Thread(target=speak_text, args=(ai_response,), daemon=True).start()
             
             return {
@@ -163,10 +163,10 @@ def send_message(message):
                 "timestamp": datetime.now().strftime("%H:%M:%S")
             }
         elif response.status_code == 404:
-            if not jarvis.available_models:
+            if not wolf.available_models:
                 return {"error": "No Ollama models available. Please install a model using: ollama pull llama3.2"}
             else:
-                return {"error": f"Model error. Available models: {', '.join(jarvis.available_models)}"}
+                return {"error": f"Model error. Available models: {', '.join(wolf.available_models)}"}
         else:
             return {"error": f"API Error: {response.status_code} - {response.text}"}
             
@@ -178,17 +178,17 @@ def send_message(message):
 @eel.expose
 def start_voice_input():
     """Start voice input"""
-    if not jarvis.microphone:
+    if not wolf.microphone:
         return {"error": "Microphone not available"}
     
     try:
-        jarvis.listening = True
+        wolf.listening = True
         
-        with jarvis.microphone as source:
-            audio = jarvis.recognizer.listen(source, timeout=10, phrase_time_limit=10)
+        with wolf.microphone as source:
+            audio = wolf.recognizer.listen(source, timeout=10, phrase_time_limit=10)
         
-        text = jarvis.recognizer.recognize_google(audio)
-        jarvis.listening = False
+        text = wolf.recognizer.recognize_google(audio)
+        wolf.listening = False
         
         return {
             "success": True,
@@ -197,25 +197,25 @@ def start_voice_input():
         }
         
     except sr.WaitTimeoutError:
-        jarvis.listening = False
+        wolf.listening = False
         return {"error": "Voice input timed out"}
     except sr.UnknownValueError:
-        jarvis.listening = False
+        wolf.listening = False
         return {"error": "Could not understand audio"}
     except sr.RequestError as e:
-        jarvis.listening = False
+        wolf.listening = False
         return {"error": f"Speech recognition error: {e}"}
     except Exception as e:
-        jarvis.listening = False
+        wolf.listening = False
         return {"error": f"Unexpected error: {e}"}
 
 @eel.expose
 def speak_text(text):
     """Speak text using TTS"""
-    if jarvis.tts_engine:
+    if wolf.tts_engine:
         try:
-            jarvis.tts_engine.say(text)
-            jarvis.tts_engine.runAndWait()
+            wolf.tts_engine.say(text)
+            wolf.tts_engine.runAndWait()
             return {"success": True}
         except Exception as e:
             return {"error": f"TTS Error: {e}"}
@@ -224,17 +224,17 @@ def speak_text(text):
 @eel.expose
 def get_settings():
     """Get current settings"""
-    return jarvis.settings
+    return wolf.settings
 
 @eel.expose
 def save_settings(settings):
     """Save settings"""
     try:
-        jarvis.settings.update(settings)
+        wolf.settings.update(settings)
         
         # Update TTS volume if available
-        if jarvis.tts_engine and "volume" in settings:
-            jarvis.tts_engine.setProperty('volume', settings["volume"])
+        if wolf.tts_engine and "volume" in settings:
+            wolf.tts_engine.setProperty('volume', settings["volume"])
         
         return {"success": True}
     except Exception as e:
@@ -243,7 +243,7 @@ def save_settings(settings):
 @eel.expose
 def clear_conversation():
     """Clear conversation history"""
-    jarvis.conversation_history = []
+    wolf.conversation_history = []
     return {"success": True}
 
 @eel.expose
@@ -251,8 +251,8 @@ def get_available_models():
     """Get available Ollama models"""
     return {
         "success": True,
-        "models": jarvis.available_models,
-        "current_model": jarvis.settings["model"]
+        "models": wolf.available_models,
+        "current_model": wolf.settings["model"]
     }
 
 @eel.expose
@@ -262,18 +262,18 @@ def get_system_status():
         # Check Ollama status
         ollama_status = "Unknown"
         try:
-            response = requests.get(f"{jarvis.settings['ollama_url']}/api/tags", timeout=3)
+            response = requests.get(f"{wolf.settings['ollama_url']}/api/tags", timeout=3)
             ollama_status = "Running" if response.status_code == 200 else "Error"
         except:
             ollama_status = "Not Running"
         
         return {
             "ollama_status": ollama_status,
-            "voice_available": jarvis.microphone is not None,
-            "tts_available": jarvis.tts_engine is not None,
-            "conversation_length": len(jarvis.conversation_history),
-            "available_models": jarvis.available_models,
-            "current_model": jarvis.settings["model"]
+            "voice_available": wolf.microphone is not None,
+            "tts_available": wolf.tts_engine is not None,
+            "conversation_length": len(wolf.conversation_history),
+            "available_models": wolf.available_models,
+            "current_model": wolf.settings["model"]
         }
     except Exception as e:
         return {"error": f"Failed to get status: {e}"}
@@ -308,7 +308,7 @@ def check_pc_control_command(message):
         
         if is_pc_command:
             # Execute PC control command
-            result = jarvis.pc_control.execute_command(message)
+            result = wolf.pc_control.execute_command(message)
             return format_pc_control_response(result, message)
         
         return None  # Not a PC control command
@@ -424,11 +424,11 @@ def format_pc_control_response(result, command=""):
 def execute_pc_command(command):
     """Execute a specific PC control command"""
     try:
-        result = jarvis.pc_control.execute_command(command)
+        result = wolf.pc_control.execute_command(command)
         formatted_result = format_pc_control_response(result, command)
         
         # Speak response if enabled
-        if jarvis.settings["auto_speak"] and jarvis.tts_engine and formatted_result.get("success"):
+        if wolf.settings["auto_speak"] and wolf.tts_engine and formatted_result.get("success"):
             # Speak only the main message, not the detailed stats to avoid being too verbose
             text_to_speak = result.get("message", "Command executed")
             threading.Thread(target=speak_text, args=(text_to_speak,), daemon=True).start()
@@ -441,14 +441,14 @@ def execute_pc_command(command):
 def get_available_pc_commands():
     """Get list of available PC control commands"""
     try:
-        commands = jarvis.pc_control.get_available_commands()
+        commands = wolf.pc_control.get_available_commands()
         return {"success": True, "commands": commands}
     except Exception as e:
         return {"success": False, "error": f"Failed to get PC commands: {str(e)}"}
 
 def main():
     """Main function to start the desktop app"""
-    print("🚀 Starting AiNest Desktop Application...")
+    print("🚀 Starting Wolf AI Desktop Assistant...")
     
     # Check if web files directory exists
     web_dir = os.path.join(os.path.dirname(__file__), 'desktop_app')

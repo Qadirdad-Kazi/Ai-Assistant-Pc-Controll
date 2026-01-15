@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# JARIS Desktop App Launcher
-# This script starts the JARIS AI Assistant desktop application
+# Wolf Desktop App Launcher
+# This script starts the Wolf AI Assistant desktop application
 
-echo "🤖 Starting JARIS AI Desktop Assistant..."
+echo "🤖 Starting Wolf AI Desktop Assistant..."
 
 # Get the directory where this script is located
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -40,7 +40,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Start the desktop application
-echo "🚀 Launching JARIS Desktop App..."
-python "$DIR/jaris_desktop_app.py"
+echo "🚀 Launching Wolf Desktop App..."
+python "$DIR/Wolf_desktop_app.py"
 
-echo "👋 JARIS Desktop App has closed."
+echo "👋 Wolf Desktop App has closed."

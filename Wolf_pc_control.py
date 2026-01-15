@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-JARIS PC Control Module
+Wolf PC Control Module
 Handles system automation and PC control commands
 """
 
@@ -18,7 +18,7 @@ from typing import Dict, List, Any, Optional
 import webbrowser
 import shutil
 
-class JARISPCControl:
+class WolfPCControl:
     def __init__(self):
         """Initialize PC Control module"""
         self.system_info = {
