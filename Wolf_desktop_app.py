@@ -103,10 +103,13 @@ class WolfDesktop:
             if result.get("success"):
                 return format_pc_control_response(result, message)
             
+            # If it's a specific system error (NOT the generic "I cannot execute"), return it
+            if result.get("error") and result["error"] != "I cannot execute this action":
+                return format_pc_control_response(result, message)
+            
             # 2. Second Pass: AI Sequential Interpretation (for multi-part commands)
             analysis = self.analyze_system_intent(message)
             if analysis and analysis.get("is_system_command"):
-                # Handle sequence or single action
                 action = analysis.get("action", "sequence")
                 params = analysis.get("params", {})
                 
@@ -125,10 +128,13 @@ class WolfDesktop:
             Analyze the user request and convert it into a sequential JSON step object.
             
             RULES:
-            1. Actions: create_folder, copy, move, paste, delete, open_app, close_app, navigate.
+            1. Actions: create_folder, copy, move, paste, delete, open_app, close_app, navigate, screenshot, volume, media, calculate.
             2. Extract file/folder names EXACTLY. No filler like "from", "on", "then".
             3. Use "it" for step parameters if the user uses a pronoun.
-            4. Output ONLY clean JSON.
+            4. For 'volume', params is {{"direction": "up"|"down"|"mute"}}.
+            5. For 'media', params is {{"command": "play"|"pause"|"next"|"prev"}}.
+            6. For 'calculate', params is {{"expression": "2+2"}}.
+            7. Output ONLY clean JSON.
             
             Format:
             {{
@@ -136,8 +142,9 @@ class WolfDesktop:
                 "action": "sequence",
                 "params": {{
                     "steps": [
+                        {{ "action": "calculate", "params": {{ "expression": "25+17" }} }},
                         {{ "action": "copy", "params": {{ "source_path": "EntityName" }} }},
-                        {{ "action": "paste", "params": {{ "destination_path": "it" }} }}
+                        {{ "action": "screenshot", "params": {{}} }}
                     ]
                 }}
             }}

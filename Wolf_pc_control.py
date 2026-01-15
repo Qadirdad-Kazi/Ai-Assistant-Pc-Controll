@@ -43,20 +43,26 @@ class WolfPCControl:
         # App Mapping
         self.app_commands = {
             "calculator": ["Calculator", "calc"],
-            "notepad": ["TextEdit", "notepad"],
-            "terminal": ["Terminal", "cmd"],
-            "browser": ["Safari", "chrome", "firefox"],
-            "finder": ["Finder", "explorer"],
-            "vscode": ["Visual Studio Code", "code"],
-            "spotify": ["Spotify", "spotify"],
-            "notes": ["Notes", "notepad"]
+            "notepad": ["TextEdit", "notepad", "text edit"],
+            "terminal": ["Terminal", "cmd", "iterm", "iterm2", "powershell"],
+            "browser": ["Safari", "chrome", "firefox", "edge", "browser"],
+            "finder": ["Finder", "explorer", "file explorer"],
+            "vscode": ["Visual Studio Code", "code", "vs code"],
+            "spotify": ["Spotify", "music"],
+            "notes": ["Notes", "stickies"],
+            "slack": ["Slack"],
+            "discord": ["Discord"]
         }
 
         print(f"🖥️ Wolf PC Control initialized for {self.system_info['os']}")
 
     def _resolve_path(self, path_str: str) -> Path:
         """Premium Path Resolver: Converts shortcuts and pronouns into absolute system paths"""
-        if not path_str or str(path_str).lower() == "it":
+        if not path_str:
+            return Path.home() / "Desktop"
+            
+        path_clean = str(path_str).lower().strip().replace("'", "").replace("\"", "")
+        if path_clean == "it":
             return self.execution_memory["last_path"] or Path.home() / "Desktop"
             
         home = Path.home()
@@ -69,21 +75,20 @@ class WolfPCControl:
             "documents": home / "Documents",
             "music": home / "Music",
             "pictures": home / "Pictures",
-            "videos": home / "Videos" if ps != "Darwin" else home / "Movies"
+            "videos": home / "Videos" if ps != "Darwin" else home / "Movies",
+            "movies": home / "Movies",
+            "library": home / "Library" if ps == "Darwin" else home / "Documents"
         }
         
-        # Clean the input
-        path_norm = str(path_str).lower().strip().replace("'", "").replace("\"", "")
-        
         # Shortcut Match
-        if path_norm in shortcuts:
-            return shortcuts[path_norm]
+        if path_clean in shortcuts:
+            return shortcuts[path_clean]
             
-        # Handle "on Desktop" etc.
+        # Handle "on Desktop", "in Downloads", "from Desktop" etc.
         for key, value in shortcuts.items():
-            if f"on {key}" in path_norm or f"in {key}" in path_norm:
+            if f"on {key}" in path_clean or f"in {key}" in path_clean or f"from {key}" in path_clean:
                 clean = path_str
-                for prefix in ["on ", "in ", "the "]:
+                for prefix in ["on ", "in ", "the ", "from ", "it "]:
                     clean = clean.replace(prefix, "").replace(prefix.capitalize(), "")
                 clean = clean.replace(key, "").replace(key.capitalize(), "").strip().rstrip('.!?,')
                 return value / clean if clean else value
@@ -94,7 +99,7 @@ class WolfPCControl:
             return path
             
         # Default fallback to Desktop
-        return home / "Desktop" / path_str
+        return home / "Desktop" / path_str.replace("'", "").replace("\"", "")
 
     # --- NATIVE ACTION LAYER (Jarvis API) ---
 
@@ -104,18 +109,37 @@ class WolfPCControl:
         path.mkdir(parents=True, exist_ok=True)
         return {"success": True, "message": f"Done. {name} has been created on your {dest.name}.", "path": str(path)}
 
-    def action_copy(self, source_path: str) -> Dict[str, Any]:
+    def action_copy(self, source_path: str, destination_path: str = None) -> Dict[str, Any]:
         src = self._resolve_path(source_path)
         if not src.exists():
             return {"success": False, "error": f"I couldn’t find {src.name} on your {src.parent.name}."}
+        
+        if destination_path:
+            dst = self._resolve_path(destination_path)
+            final_dst = dst if (dst.parent.exists() and not dst.exists()) else dst / src.name
+            try:
+                if src.is_dir(): shutil.copytree(src, final_dst, dirs_exist_ok=True)
+                else: shutil.copy2(src, final_dst)
+                return {"success": True, "message": f"Done. {final_dst.name} has been created on your {final_dst.parent.name}.", "path": str(final_dst)}
+            except Exception as e: return {"success": False, "error": str(e)}
+
         self.execution_memory["pending_source"] = src
         self.execution_memory["pending_action"] = "copy"
         return {"success": True, "message": f"Source '{src.name}' locked for duplication.", "path": str(src)}
 
-    def action_move(self, source_path: str) -> Dict[str, Any]:
+    def action_move(self, source_path: str, destination_path: str = None) -> Dict[str, Any]:
         src = self._resolve_path(source_path)
         if not src.exists():
             return {"success": False, "error": f"I couldn’t find {src.name} on your {src.parent.name}."}
+        
+        if destination_path:
+            dst = self._resolve_path(destination_path)
+            final_dst = dst if (dst.parent.exists() and not dst.exists()) else dst / src.name
+            try:
+                shutil.move(str(src), str(final_dst))
+                return {"success": True, "message": f"Done. {final_dst.name} has been moved to your {final_dst.parent.name}.", "path": str(final_dst)}
+            except Exception as e: return {"success": False, "error": str(e)}
+
         self.execution_memory["pending_source"] = src
         self.execution_memory["pending_action"] = "move"
         return {"success": True, "message": f"Source '{src.name}' locked for relocation.", "path": str(src)}
@@ -125,13 +149,7 @@ class WolfPCControl:
         if not src: return {"success": False, "error": "Nothing is locked in the neural buffer. Please copy or move something first."}
         
         dst = self._resolve_path(destination_path)
-        
-        # If dst is a folder that exists, paste INTO it.
-        # If dst is a name that doesn't exist, use it as the RENAME target.
-        if dst.parent.exists() and not dst.exists():
-            final_dst = dst
-        else:
-            final_dst = dst / src.name
+        final_dst = dst if (dst.parent.exists() and not dst.exists()) else dst / src.name
 
         try:
             if self.execution_memory["pending_action"] == "copy":
@@ -148,11 +166,11 @@ class WolfPCControl:
     def action_delete(self, target_path: str) -> Dict[str, Any]:
         path = self._resolve_path(target_path)
         if not path.exists():
-            return {"success": False, "error": f"I couldn’t find {path.name} to delete."}
+            return {"success": False, "error": f"I couldn’t find {path.name} on your {path.parent.name}."}
         try:
             if path.is_dir(): shutil.rmtree(path)
             else: path.unlink()
-            return {"success": True, "message": f"Successfully removed {path.name}."}
+            return {"success": True, "message": f"Successfully removed {path.name} from your {path.parent.name}."}
         except Exception as e:
             return {"success": False, "error": f"Deletion failed: {str(e)}"}
 
@@ -161,7 +179,7 @@ class WolfPCControl:
         app_name = app_name.lower().strip()
         found = None
         for key, aliases in self.app_commands.items():
-            if app_name == key or app_name in aliases:
+            if app_name == key or any(alias.lower() == app_name for alias in aliases):
                 found = aliases[0]
                 break
         
@@ -171,28 +189,109 @@ class WolfPCControl:
             if ps == "Darwin": subprocess.run(["open", "-a", target])
             elif ps == "Windows": subprocess.run(["start", target], shell=True)
             else: subprocess.run([target])
-            return {"success": True, "message": f"Launching {target}."}
-        except: return {"success": False, "error": f"I couldn't open {target}."}
+            # Standardized confirmation as per User rules
+            display_name = target.capitalize() if target.lower() in ["calculator", "notepad"] else target
+            return {"success": True, "message": f"{display_name} is now open"}
+        except: return {"success": False, "error": f"I cannot find {app_name} on your system"}
 
     def action_close_app(self, app_name: str) -> Dict[str, Any]:
         """Close application by name"""
         app_name = app_name.lower().strip()
+        # Resolve from mapping if possible
+        found = None
+        for key, aliases in self.app_commands.items():
+            if app_name == key or any(alias.lower() == app_name for alias in aliases):
+                found = aliases[0]
+                break
+        
+        target = (found or app_name).lower()
+        closed = False
         for proc in psutil.process_iter(['name']):
-            if app_name in proc.info['name'].lower():
-                proc.kill()
-                return {"success": True, "message": f"Successfully stopped {app_name}."}
+            try:
+                proc_name = proc.info['name'].lower()
+                if target in proc_name or any(alias.lower() in proc_name for alias in ([found] if found else [])):
+                    proc.kill()
+                    closed = True
+            except (psutil.NoSuchProcess, psutil.AccessDenied): continue
+        if closed:
+            return {"success": True, "message": f"Successfully stopped {app_name}."}
         return {"success": False, "error": f"I couldn't find a running process for {app_name}."}
 
     def action_navigate(self, target_path: str) -> Dict[str, Any]:
         """Open a folder in the native file explorer"""
         path = self._resolve_path(target_path)
-        if not path.exists(): return {"success": False, "error": f"I couldn't find {path.name} to navigate to."}
+        if not path.exists(): return {"success": False, "error": f"I couldn't find {path.name} on your {path.parent.name}."}
         
         ps = platform.system()
         if ps == "Darwin": subprocess.run(["open", str(path)])
         elif ps == "Windows": os.startfile(str(path))
         else: subprocess.run(["xdg-open", str(path)])
         return {"success": True, "message": f"Opening {path.name} in file explorer."}
+
+    def action_screenshot(self) -> Dict[str, Any]:
+        """Capture screen and save to Desktop"""
+        try:
+            filename = f"Screenshot_{int(time.time())}.png"
+            path = Path.home() / "Desktop" / filename
+            
+            ps = platform.system()
+            if ps == "Darwin":
+                # Use native macOS screencapture
+                subprocess.run(["screencapture", "-x", str(path)])
+            else:
+                pyautogui.screenshot(str(path))
+                
+            return {"success": True, "message": "Screenshot saved on Desktop", "path": str(path)}
+        except Exception as e:
+            return {"success": False, "error": f"Screenshot protocol failed: {str(e)}"}
+
+    def action_volume(self, direction: str) -> Dict[str, Any]:
+        """Control system volume"""
+        if direction == "up":
+            for _ in range(5): pyautogui.press('volumeup')
+            return {"success": True, "message": "Volume increased."}
+        elif direction == "down":
+            for _ in range(5): pyautogui.press('volumedown')
+            return {"success": True, "message": "Volume decreased."}
+        elif direction == "mute":
+            pyautogui.press('volumemute')
+            return {"success": True, "message": "Volume toggled."}
+        return {"success": False, "error": "Invalid volume command."}
+
+    def action_media(self, command: str) -> Dict[str, Any]:
+        """Control media playback"""
+        mapping = {"play": "playpause", "pause": "playpause", "next": "nexttrack", "prev": "prevtrack"}
+        key = mapping.get(command.lower())
+        if key:
+            pyautogui.press(key)
+            return {"success": True, "message": f"Media {command} executed."}
+        return {"success": False, "error": "Invalid media command."}
+
+    def action_calculate(self, expression: str) -> Dict[str, Any]:
+        """Perform simple arithmetic calculations"""
+        try:
+            # Clean expression for safety
+            safe_expr = expression.replace('x', '*').replace('÷', '/').replace('^', '**')
+            # Use a limited set of allowed characters for basic security
+            allowed_chars = set("0123456789+-*/(). ")
+            if not all(c in allowed_chars for c in safe_expr):
+                # Check for word-based operations
+                words = expression.lower().split()
+                if "add" in words or "plus" in words or "+" in expression:
+                    pass # Handled by parser or allowed chars
+                else:
+                    return {"success": False, "error": "I cannot calculate that"}
+
+            # Evaluate result
+            # Note: For production, use a proper math parser.
+            # Here we follow the simple request requirement.
+            result = eval(safe_expr, {"__builtins__": None}, {})
+            
+            # Format nicely for the user
+            fmt_expr = expression.replace('*', '×').replace('/', '÷')
+            return {"success": True, "message": f"{fmt_expr} = {result}"}
+        except Exception:
+            return {"success": False, "error": "I cannot calculate that"}
 
     # --- EXECUTION ROUTING ---
 
@@ -218,16 +317,19 @@ class WolfPCControl:
         # Route to handler
         handler = getattr(self, f"action_{action}", None)
         if handler:
-            import inspect
-            sig = inspect.signature(handler)
-            filtered = {k: v for k, v in params.items() if k in sig.parameters}
-            result = handler(**filtered)
-            
-            # Post-execution State Update
-            if result.get("success"):
-                if "path" in result: self.execution_memory["last_path"] = Path(result["path"])
-                if "source_path" in params: self.execution_memory["last_path"] = self._resolve_path(params["source_path"])
-            return result
+            try:
+                import inspect
+                sig = inspect.signature(handler)
+                filtered = {k: v for k, v in params.items() if k in sig.parameters}
+                result = handler(**filtered)
+                
+                # Post-execution State Update
+                if result.get("success"):
+                    if "path" in result: self.execution_memory["last_path"] = Path(result["path"])
+                    if "source_path" in params: self.execution_memory["last_path"] = self._resolve_path(params["source_path"])
+                return result
+            except Exception as e:
+                return {"success": False, "error": f"Execution error in {action}: {str(e)}"}
         
         return {"success": False, "error": f"Command protocol '{action}' is not supported."}
 
@@ -238,7 +340,7 @@ class WolfPCControl:
         if norm:
             return self.execute_structured_action(norm["action"], norm["params"])
             
-        return {"success": False, "error": f"Protocol unrecognized: '{command}'"}
+        return {"success": False, "error": "I cannot execute this action"}
 
     def _parse_to_normalized(self, command: str) -> Optional[Dict[str, Any]]:
         """Natural Language to Structured JSON Parser"""
@@ -266,50 +368,162 @@ class WolfPCControl:
         def get_name(text):
             if '"' in text: return text.split('"')[1]
             if "'" in text: return text.split("'")[1]
-            for kw in ["named ", "as ", "called ", "folder "]:
-                if kw in text:
-                    cand = text.split(kw)[1].strip()
+            # Strip common action verbs first
+            clean_text = text
+            for verb in ["copy ", "move ", "delete ", "remove ", "create ", "make ", "rename "]:
+                if clean_text.lower().startswith(verb):
+                    clean_text = clean_text[len(verb):].strip()
+                    break
+                    
+            for kw in ["named ", "as ", "called ", "folder ", "file "]:
+                if kw in clean_text.lower():
+                    # Handle case where kw might be mixed case
+                    idx = clean_text.lower().find(kw)
+                    cand = clean_text[idx + len(kw):].strip()
                     words = []
                     for w in cand.split():
-                        if w.lower() in ["on", "in", "from", "to", "and", "then"]: break
+                        if w.lower() in ["on", "in", "from", "to", "and", "then", "at"]: break
                         words.append(w)
                     return " ".join(words).rstrip('.!?,')
             return None
 
-        seg = segment.lower()
-        if "copy " in seg:
-            return {"action": "copy", "params": {"source_path": get_name(segment) or seg.split("copy ")[1].split()[0]}}
-        if "move " in seg:
-            return {"action": "move", "params": {"source_path": get_name(segment) or seg.split("move ")[1].split()[0]}}
-        if "paste " in seg:
-            return {"action": "paste", "params": {"destination_path": get_name(segment) or "it"}}
-        if "create " in seg or "make " in seg:
-            return {"action": "create_folder", "params": {"name": get_name(segment) or "NewFolder"}}
-        if "open " in seg or "show " in seg or "go to " in seg:
+        seg = segment.lower().strip()
+        
+        # 1. Action: Rename (Special handling for source and destination)
+        if "rename " in seg:
+            parts = segment.split(" to ")
+            if len(parts) == 2:
+                src_parts = parts[0].lower().split("rename ")
+                src_name = get_name(parts[0]) or (src_parts[1].strip() if len(src_parts) > 1 else None)
+                dst_name = get_name(parts[1]) or parts[1].strip()
+                return {"action": "move", "params": {"source_path": src_name, "destination_path": dst_name}}
+            
+            rename_parts = seg.split("rename ")
+            name = get_name(segment) or (rename_parts[1].strip() if len(rename_parts) > 1 else None)
+            return {"action": "move", "params": {"source_path": "it", "destination_path": name}}
+
+        # 2. Action: Delete / Remove
+        if any(k in seg for k in ["delete ", "remove ", "erase ", "trash "]):
             target = get_name(segment)
             if not target:
-                common = ["desktop", "downloads", "documents", "pictures", "music"]
+                for kw in ["delete ", "remove ", "erase ", "trash "]:
+                    if kw in seg:
+                        raw_target = seg.split(kw)[1].strip()
+                        # Strip filler
+                        for filler in ["from desktop", "from downloads", "from documents", "it "]:
+                            if raw_target.startswith(filler):
+                                raw_target = raw_target[len(filler):].strip()
+                            if raw_target.endswith(filler):
+                                raw_target = raw_target[:-len(filler)].strip()
+                        target = raw_target
+                        break
+            # Clean up target for common filler patterns
+            if target:
+                for suffix in [" from desktop", " in desktop", " from downloads", " in downloads", " from documents", " in documents"]:
+                    if target.lower().endswith(suffix):
+                        target = target[:-len(suffix)].strip()
+            return {"action": "delete", "params": {"target_path": target}}
+
+        # 3. Action: Copy
+        if "copy " in seg:
+            name = get_name(segment)
+            if not name:
+                parts = seg.split("copy ")
+                name = parts[1].split()[0] if len(parts) > 1 else None
+            return {"action": "copy", "params": {"source_path": name}}
+
+        # 4. Action: Move
+        if "move " in seg:
+            name = get_name(segment)
+            if not name:
+                parts = seg.split("move ")
+                name = parts[1].split()[0] if len(parts) > 1 else None
+            return {"action": "move", "params": {"source_path": name}}
+
+        # 5. Action: Paste
+        if "paste " in seg:
+            return {"action": "paste", "params": {"destination_path": get_name(segment) or "it"}}
+
+        # 6. Action: Create Folder
+        if any(k in seg for k in ["create ", "make ", "mkdir "]) and "folder" in seg:
+            return {"action": "create_folder", "params": {"name": get_name(segment) or "NewFolder"}}
+
+        # 7. Action: Open / Show / Navigate
+        if any(k in seg for k in ["open ", "show ", "go to ", "launch ", "start "]):
+            target = get_name(segment)
+            if not target:
+                common = ["desktop", "downloads", "documents", "pictures", "music", "movies"]
                 for c in common:
                     if c in seg:
                         target = c
                         break
             if not target:
-                target = seg.split("open ")[1].split()[0] if "open " in seg else None
+                for kw in ["open ", "show ", "go to ", "launch ", "start "]:
+                    if kw in seg:
+                        parts = seg.split(kw)
+                        target = parts[1].split()[0] if len(parts) > 1 else None
+                        break
             
-            # Decide if it's an app or a folder
-            folder_keywords = ["desktop", "downloads", "documents", "folder", "directory"]
-            if any(k in seg for k in folder_keywords):
+            # Logic: Folder vs App
+            is_folder = any(k in seg for k in ["desktop", "downloads", "documents", "folder", "directory", "pictures", "music", "movies"])
+            if is_folder:
                 return {"action": "navigate", "params": {"target_path": target}}
             return {"action": "open_app", "params": {"app_name": target}}
 
-        if "delete " in seg or "remove " in seg:
-            return {"action": "delete", "params": {"target_path": get_name(segment) or seg.split("delete ")[1]}}
-            
+        # 8. Action: Close / Stop
+        if any(k in seg for k in ["close ", "stop ", "quit ", "kill "]):
+            target = get_name(segment)
+            if not target:
+                for kw in ["close ", "stop ", "quit ", "kill "]:
+                    if kw in seg:
+                        parts = seg.split(kw)
+                        target = parts[1].split()[0] if len(parts) > 1 else None
+                        break
+            return {"action": "close_app", "params": {"app_name": target}}
+
+        # 9. Action: Screenshot
+        if any(k in seg for k in ["screenshot", "capture ", "screen shot"]):
+            return {"action": "screenshot", "params": {}}
+
+        # 10. Action: Volume
+        if "volume" in seg:
+            direction = "mute"
+            if "up" in seg or "increase" in seg: direction = "up"
+            elif "down" in seg or "decrease" in seg: direction = "down"
+            return {"action": "volume", "params": {"direction": direction}}
+
+        # 11. Action: Media
+        if any(k in seg for k in ["play", "pause", "next song", "previous song", "skip"]):
+            cmd = "play"
+            if "pause" in seg: cmd = "pause"
+            elif "next" in seg or "skip" in seg: cmd = "next"
+            elif "prev" in seg: cmd = "prev"
+            return {"action": "media", "params": {"command": cmd}}
+
+        # 12. Action: Math / Calculation
+        math_words = ["add ", "plus ", "sum ", "subtract ", "minus ", "multiply ", "times ", "divide ", "calculate "]
+        if any(w in seg for w in math_words) or any(c in seg for c in "+-*/%"):
+            # Rapid natural language math extraction
+            import re
+            nums = re.findall(r'\d+', seg)
+            if len(nums) >= 2:
+                n1, n2 = nums[0], nums[1]
+                if "add" in seg or "plus" in seg or "+" in seg:
+                    return {"action": "calculate", "params": {"expression": f"{n1} + {n2}"}}
+                if "subtract" in seg or "minus" in seg or "-" in seg or "from" in seg:
+                    # Handle "Subtract 8 from 30" -> 30 - 8
+                    if "from" in seg: return {"action": "calculate", "params": {"expression": f"{n2} - {n1}"}}
+                    return {"action": "calculate", "params": {"expression": f"{n1} - {n2}"}}
+                if "multiply" in seg or "times" in seg or "*" in seg or "x" in seg:
+                    return {"action": "calculate", "params": {"expression": f"{n1} * {n2}"}}
+                if "divide" in seg or "/" in seg or "÷" in seg:
+                    return {"action": "calculate", "params": {"expression": f"{n1} / {n2}"}}
+
         return None
 
     def get_available_commands(self) -> List[str]:
         """Return list of supported action protocols"""
-        return ["copy", "move", "paste", "create_folder", "delete", "open_app", "close_app", "navigate", "system_status"]
+        return ["copy", "move", "paste", "create_folder", "delete", "open_app", "close_app", "navigate", "screenshot", "volume", "media", "calculate"]
 
     def get_system_info(self) -> Dict[str, Any]:
         """Native Diagnostic Layer"""
