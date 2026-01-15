@@ -51,7 +51,7 @@ class WolfPCControl:
             "chrome": ["Google Chrome", "Chrome"],
             "safari": ["Safari"],
             "finder": ["Finder", "explorer", "file explorer"],
-            "vscode": ["Visual Studio Code", "code", "vs code", "visual studio", "visual", "studio", "vscode"],
+            "vscode": ["Visual Studio Code", "code", "vs code", "visual studio", "visual", "studio", "vscode", "Electron"],
             "spotify": ["Spotify", "music"],
             "notes": ["Notes", "stickies"],
             "slack": ["Slack"],
@@ -68,19 +68,24 @@ class WolfPCControl:
         print(f"🖥️ Wolf PC Control initialized for {self.system_info['os']}")
 
     def _bring_to_front(self, app_name: str):
-        """Native window focus logic with normalized names"""
+        """Native window focus logic with alias fallback for macOS"""
         norm_name = app_name.lower().strip()
-        found = None
-        for key, aliases in self.app_commands.items():
-            if norm_name == key or any(alias.lower() == norm_name for alias in aliases):
-                found = aliases[0]
-                break
-        
-        target = found or app_name
         ps = platform.system()
+        
         if ps == "Darwin":
-            script = f'tell application "System Events" to set frontmost of process "{target}" to true'
-            subprocess.run(["osascript", "-e", script])
+            # 1. Identify all potential process names
+            targets = [app_name]
+            for key, aliases in self.app_commands.items():
+                if norm_name == key or any(alias.lower() == norm_name for alias in aliases):
+                    targets = aliases
+                    break
+            
+            # 2. Try each target until success
+            for target in targets:
+                script = f'tell application "System Events" to set frontmost of process "{target}" to true'
+                result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+                if result.returncode == 0:
+                    break
         elif ps == "Windows":
             pass
         time.sleep(0.5)
@@ -373,17 +378,21 @@ class WolfPCControl:
             return {"success": False, "error": f"I cannot calculate that: {str(e)}"}
 
     def action_automate_vscode(self, files: List[Dict[str, str]], folder_name: Optional[str] = None) -> Dict[str, Any]:
-        """GUIAgent for VS Code automation: Handles multiple file creation in a workspace"""
+        """GUIAgent for VS Code automation: Handles multiple file creation in a workspace with advanced focus logic"""
         try:
             # 1. Project Setup
             project_folder = folder_name or "Wolf_Automation"
             project_path = Path.home() / "Desktop" / project_folder
             project_path.mkdir(parents=True, exist_ok=True)
             
-            # 2. Open Workspace
-            subprocess.run(["open", "-a", "Visual Studio Code", str(project_path)])
-            time.sleep(3) 
+            # 2. Open Workspace (Native MacOS)
+            # Use bundle identifier to be safe if name varies
+            subprocess.run(["open", "-b", "com.microsoft.VSCode", str(project_path)])
+            time.sleep(4) 
+            
+            # Use 'Electron' or 'Visual Studio Code' for focus based on what was detected
             self._bring_to_front("Visual Studio Code")
+            time.sleep(1)
             
             file_names = []
             for file_data in files:
@@ -391,20 +400,25 @@ class WolfPCControl:
                 code = file_data.get("code", "")
                 if not name: continue
                 
+                # Check focus again before typing
+                self._bring_to_front("Electron")
+                
                 # 3. Create New File (Cmd+N)
                 pyautogui.hotkey('command', 'n')
-                time.sleep(1)
+                time.sleep(1.5)
                 
-                # 4. Typing Code
-                self._human_type(code, interval=0.005) # Faster for large blocks
+                # 4. Human-like Typing
+                self._human_type(code, interval=0.01)
                 
-                # 5. Save Routine
+                # 5. Save Routine (Cmd+S)
                 pyautogui.hotkey('command', 's')
-                time.sleep(2.0)
+                time.sleep(2.5) # macOS slide-down animation is slow
+                
+                # Type name and confirm
                 self._human_type(name)
                 time.sleep(0.5)
                 pyautogui.press('enter')
-                time.sleep(1)
+                time.sleep(1.5) # Wait for file to establish in filesystem
                 file_names.append(name)
             
             file_str = ", ".join(file_names)
