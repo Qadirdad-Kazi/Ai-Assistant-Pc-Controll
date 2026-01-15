@@ -128,13 +128,15 @@ class WolfDesktop:
             Analyze the user request and convert it into a sequential JSON step object.
             
             RULES:
-            1. Actions: create_folder, copy, move, paste, delete, open_app, close_app, navigate, screenshot, volume, media, calculate.
+            1. Actions: create_folder, create_file, copy, move, paste, delete, open_app, close_app, navigate, screenshot, volume, media, calculate, automate_vscode, automate_browser.
             2. Extract file/folder names EXACTLY. No filler like "from", "on", "then".
             3. Use "it" for step parameters if the user uses a pronoun.
-            4. For 'volume', params is {{"direction": "up"|"down"|"mute"}}.
-            5. For 'media', params is {{"command": "play"|"pause"|"next"|"prev"}}.
-            6. For 'calculate', params is {{"expression": "2+2"}}.
-            7. Output ONLY clean JSON.
+            4. For 'create_file', params: {{"name": "test.txt", "content": "hello", "location": "Desktop"}}.
+            5. For 'calculate', params: {{"expression": "25+17"}}. Use this for math.
+            6. For 'automate_vscode', params: {{"file_name": "app.py", "code": "print('hello')", "folder_name": "ProjectFolder"}}.
+            7. For 'automate_browser', params: {{"url": "google.com", "prompt": "search for wolves"}}.
+            8. For 'volume', params: {{"direction": "up"|"down"|"mute"}}.
+            9. Output ONLY clean JSON.
             
             Format:
             {{
@@ -142,9 +144,9 @@ class WolfDesktop:
                 "action": "sequence",
                 "params": {{
                     "steps": [
-                        {{ "action": "calculate", "params": {{ "expression": "25+17" }} }},
-                        {{ "action": "copy", "params": {{ "source_path": "EntityName" }} }},
-                        {{ "action": "screenshot", "params": {{}} }}
+                        {{ "action": "automate_browser", "params": {{ "url": "chat.openai.com", "prompt": "Write a poem" }} }},
+                        {{ "action": "automate_vscode", "params": {{ "file_name": "poem.txt", "code": "[result from previous]" }} }},
+                        {{ "action": "calculate", "params": {{ "expression": "2+2" }} }}
                     ]
                 }}
             }}
