@@ -96,39 +96,71 @@ class WolfDesktop:
             print(f"⚠️ Cannot connect to Ollama: {e}")
 
     def check_pc_control_command(self, message):
-        """Check if message is a PC control command and execute it"""
+        """Check if message is a PC control command and execute it directly or via AI sequence parsing"""
         try:
-            # 1st attempt: Fast keyword matching
+            # 1. First Pass: Rapid Keyword Match (for efficiency)
             result = self.pc_control.execute_command(message)
-            if result.get("success") or "Protocol unrecognized" not in str(result.get("error", "")):
+            if result.get("success"):
                 return format_pc_control_response(result, message)
             
-            # 2nd attempt: LLM Intent Identification for fuzzy commands
-            if self.is_likely_command(message):
-                intent_cmd = self.identify_intent_via_ai(message)
-                if intent_cmd:
-                    result = self.pc_control.execute_command(intent_cmd)
-                    if result.get("success"):
-                        return format_pc_control_response(result, intent_cmd)
+            # 2. Second Pass: AI Sequential Interpretation (for multi-part commands)
+            analysis = self.analyze_system_intent(message)
+            if analysis and analysis.get("is_system_command"):
+                # Handle sequence or single action
+                action = analysis.get("action", "sequence")
+                params = analysis.get("params", {})
+                
+                result = self.pc_control.execute_structured_action(action, params)
+                return format_pc_control_response(result, message)
+                
             return None
         except Exception as e:
-            print(f"Intent Error: {e}")
+            print(f"Neural routing error: {e}")
             return None
 
-    def is_likely_command(self, message):
-        words = message.lower().split()
-        if len(words) > 12: return False
-        verbs = ['open', 'close', 'show', 'list', 'take', 'maximize', 'minimize', 'create', 'search', 'volume', 'mute', 'play', 'pause', 'next', 'previous']
-        return any(message.lower().startswith(v) for v in verbs) or len(words) < 5
-
-    def identify_intent_via_ai(self, user_input):
+    def analyze_system_intent(self, user_input):
+        """Segment multi-part commands into the Jarvis Protocol structure"""
         try:
-            prompt = f"Map this to a system command (e.g. 'open calculator', 'volume up', 'take screenshot'). Request: '{user_input}'. Return ONLY the command or 'None':"
-            payload = {"model": self.settings["model"], "messages": [{"role": "system", "content": prompt}], "stream": False, "options": {"temperature": 0.1}}
+            prompt = f"""[PROTOCOL OVERRIDE] You are a high-precision system command segmenter.
+            Analyze the user request and convert it into a sequential JSON step object.
+            
+            RULES:
+            1. Actions: create_folder, copy, move, paste, delete, open_app, close_app, navigate.
+            2. Extract file/folder names EXACTLY. No filler like "from", "on", "then".
+            3. Use "it" for step parameters if the user uses a pronoun.
+            4. Output ONLY clean JSON.
+            
+            Format:
+            {{
+                "is_system_command": true,
+                "action": "sequence",
+                "params": {{
+                    "steps": [
+                        {{ "action": "copy", "params": {{ "source_path": "EntityName" }} }},
+                        {{ "action": "paste", "params": {{ "destination_path": "it" }} }}
+                    ]
+                }}
+            }}
+            
+            User Request: "{user_input}" """
+            
+            payload = {
+                "model": self.settings["model"],
+                "messages": [{"role": "system", "content": prompt}],
+                "stream": False,
+                "format": "json",
+                "options": {"temperature": 0}
+            }
+            
             response = requests.post(f"{self.settings['ollama_url']}/api/chat", json=payload, timeout=5)
             if response.status_code == 200:
-                cmd = response.json()["message"]["content"].strip().lower()
-                return cmd if cmd != "none" else None
+                content = response.json()["message"]["content"]
+                # Clean up any potential markdown wraps
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+                return json.loads(content)
         except: return None
         return None
 
@@ -137,15 +169,36 @@ wolf = WolfDesktop()
 
 @eel.expose
 def send_message(message):
-    """Send message to AI and get response"""
+    """Send message to AI and get response with rigorous command filtering"""
     try:
         if not message.strip(): return {"error": "Empty message"}
         
-        # Check command first
-        pc_control_result = wolf.check_pc_control_command(message)
-        if pc_control_result: return pc_control_result
+        msg_lower = message.lower().strip()
+        system_triggers = [
+            'copy', 'move', 'delete', 'remove', 'create', 'open', 'close', 
+            'list', 'show', 'take', 'capture', 'volume', 'mute', 'system', 
+            'folder', 'file', 'navigation', 'browser', 'search', 'mkdir'
+        ]
         
-        # AI Chat
+        # Check if this is likely a system command based on keyword or structure
+        is_likely_system = any(msg_lower.startswith(t) for t in system_triggers) or \
+                          (len(msg_lower.split()) < 5 and any(t in msg_lower for t in system_triggers))
+        
+        # 1. Primary: Direct System Execution
+        pc_control_result = wolf.check_pc_control_command(message)
+        if pc_control_result: 
+            return pc_control_result
+            
+        # 2. Safety Valve: If it LOOKS like a system command but reached here, it failed.
+        # DO NOT let it go to the Chat LLM for 'explanations'.
+        if is_likely_system:
+            return {
+                "success": False, 
+                "error": "System protocol unrecognized or parameters missing. I cannot execute this action.",
+                "pc_control": True
+            }
+        
+        # 3. AI Chat: General conversation ONLY
         wolf.kill_flag = False
         wolf.conversation_history.append({"role": "user", "content": message})
         payload = {"model": wolf.settings["model"], "messages": wolf.conversation_history, "stream": False}
@@ -159,6 +212,16 @@ def send_message(message):
             return {"success": False, "error": "Neural link severed by user."}
         if response.status_code == 200:
             ai_response = response.json()["message"]["content"]
+            
+            # HARD INTERCEPT: Check for instructional guides/tutorials
+            guide_keywords = ["to achieve this", "step-by-step", "method 1:", "open file explorer", "open the finder", "open command prompt", "here is a guide"]
+            if any(guide.lower() in ai_response.lower() for guide in guide_keywords):
+                return {
+                    "success": False, 
+                    "error": "Protocol Violation: External instruction guide detected. System and AI are configured for direct execution only.",
+                    "pc_control": True
+                }
+
             wolf.conversation_history.append({"role": "assistant", "content": ai_response})
             if wolf.settings["auto_speak"] and wolf.tts_engine:
                 threading.Thread(target=speak_text, args=(ai_response,), daemon=True).start()
