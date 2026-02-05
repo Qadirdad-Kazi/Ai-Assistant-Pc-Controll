@@ -1,7 +1,7 @@
 import asyncio
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, 
-    QScrollArea, QGridLayout, QPushButton
+    QScrollArea, QGridLayout, QPushButton, QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Qt, Signal, QThread
 from PySide6.QtGui import QColor
@@ -12,6 +12,21 @@ from qfluentwidgets import (
 )
 
 from core.kasa_control import kasa_manager
+
+# --- Wolf Knight Theme Constants ---
+THEME_GLASS = "rgba(16, 24, 40, 0.70)" 
+THEME_BORDER = "rgba(76, 201, 240, 0.3)" # Neon Cyan
+THEME_ACCENT = "#4cc9f0"
+THEME_TEXT_MAIN = "#e8f1ff"
+THEME_TEXT_SUB = "#94a3b8"
+THEME_GLOW = "rgba(76, 201, 240, 0.15)"
+
+class GlowEffect(QGraphicsDropShadowEffect):
+    def __init__(self, color=THEME_ACCENT, blur=15, parent=None):
+        super().__init__(parent)
+        self.setBlurRadius(blur)
+        self.setColor(QColor(color))
+        self.setOffset(0, 0)
 
 class DataFetchThread(QThread):
     devices_found = Signal(list)
@@ -78,12 +93,16 @@ class DeviceCard(QFrame):
         self.is_bulb = "Bulb" in device_info.get("type", "") or device_info.get("brightness") is not None
         
         self.setFixedSize(300, 160)
-        self.setStyleSheet("""
-            DeviceCard {
-                background-color: #1a2236;
-                border: 1px solid #2a3556;
-                border-radius: 20px;
-            }
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {THEME_GLASS};
+                border: 1px solid {THEME_BORDER};
+                border-radius: 12px;
+            }}
+            QFrame:hover {{
+                border: 1px solid {THEME_ACCENT};
+                background-color: rgba(20, 30, 50, 0.8);
+            }}
         """)
         
         layout = QVBoxLayout(self)
@@ -95,7 +114,7 @@ class DeviceCard(QFrame):
         # Icon Box
         icon_box = QFrame()
         icon_box.setFixedSize(40, 40)
-        icon_box.setStyleSheet("background-color: #232d45; border-radius: 12px;")
+        icon_box.setStyleSheet(f"background-color: rgba(76, 201, 240, 0.1); border-radius: 6px; border: none;")
         ib_layout = QVBoxLayout(icon_box)
         ib_layout.setAlignment(Qt.AlignCenter)
         ib_layout.setContentsMargins(0,0,0,0)
@@ -111,19 +130,17 @@ class DeviceCard(QFrame):
         self.toggle = SwitchButton()
         self.toggle.setChecked(device_info['is_on'])
         self.toggle.checkedChanged.connect(self._on_toggle)
+        # Style switch if needed, but standard usually works
         header.addWidget(self.toggle)
         
         layout.addLayout(header)
         
         # Info
         name_label = QLabel(device_info['alias'])
-        name_label.setStyleSheet("color: white; font-weight: bold; font-size: 16px; background: transparent;")
+        name_label.setStyleSheet(f"color: {THEME_TEXT_MAIN}; font-weight: bold; font-size: 16px; background: transparent; border: none;")
         
         status_label = QLabel("ONLINE")
-        status_label.setStyleSheet("color: #6e7a8e; font-size: 11px; font-weight: bold; spacing: 2px; background: transparent;")
-        
-        layout.addWidget(name_label)
-        layout.addWidget(status_label)
+        status_label.setStyleSheet(f"color: {THEME_ACCENT}; font-size: 10px; font-weight: bold; spacing: 2px; background: transparent; border: none;")
         
         layout.addWidget(name_label)
         layout.addWidget(status_label)
@@ -177,6 +194,7 @@ class DeviceCard(QFrame):
 class HomeAutomationTab(QWidget):
     """
     Environmental Control Dashboard.
+    Wolf Knight Theme.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -196,6 +214,7 @@ class HomeAutomationTab(QWidget):
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setStyleSheet("background: transparent; border: none;")
+        self.scroll.viewport().setStyleSheet("background: transparent;")
         
         self.grid_widget = QWidget()
         self.grid_widget.setStyleSheet("background: transparent;")
@@ -217,11 +236,11 @@ class HomeAutomationTab(QWidget):
         header = QHBoxLayout()
         
         text_layout = QVBoxLayout()
-        title = TitleLabel("Environmental Control", self)
-        title.setStyleSheet("font-size: 28px; font-weight: bold; color: white;")
+        title = QLabel("ENVIRONMENTAL CONTROL")
+        title.setStyleSheet(f"font-size: 24px; font-weight: 800; color: {THEME_TEXT_MAIN}; letter-spacing: 2px;")
         
-        sub = BodyLabel("Localized automation interface.", self)
-        sub.setStyleSheet("color: #6e7a8e; font-size: 14px;")
+        sub = QLabel("LOCALIZED AUTOMATION INTERFACE // ACTIVE")
+        sub.setStyleSheet(f"color: {THEME_ACCENT}; font-size: 10px; font-weight: bold; letter-spacing: 1px;")
         
         text_layout.addWidget(title)
         text_layout.addWidget(sub)
@@ -238,17 +257,15 @@ class HomeAutomationTab(QWidget):
         header.addSpacing(10)
 
         # HA Bubble
-        ha_bubble = QLabel("•  PERIMETER SECURE") # Closest match to image, or custom text
-        # User requested: "Home Assistant coming soon!"
-        ha_bubble.setText("⬤  Home Assistant Coming Soon!")
-        ha_bubble.setStyleSheet("""
-            background-color: #0d121d; 
-            color: #33b5e5; 
-            border: 1px solid #1a2236; 
-            border-radius: 18px; 
-            padding: 8px 20px; 
+        ha_bubble = QLabel("• HOME ASSISTANT INTEGRATION COMING SOON") 
+        ha_bubble.setStyleSheet(f"""
+            background-color: rgba(13, 18, 29, 0.6); 
+            color: {THEME_ACCENT}; 
+            border: 1px solid {THEME_BORDER}; 
+            border-radius: 14px; 
+            padding: 6px 15px; 
             font-weight: bold;
-            font-size: 12px;
+            font-size: 10px;
         """)
         header.addWidget(ha_bubble)
         
@@ -272,7 +289,7 @@ class HomeAutomationTab(QWidget):
         
         # Insert before stretch
         for i, room in enumerate(rooms):
-            btn = QPushButton(room)
+            btn = QPushButton(room.upper())
             btn.setCheckable(True)
             btn.clicked.connect(lambda checked, r=room: self._filter_grid(r))
             
@@ -284,19 +301,22 @@ class HomeAutomationTab(QWidget):
             # Custom Style
             btn.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: #1a2236; 
-                    color: #6e7a8e; 
-                    border-radius: 15px; 
+                    background-color: rgba(26, 34, 54, 0.5); 
+                    color: {THEME_TEXT_SUB}; 
+                    border-radius: 4px; 
                     padding: 8px 20px;
-                    border: none;
+                    border: 1px solid transparent;
                     font-weight: bold;
+                    letter-spacing: 1px;
                 }}
                 QPushButton:checked {{
-                    background-color: #33b5e5; 
-                    color: #0f1524; 
+                    background-color: rgba(76, 201, 240, 0.15); 
+                    color: {THEME_ACCENT}; 
+                    border: 1px solid {THEME_ACCENT};
                 }}
                 QPushButton:hover {{
-                    background-color: #232d45;
+                    background-color: rgba(35, 45, 69, 0.8);
+                    color: {THEME_TEXT_MAIN};
                 }}
             """)
             self.filter_layout.insertWidget(i, btn)
@@ -307,7 +327,7 @@ class HomeAutomationTab(QWidget):
         for i in range(self.filter_layout.count() - 1): # exclude stretch
             btn = self.filter_layout.itemAt(i).widget()
             if isinstance(btn, QPushButton): # Safety check
-                if btn.text() == room_name:
+                if btn.text() == room_name.upper():
                     btn.setChecked(True)
                 else:
                     btn.setChecked(False)

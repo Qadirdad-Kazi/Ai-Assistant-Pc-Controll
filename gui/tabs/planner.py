@@ -1,8 +1,10 @@
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QVBoxLayout, QLabel, 
-    QListWidgetItem, QSizePolicy, QWidget, QScrollArea
+    QListWidgetItem, QSizePolicy, QWidget, QScrollArea,
+    QGraphicsDropShadowEffect
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, Signal
+from PySide6.QtGui import QColor
 
 from qfluentwidgets import (
     LineEdit, ListWidget, CheckBox, PushButton, 
@@ -16,11 +18,25 @@ from gui.components.timer import TimerComponent
 from gui.components.alarm import AlarmComponent
 from core.tasks import task_manager
 
+# --- Wolf Knight Theme Constants ---
+THEME_GLASS = "rgba(16, 24, 40, 0.70)" 
+THEME_BORDER = "rgba(76, 201, 240, 0.3)" # Neon Cyan
+THEME_ACCENT = "#4cc9f0"
+THEME_TEXT_MAIN = "#e8f1ff"
+THEME_TEXT_SUB = "#94a3b8"
+THEME_GLOW = "rgba(76, 201, 240, 0.15)"
+
+class GlowEffect(QGraphicsDropShadowEffect):
+    def __init__(self, color=THEME_ACCENT, blur=15, parent=None):
+        super().__init__(parent)
+        self.setBlurRadius(blur)
+        self.setColor(QColor(color))
+        self.setOffset(0, 0)
 
 class PlannerTab(QFrame):
     """
     Planner functionality: Focus Tasks, Schedule, and Flow State tools.
-    Refined for Aura Theme.
+    Wolf Knight Theme Edition.
     """
     
     def __init__(self):
@@ -38,37 +54,51 @@ class PlannerTab(QFrame):
         planner_layout.setContentsMargins(30, 30, 30, 30)
         planner_layout.setSpacing(25)
         
-        # --- Column 1: Focus Tasks (HeaderCardWidget) ---
-        tasks_col = HeaderCardWidget("Focus Tasks")
-        tasks_col.setBorderRadius(12)
+        # --- Column 1: Focus Tasks (Custom Glass Card) ---
+        tasks_col = QFrame()
+        tasks_col.setStyleSheet(f"""
+            QFrame {{
+                background-color: {THEME_GLASS};
+                border: 1px solid {THEME_BORDER};
+                border-radius: 12px;
+            }}
+        """)
+        tasks_col.setGraphicsEffect(GlowEffect(THEME_ACCENT, 10))
         
-        # Add Input to header area or top of content? 
-        # HeaderCardWidget usually has title. Let's put input inside content.
-        
-        tasks_layout = QVBoxLayout(tasks_col.viewLayout.parentWidget()) 
-        # Note: HeaderCardWidget has .viewLayout which is the content layout
-        # But to access it we usually just add widgets to the Card/view.
-        # Actually HeaderCardWidget inherits from CardWidget but adds a header.
-        # The content area is populated via styling or adding to layout.
-        # Let's check docs or usage. Commonly: widget.viewLayout.addWidget(...)
-        
-        # Wait, HeaderCardWidget in qfluentwidgets might treat children differently.
-        # It's safer to use the layout directly if accessible, or add to self.
-        
-        t_layout = QVBoxLayout()
+        t_layout = QVBoxLayout(tasks_col)
         t_layout.setContentsMargins(20, 20, 20, 20)
         t_layout.setSpacing(15)
         
+        # Header
+        t_header = QLabel("MISSION OBJECTIVES")
+        t_header.setStyleSheet(f"color: {THEME_ACCENT}; font-size: 12px; font-weight: bold; letter-spacing: 2px; border: none; background: transparent;")
+        t_layout.addWidget(t_header)
+        
         # New Task Input
         self.task_input = LineEdit()
-        self.task_input.setPlaceholderText("Add objective...")
+        self.task_input.setPlaceholderText("Enter objective parameters...")
         self.task_input.returnPressed.connect(self._add_task)
         self.task_input.setClearButtonEnabled(True)
+        self.task_input.setFixedHeight(40)
+        # Custom input style handled by global stylesheet better, but inline override:
+        self.task_input.setStyleSheet(f"""
+            QLineEdit {{
+                background: rgba(0, 0, 0, 0.3);
+                border: 1px solid {THEME_BORDER};
+                border-radius: 6px;
+                color: {THEME_TEXT_MAIN};
+                padding-left: 10px;
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {THEME_ACCENT};
+                background: rgba(0, 0, 0, 0.5);
+            }}
+        """)
         t_layout.addWidget(self.task_input)
         
         # Task Lists (Active)
         self.task_list = ListWidget()
-        self.task_list.setStyleSheet("background: transparent; border: none;")
+        self.task_list.setStyleSheet("background: transparent; border: none; outline: none;")
         t_layout.addWidget(self.task_list, 1) # Stretch to fill
         
         # Completed Section
@@ -78,32 +108,43 @@ class PlannerTab(QFrame):
         header_layout.addWidget(self.completed_header_btn)
         
         self.completed_label = BodyLabel("Completed 0")
-        self.completed_label.setStyleSheet("color: #8b9bb4;")
+        self.completed_label.setStyleSheet(f"color: {THEME_TEXT_SUB}; border: none; background: transparent;")
         header_layout.addWidget(self.completed_label)
         header_layout.addStretch()
         
         t_layout.addLayout(header_layout)
         
         self.completed_list = ListWidget()
-        self.completed_list.setStyleSheet("background: transparent; border: none;")
+        self.completed_list.setStyleSheet(f"background: transparent; border: none; outline: none; color: {THEME_TEXT_SUB};")
         self.completed_list.setVisible(False)
         t_layout.addWidget(self.completed_list)
         
-        tasks_col.viewLayout.addLayout(t_layout)
-        
         planner_layout.addWidget(tasks_col, 1)
         
-        # --- Column 2: Schedule (HeaderCardWidget) ---
-        schedule_col = HeaderCardWidget("Timeline")
-        schedule_col.setBorderRadius(12)
+        # --- Column 2: Schedule (Custom Glass Card) ---
+        schedule_col = QFrame()
+        schedule_col.setStyleSheet(f"""
+            QFrame {{
+                background-color: {THEME_GLASS};
+                border: 1px solid {THEME_BORDER};
+                border-radius: 12px;
+            }}
+        """)
+        schedule_col.setGraphicsEffect(GlowEffect(THEME_ACCENT, 10))
         
-        s_layout = QVBoxLayout()
-        s_layout.setContentsMargins(0, 0, 0, 0)
+        s_layout = QVBoxLayout(schedule_col)
+        s_layout.setContentsMargins(20, 20, 20, 20)
+        s_layout.setSpacing(10)
+        
+        s_header = QLabel("OPERATIONAL TIMELINE")
+        s_header.setStyleSheet(f"color: {THEME_ACCENT}; font-size: 12px; font-weight: bold; letter-spacing: 2px; border: none; background: transparent;")
+        s_layout.addWidget(s_header)
         
         self.schedule_component = ScheduleComponent()
+        # Ensure schedule component has transparent bg
+        # Note: ScheduleComponent might need internal styling updates too, 
+        # but wrapping it here helps.
         s_layout.addWidget(self.schedule_component)
-        
-        schedule_col.viewLayout.addLayout(s_layout)
         
         planner_layout.addWidget(schedule_col, 1)
         
@@ -116,13 +157,14 @@ class PlannerTab(QFrame):
         flow_layout.setSpacing(25)
         
         # Performance Header
-        p_title = StrongBodyLabel("Performance Timers")
-        p_title.setStyleSheet("color: #e8eaed; font-size: 14px;")
+        p_title = QLabel("CHRONO SYNC")
+        p_title.setStyleSheet(f"color: {THEME_ACCENT}; font-size: 14px; font-weight: bold; letter-spacing: 2px;")
         flow_layout.addWidget(p_title)
         
         # Timer
         self.timer_component = TimerComponent()
-        # Ensure it has a Card-like container if it doesn't already
+        # Assuming TimerComponent inherits CardWidget or Frame. We can style it if needed.
+        # But for now, just adding it.
         flow_layout.addWidget(self.timer_component)
         
         # Alarm
@@ -207,6 +249,7 @@ class PlannerTab(QFrame):
         item.setData(Qt.UserRole, task_id)  # Store ID
         
         task_widget = QWidget()
+        task_widget.setStyleSheet(f"background: transparent; border: none;")
         task_layout = QHBoxLayout(task_widget)
         task_layout.setContentsMargins(10, 5, 10, 5)
         task_layout.setSpacing(12)
@@ -222,15 +265,16 @@ class PlannerTab(QFrame):
         task_label = BodyLabel(text)
         if completed:
             # Strikethrough style
-            task_label.setStyleSheet("color: #8a8a8a; text-decoration: line-through;")
+            task_label.setStyleSheet(f"color: {THEME_TEXT_SUB}; text-decoration: line-through; border: none; background: transparent;")
         else:
-            task_label.setStyleSheet("color: #e8eaed;") 
+            task_label.setStyleSheet(f"color: {THEME_TEXT_MAIN}; border: none; background: transparent;")
             
         task_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         task_layout.addWidget(task_label, 1)
         
         # Delete button
         delete_btn = TransparentToolButton(FIF.DELETE)
+        delete_btn.setStyleSheet("border: none; background: transparent;")
         delete_btn.clicked.connect(lambda: self._delete_task(item, target_list))
         task_layout.addWidget(delete_btn)
         

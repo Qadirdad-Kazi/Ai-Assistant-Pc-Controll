@@ -9,11 +9,16 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, Property, QRectF, QPointF
 from PySide6.QtGui import QFont, QPainter, QColor
 
+# --- Wolf Knight Theme Constants ---
+THEME_GLASS_DARK = "rgba(10, 15, 25, 0.4)" 
+THEME_BORDER = "rgba(76, 201, 240, 0.3)" 
+THEME_ACCENT = "#4cc9f0"
+THEME_TEXT_SUB = "#94a3b8"
 
 class RotatingSpinner(QWidget):
     """A widget that displays a rotating text character."""
 
-    def __init__(self, text="⟳", color="#4F8EF7", font_size=12, parent=None):
+    def __init__(self, text="⟳", color=THEME_ACCENT, font_size=12, parent=None):
         super().__init__(parent)
         self.setFixedSize(20, 20)
         self._text = text
@@ -111,7 +116,7 @@ class ThinkingExpander(QFrame):
         
         # Title
         self.title_label = QLabel("Thinking...")
-        self.title_label.setStyleSheet("color: #9e9e9e; font-size: 11px;")
+        self.title_label.setStyleSheet(f"color: {THEME_TEXT_SUB}; font-size: 11px;")
         header_layout.addWidget(self.title_label)
         
         header_layout.addStretch()
@@ -119,7 +124,7 @@ class ThinkingExpander(QFrame):
         # Expand/Collapse arrow
         # Default to expanded arrow
         self.arrow_label = QLabel("▼")
-        self.arrow_label.setStyleSheet("color: #6e6e6e; font-size: 9px;")
+        self.arrow_label.setStyleSheet(f"color: {THEME_TEXT_SUB}; font-size: 9px;")
         header_layout.addWidget(self.arrow_label)
         
         self.main_layout.addWidget(self.header)
@@ -137,15 +142,15 @@ class ThinkingExpander(QFrame):
         self.log_text.setFont(QFont("Consolas", 9))
         self.log_text.setMinimumHeight(60)
         self.log_text.setMaximumHeight(150)
-        self.log_text.setStyleSheet("""
-            QTextEdit {
-                background-color: #1a1a1a;
-                color: #a0a0a0;
-                border: none;
+        self.log_text.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: rgba(10, 15, 25, 0.4);
+                color: {THEME_TEXT_SUB};
+                border: 1px solid {THEME_BORDER};
                 border-radius: 4px;
                 padding: 6px;
                 line-height: 120%;
-            }
+            }}
         """)
         content_layout.addWidget(self.log_text)
         
@@ -155,20 +160,22 @@ class ThinkingExpander(QFrame):
         self.header.mousePressEvent = self._on_header_click
         
     def _apply_style(self):
-        self.setStyleSheet("""
-            QFrame#thinkingExpander {
-                background-color: #2a2a2a;
+        self.setStyleSheet(f"""
+            QFrame#thinkingExpander {{
+                background-color: {THEME_GLASS_DARK};
+                border: 1px solid {THEME_BORDER};
                 border-radius: 6px;
                 margin-bottom: 4px;
                 margin-top: 4px;
-            }
-            QFrame#thinkingHeader {
+            }}
+            QFrame#thinkingHeader {{
                 background-color: transparent;
                 border-radius: 6px;
-            }
-            QFrame#thinkingHeader:hover {
-                background-color: #333333;
-            }
+                border: none;
+            }}
+            QFrame#thinkingHeader:hover {{
+                background-color: rgba(76, 201, 240, 0.1);
+            }}
         """)
         
     def _on_header_click(self, event):

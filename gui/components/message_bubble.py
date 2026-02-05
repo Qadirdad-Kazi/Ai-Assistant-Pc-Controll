@@ -70,23 +70,33 @@ class MessageBubble(QFrame):
     def _apply_style(self):
         is_user = self.role == "user"
         
+        # Wolf Knight Theme Colors
+        # User: Deep Blue Glass
+        # AI: Dark Glass with Cyan Accent
+        
         if self.is_thinking:
-            bg_color = "#2a2a2a"
+            bg_color = "rgba(42, 42, 42, 0.6)"
             border_radius = "12px"
             text_color = "#9e9e9e"
+            border = "1px solid rgba(255, 255, 255, 0.1)"
         elif is_user:
-            bg_color = "#005c4b"
-            border_radius = "18px 18px 4px 18px"
+            # Deep Indigo Glass
+            bg_color = "rgba(40, 50, 100, 0.5)"
+            border_radius = "18px 4px 18px 18px" # Sharp top-right
             text_color = "#e8eaed"
+            border = "1px solid rgba(76, 201, 240, 0.3)" # Neon Cyan/Silver border
         else:
-            bg_color = "#363636"
-            border_radius = "18px 18px 18px 4px"
+            # Ghost Dark Glass
+            bg_color = "rgba(20, 30, 50, 0.6)"
+            border_radius = "4px 18px 18px 18px" # Sharp top-left
             text_color = "#e8eaed"
+            border = "1px solid rgba(76, 201, 240, 0.2)" # Subtle Cyan border
         
         self.setStyleSheet(f"""
             QFrame#messageBubble {{
                 background-color: {bg_color};
                 border-radius: {border_radius};
+                border: {border};
             }}
             QTextBrowser {{
                 color: {text_color};
@@ -95,7 +105,8 @@ class MessageBubble(QFrame):
         
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         self.setMinimumWidth(60)
-        self.setMaximumWidth(600) # Slightly wider for code
+        self.setMaximumWidth(700) # Slightly wider
+
     
     def set_text(self, text: str, force_markdown: bool = True):
         """Update the message content (for streaming)."""

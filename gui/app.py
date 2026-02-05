@@ -25,7 +25,6 @@ from gui.tabs.dashboard import DashboardView
 from gui.tabs.chat import ChatTab
 from gui.tabs.planner import PlannerTab
 from gui.tabs.settings import SettingsTab
-from gui.tabs.briefing import BriefingView
 from gui.tabs.browser import BrowserTab
 from gui.tabs.home_automation import HomeAutomationTab
 from gui.components.system_monitor import SystemMonitor
@@ -205,21 +204,24 @@ class MainWindow(FluentWindow):
         self.dashboard_view.navigate_to.connect(self._navigate_to_tab)
         self.addSubInterface(self.dashboard_view, FIF.LAYOUT, "Dashboard")
 
+
         # Lazy load other tabs
         self.chat_lazy = LazyTab(ChatTab, "chatInterface")
         self.planner_lazy = LazyTab(PlannerTab, "plannerInterface")
-        # Eager load briefing for startup fetch
-        self.briefing_view = BriefingView()
-        self.briefing_view.setObjectName("briefingInterface")
+        
+from gui.tabs.grimoire import GrimoireTab
 
+# ... (inside MainWindow._init_window)
+        
         self.home_lazy = LazyTab(HomeAutomationTab, "homeInterface")
         self.browser_lazy = LazyTab(BrowserTab, "browserInterface")
+        self.grimoire_lazy = LazyTab(GrimoireTab, "grimoireInterface")
         
         self.addSubInterface(self.chat_lazy, FIF.CHAT, "Chat")
         self.addSubInterface(self.planner_lazy, FIF.CALENDAR, "Planner")
-        self.addSubInterface(self.briefing_view, FIF.DATE_TIME, "Briefing")
-        self.addSubInterface(self.home_lazy, FIF.HOME, "Home Auto")
-        self.addSubInterface(self.browser_lazy, FIF.GLOBE, "Web Agent")
+        self.addSubInterface(self.home_lazy, FIF.HOME, "Home")
+        self.addSubInterface(self.browser_lazy, FIF.GLOBE, "Web")
+        self.addSubInterface(self.grimoire_lazy, FIF.BOOK_SHELF, "Grimoire")
         
         # Settings at bottom
         self.settings_lazy = LazyTab(SettingsTab, "settingsInterface")
@@ -293,8 +295,6 @@ class MainWindow(FluentWindow):
                 self._connect_chat_signals()
             elif obj_name == "plannerInterface":
                 self.planner_tab = real_widget
-            elif obj_name == "briefingInterface":
-                self.briefing_view = real_widget
             elif obj_name == "homeInterface":
                 self.home_tab = real_widget
             elif obj_name == "browserInterface":

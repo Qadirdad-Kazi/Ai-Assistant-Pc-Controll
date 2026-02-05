@@ -11,7 +11,6 @@ from qfluentwidgets import (
     SimpleCardWidget, ImageLabel, PillToolButton
 )
 
-from core.news import news_manager
 from core.tasks import task_manager
 from core.calendar_manager import calendar_manager
 from core.kasa_control import kasa_manager
@@ -453,13 +452,10 @@ class IntelligenceFeed(QFrame):
         h_layout.addWidget(live)
         self.layout.addLayout(h_layout)
         
-        # 1. Daily Focus
+
+        # 2. Daily Focus
         self.focus_item = self._create_item(FIF.TILES, "MISSION OBJECTIVES", "Analyzing daily schedule protocols...", "SYNCING")
         self.layout.addWidget(self.focus_item)
-        
-        # 2. Intel
-        self.news_item = self._create_item(FIF.WIFI, "INTEL STREAM", "Scanning global information networks...", "WAITING")
-        self.layout.addWidget(self.news_item)
         
         # 3. IOT
         self.dev_item = self._create_item(FIF.IOT, "CONNECTED ASSETS", "Ping network for active nodes...", "SCANNING")
@@ -491,12 +487,6 @@ class IntelligenceFeed(QFrame):
         time_lbl.setText(time)
         desc_lbl.setText(desc)
 
-    def update_news(self, news):
-        if news:
-            self._update_item_widgets(self.news_item, "INTEL ALERT", news[0]['title'], "INCOMING")
-        else:
-            self._update_item_widgets(self.news_item, "INTEL ALERT", "No critical intelligence updates.", "IDLE")
-            
     def update_devices(self, devices):
         c = len(devices)
         active = sum(1 for d in devices if d.get('is_on'))
@@ -597,7 +587,6 @@ class DashboardLoader(QThread):
     def run(self):
         try:
             tasks = task_manager.get_tasks()
-            news = news_manager.get_briefing(use_ai=False)
             
             devices = []
             try:
@@ -611,7 +600,7 @@ class DashboardLoader(QThread):
             today = datetime.now().strftime("%Y-%m-%d")
             events = calendar_manager.get_events(today)
             
-            self.finished.emit({"tasks": tasks, "news": news, "devices": devices, "events": events})
+            self.finished.emit({"tasks": tasks, "devices": devices, "events": events})
         except:
             self.finished.emit({})
 
@@ -650,10 +639,6 @@ class DashboardView(QWidget):
         self.device_stat.navigate_requested.connect(self._on_navigate)
         left.addWidget(self.device_stat)
         
-        self.news_stat = StatCard(FIF.TILES, "Intel Streams", "--", "briefingInterface")
-        self.news_stat.navigate_requested.connect(self._on_navigate)
-        left.addWidget(self.news_stat)
-        
         self.scenes = HomeScenesCard()
         left.addWidget(self.scenes)
         
@@ -669,6 +654,7 @@ class DashboardView(QWidget):
         self.loader = None
         QTimer.singleShot(100, self._start_loading)
         
+
     def _start_loading(self):
         if self.loader and self.loader.isRunning(): return
         self.loader = DashboardLoader(self)
@@ -679,7 +665,6 @@ class DashboardView(QWidget):
     def _on_data(self, data):
         if not data: return
         tasks = data.get('tasks', [])
-        news = data.get('news', [])
         devs = data.get('devices', [])
         evts = data.get('events', [])
         
@@ -687,10 +672,8 @@ class DashboardView(QWidget):
         
         act_tasks = len([t for t in tasks if not t.get('completed')])
         self.planner_stat.set_count(act_tasks)
-        self.news_stat.set_count(len(news))
         self.device_stat.set_count(len(devs))
         
-        self.feed.update_news(news)
         self.feed.update_devices(devs)
         self.feed.update_focus(tasks)
         self.feed.priority.update_event(evts)

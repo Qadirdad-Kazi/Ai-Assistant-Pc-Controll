@@ -11,6 +11,13 @@ from PySide6.QtGui import QFont
 from config import OLLAMA_URL
 from core.llm import is_router_loaded
 
+# --- Wolf Knight Theme Constants ---
+THEME_GLASS = "rgba(16, 24, 40, 0.90)" 
+THEME_BORDER = "rgba(76, 201, 240, 0.3)" # Neon Cyan
+THEME_ACCENT = "#4cc9f0"
+THEME_TEXT_MAIN = "#e8f1ff"
+THEME_TEXT_SUB = "#94a3b8"
+
 # Try to import pynvml for GPU monitoring
 try:
     import pynvml
@@ -101,26 +108,26 @@ class SystemMonitor(QFrame):
     def _setup_ui(self):
         """Build the monitor UI."""
         self.setFixedHeight(32)
-        self.setStyleSheet("""
-            QFrame#systemMonitor {
-                background: rgba(20, 20, 30, 0.9);
-                border-bottom: 1px solid rgba(187, 134, 252, 0.3);
-            }
-            QLabel {
-                color: #b0b0b0;
+        self.setStyleSheet(f"""
+            QFrame#systemMonitor {{
+                background: {THEME_GLASS};
+                border-bottom: 1px solid {THEME_BORDER};
+            }}
+            QLabel {{
+                color: {THEME_TEXT_SUB};
                 font-size: 11px;
                 padding: 0 8px;
-            }
-            QLabel#valueLabel {
-                color: #e0e0e0;
+            }}
+            QLabel#valueLabel {{
+                color: {THEME_TEXT_MAIN};
                 font-weight: bold;
-            }
-            QLabel#gpuLabel {
-                color: #4fc3f7;
-            }
-            QLabel#modelsLabel {
+            }}
+            QLabel#gpuLabel {{
+                color: {THEME_ACCENT};
+            }}
+            QLabel#modelsLabel {{
                 color: #81c784;
-            }
+            }}
         """)
         
         layout = QHBoxLayout(self)
@@ -163,7 +170,7 @@ class SystemMonitor(QFrame):
         gpu_container.addWidget(gpu_label)
         self.gpu_value = QLabel("N/A" if not GPU_AVAILABLE else "0%")
         self.gpu_value.setObjectName("valueLabel")
-        self.gpu_value.setStyleSheet("color: #4fc3f7; font-weight: bold;")
+        self.gpu_value.setStyleSheet(f"color: {THEME_ACCENT}; font-weight: bold;")
         gpu_container.addWidget(self.gpu_value)
         layout.addLayout(gpu_container)
         
@@ -174,14 +181,14 @@ class SystemMonitor(QFrame):
         vram_container.addWidget(vram_label)
         self.vram_value = QLabel("N/A" if not GPU_AVAILABLE else "0 GB")
         self.vram_value.setObjectName("valueLabel")
-        self.vram_value.setStyleSheet("color: #4fc3f7; font-weight: bold;")
+        self.vram_value.setStyleSheet(f"color: {THEME_ACCENT}; font-weight: bold;")
         vram_container.addWidget(self.vram_value)
         layout.addLayout(vram_container)
         
         # Separator
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.VLine)
-        separator.setStyleSheet("background: rgba(255,255,255,0.2);")
+        separator.setStyleSheet(f"background: {THEME_BORDER};")
         separator.setFixedWidth(1)
         layout.addWidget(separator)
         
@@ -224,23 +231,23 @@ class SystemMonitor(QFrame):
         self.voice_animation.setEasingCurve(QEasingCurve.InOutSine)
         
         # Animation values (glowing effect)
-        self.voice_animation.setStartValue("""
-            QFrame {
+        self.voice_animation.setStartValue(f"""
+            QFrame {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(51, 181, 229, 150),
-                    stop:0.5 rgba(51, 181, 229, 255),
-                    stop:1 rgba(51, 181, 229, 150));
+                    stop:0 {THEME_ACCENT}80,
+                    stop:0.5 {THEME_ACCENT}FF,
+                    stop:1 {THEME_ACCENT}80);
                 border-radius: 2px;
-            }
+            }}
         """)
-        self.voice_animation.setEndValue("""
-            QFrame {
+        self.voice_animation.setEndValue(f"""
+            QFrame {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(51, 181, 229, 255),
-                    stop:0.5 rgba(51, 181, 229, 150),
-                    stop:1 rgba(51, 181, 229, 255));
+                    stop:0 {THEME_ACCENT}FF,
+                    stop:0.5 {THEME_ACCENT}80,
+                    stop:1 {THEME_ACCENT}FF);
                 border-radius: 2px;
-            }
+            }}
         """)
     
     def show_listening(self):
