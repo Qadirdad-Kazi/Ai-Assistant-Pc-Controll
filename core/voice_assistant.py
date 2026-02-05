@@ -14,7 +14,7 @@ from config import (
 )
 from core.stt import STTListener
 from core.llm import route_query, should_bypass_router, http_session
-from core.model_persistence import ensure_qwen_loaded, mark_qwen_used, unload_qwen
+from core.model_persistence import ensure_llama_loaded, mark_llama_used, unload_llama
 from core.tts import tts, SentenceBuffer
 from core.function_executor import executor as function_executor
 
@@ -120,7 +120,7 @@ class VoiceAssistant(QObject):
             return
         
         # Remove wake word from text if present
-        text = text.lower().replace("ada", "").strip()
+        text = text.lower().replace("jarvis", "").strip()
         if not text:
             return
         
@@ -191,15 +191,15 @@ class VoiceAssistant(QObject):
             self.processing_finished.emit()
     
     def _generate_response_with_context(self, func_name: str, result: dict, user_text: str, enable_thinking: bool = False):
-        """Generate Qwen response with function execution context."""
+        """Generate Llama response with function execution context."""
         try:
-            # Ensure Qwen is loaded
-            if not ensure_qwen_loaded():
-                print(f"{GRAY}[VoiceAssistant] Failed to load Qwen model.{RESET}")
+            # Ensure Llama is loaded
+            if not ensure_llama_loaded():
+                print(f"{GRAY}[VoiceAssistant] Failed to load Llama model.{RESET}")
                 self.processing_finished.emit()
                 return
             
-            mark_qwen_used()
+            mark_llama_used()
             
             # Build context message
             success = result.get("success", False)
@@ -283,7 +283,7 @@ class VoiceAssistant(QObject):
             # Update messages
             self.messages.append({'role': 'assistant', 'content': full_response})
             
-            mark_qwen_used()  # Update usage time
+            mark_llama_used()  # Update usage time
             
             print(f"{GREEN}[VoiceAssistant] Response generated.{RESET}")
             self.processing_finished.emit()
@@ -293,15 +293,15 @@ class VoiceAssistant(QObject):
             self.processing_finished.emit()
     
     def _stream_qwen_response(self, user_text: str, enable_thinking: bool):
-        """Stream direct Qwen response."""
+        """Stream direct Llama response."""
         try:
-            # Ensure Qwen is loaded
-            if not ensure_qwen_loaded():
-                print(f"{GRAY}[VoiceAssistant] Failed to load Qwen model.{RESET}")
+            # Ensure Llama is loaded
+            if not ensure_llama_loaded():
+                print(f"{GRAY}[VoiceAssistant] Failed to load Llama model.{RESET}")
                 self.processing_finished.emit()
                 return
             
-            mark_qwen_used()
+            mark_llama_used()
             
             # Manage context window
             max_hist = MAX_HISTORY
@@ -351,7 +351,7 @@ class VoiceAssistant(QObject):
             # Update messages
             self.messages.append({'role': 'assistant', 'content': full_response})
             
-            mark_qwen_used()  # Update usage time
+            mark_llama_used()  # Update usage time
             
             print(f"{GREEN}[VoiceAssistant] Response generated.{RESET}")
             self.processing_finished.emit()

@@ -6,6 +6,7 @@ import psutil
 
 # Model configurations: (model_name, think_enabled, display_name)
 MODELS = [
+    {"model": "llama3.2:3b", "think": False, "name": "llama3.2:3b"},
     {"model": "qwen3:0.6b", "think": False, "name": "qwen3:0.6b"},
     #{"model": "qwen3:0.6b", "think": True, "name": "qwen3:0.6b (think)"},
     {"model": "qwen3:1.7b", "think": False, "name": "qwen3:1.7b"},

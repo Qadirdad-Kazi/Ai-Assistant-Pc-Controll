@@ -167,7 +167,7 @@ The following models are **downloaded automatically** on first run—no manual s
 
 | Model | Purpose | Size | Downloaded From |
 |-------|---------|------|-----------------|
-| **Router Model** | Intent classification | ~500MB | [Hugging Face](https://huggingface.co/nlouis/pocket-ai-router) |
+| **Router Model** | Intent classification | ~500MB | [Hugging Face](https://huggingface.co/nlouis/wolf-ai-router) |
 | **TTS Voice** | Text-to-speech | ~50MB | [Piper Voices](https://huggingface.co/rhasspy/piper-voices) |
 | **STT Model** | Speech-to-text (Whisper) | ~150MB | OpenAI Whisper |
 

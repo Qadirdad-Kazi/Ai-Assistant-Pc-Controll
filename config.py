@@ -32,8 +32,8 @@ STT_RECORD_TIMEOUT = 5.0  # Maximum seconds to record after wake word
 
 # --- Voice Assistant Configuration ---
 VOICE_ASSISTANT_ENABLED = True
-QWEN_TIMEOUT_SECONDS = 300  # 5 minutes of inactivity before sleep
-QWEN_KEEP_ALIVE = "5m"  # Keep in memory for 5 minutes after last use
+LLM_TIMEOUT_SECONDS = 300  # 5 minutes of inactivity before sleep
+LLM_KEEP_ALIVE = "5m"  # Keep in memory for 5 minutes after last use
 
 # --- Router Keywords ---
 # REMOVED: ROUTER_KEYWORDS - All queries now go through Function Gemma router

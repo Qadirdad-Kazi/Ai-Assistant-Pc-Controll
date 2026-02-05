@@ -7,7 +7,7 @@ from core.llm import route_query, should_bypass_router, http_session
 from core.tts import tts, SentenceBuffer
 from core.history import history_manager
 from core.model_manager import ensure_exclusive_qwen
-from core.model_persistence import ensure_qwen_loaded, mark_qwen_used
+from core.model_persistence import ensure_llama_loaded, mark_llama_used
 from core.settings_store import settings as app_settings
 from core.function_executor import executor as function_executor
 
@@ -183,8 +183,8 @@ class ChatWorker(QObject):
         self.status.emit("Generating response...")
         
         model = app_settings.get("models.chat", RESPONDER_MODEL)
-        ensure_qwen_loaded()  # Use persistence manager
-        mark_qwen_used()
+        ensure_llama_loaded()  # Use persistence manager
+        mark_llama_used()
         ensure_exclusive_qwen(model)
         ollama_url = app_settings.get("ollama_url", OLLAMA_URL)
         
@@ -253,8 +253,8 @@ class ChatWorker(QObject):
         self.status.emit("Generating...")
         
         model = app_settings.get("models.chat", RESPONDER_MODEL)
-        ensure_qwen_loaded()  # Use persistence manager
-        mark_qwen_used()
+        ensure_llama_loaded()  # Use persistence manager
+        mark_llama_used()
         ensure_exclusive_qwen(model)
         ollama_url = app_settings.get("ollama_url", OLLAMA_URL)
         

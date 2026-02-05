@@ -1,6 +1,6 @@
 """
 Centralized settings storage with persistence.
-Saves settings to ~/.pocket_ai/settings.json
+Saves settings to ~/.wolf_ai/settings.json
 """
 
 import json
@@ -16,7 +16,7 @@ DEFAULT_SETTINGS = {
     "theme": "Dark",
     "ollama_url": "http://localhost:11434",
     "models": {
-        "chat": "qwen3:1.7b",
+        "chat": "llama3.2:3b",
         "web_agent": "qwen3-vl:4b",
     },
     "web_agent_params": {
@@ -51,7 +51,7 @@ class SettingsStore(QObject):
         super().__init__()
         self._lock = threading.RLock()
         self._settings: Dict[str, Any] = {}
-        self._settings_dir = Path.home() / ".pocket_ai"
+        self._settings_dir = Path.home() / ".wolf_ai"
         self._settings_file = self._settings_dir / "settings.json"
         
         self._load()
