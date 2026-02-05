@@ -1,10 +1,10 @@
-# 🐺 Wolf AI
+# 🤖 Wolf - Pocket AI
 
 <p align="center">
-  <img src="wolf_avatar.png" alt="Wolf AI Logo" width="120" height="120">
+  <img src="gui/assets/logo.png" alt="Wolf Logo" width="120" height="120">
 </p>
 
-**Wolf AI** is a **fully local, privacy-focused AI assistant** for Windows. It combines a beautiful modern GUI with powerful voice control capabilities—all running entirely on YOUR computer with no cloud dependency.
+**Wolf** (Advanced Digital Assistant) is a **fully local, privacy-focused AI assistant** for Windows. It combines a beautiful modern GUI with powerful voice control capabilities—all running entirely on YOUR computer with no cloud dependency.
 
 > 🔒 **Your data stays on your machine.** No API keys required for core functionality. No subscriptions. No data collection.
 
@@ -53,7 +53,7 @@ Before you begin, make sure you have:
 
 ## 🚀 Quick Start Guide
 
-Follow these steps to get Wolf AI running on your system.
+Follow these steps to get Wolf running on your system.
 
 ### Step 1: Install Miniconda
 
@@ -72,16 +72,16 @@ Follow these steps to get Wolf AI running on your system.
 
 Open a terminal and pull your preferred model. You can choose from:
 
-**🔹 Option A: Llama 3.2 (Recommended for most users)**
+**🔹 Option A: Qwen3 (Recommended for most users)**
 ```bash
 # Fast and efficient - great balance of speed and quality
-ollama pull llama3.2:3b
+ollama pull qwen3:1.7b
 ```
 
-**🔹 Option B: Qwen3 (Alternative option)**
+**🔹 Option B: DeepSeek R1 (Better reasoning)**
 ```bash
-# Good performance - slightly different model
-ollama pull qwen3:1.7b
+# Stronger reasoning capabilities - slightly slower
+ollama pull deepseek-r1:1.5b
 ```
 
 > 💡 **Tip**: You can switch models anytime in `config.py` by changing `RESPONDER_MODEL`.
@@ -95,14 +95,14 @@ ollama list
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/wolf-ai.git
-cd wolf-ai
+git clone https://github.com/your-username/pocket_ai.git
+cd pocket_ai
 
 # Create a conda environment
-conda create -n wolfai python=3.11 -y
+conda create -n ada python=3.11 -y
 
 # Activate the environment
-conda activate wolfai
+conda activate ada
 
 # Install dependencies
 pip install -r requirements.txt
@@ -132,13 +132,13 @@ python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 python main.py
 ```
 
-🎉 **That's it!** Wolf AI will launch with a beautiful GUI.
+🎉 **That's it!** Wolf will launch with a beautiful GUI.
 
 ---
 
 ## 🎮 GPU Acceleration
 
-Wolf AI benefits greatly from GPU acceleration. Here's what runs on your GPU:
+Wolf benefits greatly from GPU acceleration. Here's what runs on your GPU:
 
 | Component | GPU Benefit | Without GPU |
 |-----------|-------------|-------------|
@@ -177,13 +177,13 @@ The following models are **downloaded automatically** on first run—no manual s
 
 ## 🎙️ Voice Assistant Setup
 
-Wolf AI includes Alexa-like voice control with wake word detection.
+Wolf includes Alexa-like voice control with wake word detection.
 
 ### How It Works
 
 1. Say **"Jarvis"** to wake the assistant
 2. Speak your command naturally
-3. Wolf AI processes your request and responds
+3. Wolf processes your request and responds
 
 ### Example Voice Commands
 
@@ -222,8 +222,8 @@ Change the chat model in `config.py`:
 
 ```python
 # The main chat model (runs on Ollama)
-# Options: "llama3.2:3b" (recommended) or "qwen3:1.7b"
-RESPONDER_MODEL = "llama3.2:3b"
+# Options: "qwen3:1.7b" (fast) or "deepseek-r1:1.5b" (better reasoning)
+RESPONDER_MODEL = "qwen3:1.7b"
 
 # Ollama server URL (usually no need to change)
 OLLAMA_URL = "http://localhost:11434/api"
@@ -233,8 +233,8 @@ OLLAMA_URL = "http://localhost:11434/api"
 
 | Model | Speed | Reasoning | Best For |
 |-------|-------|-----------|----------|
-| `llama3.2:3b` | ⚡ Fast | Good | Daily use, quick responses |
-| `qwen3:1.7b` | ⚡ Fast | Good | Alternative option |
+| `qwen3:1.7b` | ⚡ Fast | Good | Daily use, quick responses |
+| `deepseek-r1:1.5b` | Moderate | Excellent | Math, coding, complex questions |
 
 ### Text-to-Speech
 
@@ -256,7 +256,7 @@ The default location is New York City. To change it:
 ## 🏗️ Project Architecture
 
 ```
-wolf-ai/
+pocket_ai/
 ├── main.py                 # Application entry point
 ├── config.py               # Centralized configuration
 ├── requirements.txt        # Python dependencies
@@ -308,7 +308,7 @@ wolf-ai/
                                                     │
                                                     ▼
                                           ┌──────────────┐
-                                          │ Llama LLM    │
+                                          │ Qwen LLM     │
                                           │ (via Ollama) │
                                           └──────────────┘
                                                     │
@@ -322,14 +322,14 @@ wolf-ai/
 1. **User speaks or types** a command
 2. **FunctionGemma Router** (fine-tuned local AI) classifies intent
 3. **Function Executor** runs the appropriate action
-4. **Llama LLM** generates a natural language response
+4. **Qwen LLM** generates a natural language response
 5. **Piper TTS** speaks the response (if voice enabled)
 
 ---
 
 ## 🏠 Smart Home Integration
 
-Wolf AI supports **TP-Link Kasa** smart devices:
+Wolf supports **TP-Link Kasa** smart devices:
 
 ### Supported Devices
 
@@ -340,7 +340,7 @@ Wolf AI supports **TP-Link Kasa** smart devices:
 ### Setup
 
 1. Ensure your Kasa devices are on the same network as your computer
-2. Open Wolf AI and go to the **Home Automation** tab
+2. Open Wolf and go to the **Home Automation** tab
 3. Click **Refresh** to scan for devices
 4. Control devices through the GUI or voice commands
 

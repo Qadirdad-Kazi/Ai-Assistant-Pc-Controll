@@ -672,7 +672,7 @@ def run_cli():
     # Default State
     tts_mode = tts.toggle(True)
     
-    print(f"{BOLD}Pocket AI - Dual Model Architecture{RESET}")
+    print(f"{BOLD}Wolf AI - Dual Model Architecture{RESET}")
     print("-" * 45)
     print(f"  {GREEN}Router:{RESET}    Local FunctionGemma ({LOCAL_ROUTER_PATH})")
     print(f"  {CYAN}Responder:{RESET} {RESPONDER_MODEL}")

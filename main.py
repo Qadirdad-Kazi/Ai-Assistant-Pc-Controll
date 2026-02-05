@@ -1,5 +1,5 @@
 """
-Pocket AI - Main Entry Point
+Wolf AI - Main Entry Point
 """
 
 import warnings
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     app.setFont(QFont("Segoe UI", 10))
     
     # Create SplashScreen
-    splash = SplashScreen(QIcon("gui/assets/logo.png" if "gui/assets/logo.png" else None), None)
+    splash = SplashScreen(QIcon("wolf_avatar.png"), None)
     splash.setIconSize(QSize(100, 100))
     splash.show()
     

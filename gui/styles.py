@@ -1,5 +1,5 @@
 """
-Global stylesheet for the Pocket AI application (Aura AI Theme).
+Global stylesheet for the Wolf AI application (Aura AI Theme).
 """
 
 # Aura Theme Colors

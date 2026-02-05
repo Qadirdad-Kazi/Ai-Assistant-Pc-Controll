@@ -1,12 +1,12 @@
 """
-Centralized configuration for Pocket AI.
+Centralized configuration for Wolf AI.
 """
 
 # --- Model Configuration ---
-RESPONDER_MODEL = "qwen3:1.7b"
+RESPONDER_MODEL = "llama3.2:3b"
 OLLAMA_URL = "http://localhost:11434/api"
 LOCAL_ROUTER_PATH = "./merged_model"
-HF_ROUTER_REPO = "nlouis/pocket-ai-router"  # Hugging Face repo for auto-download
+HF_ROUTER_REPO = "nlouis/wolf-ai-router"  # Hugging Face repo for auto-download
 MAX_HISTORY = 20
 
 # --- TTS Configuration ---
