@@ -1,1 +1,0 @@
-cannot import name 'create_app' from 'gui.app' (C:\Users\nazir\Documents\Projects\pocket_ai\gui\app.py)
