@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "C:\Users\nazir\Documents\Projects\ada_local\debug_traceback.py", line 7, in <module>
+    import RealtimeTTS
+  File "C:\Users\nazir\anaconda3\envs\tut\Lib\site-packages\RealtimeTTS\__init__.py", line 1, in <module>
+    from .text_to_stream import TextToAudioStream
+  File "C:\Users\nazir\anaconda3\envs\tut\Lib\site-packages\RealtimeTTS\text_to_stream.py", line 1, in <module>
+    from .engines import BaseEngine
+  File "C:\Users\nazir\anaconda3\envs\tut\Lib\site-packages\RealtimeTTS\engines\__init__.py", line 4, in <module>
+    from .elevenlabs_engine import ElevenlabsEngine
+  File "C:\Users\nazir\anaconda3\envs\tut\Lib\site-packages\RealtimeTTS\engines\elevenlabs_engine.py", line 2, in <module>
+    from elevenlabs import voices, generate, stream
+ImportError: cannot import name 'generate' from 'elevenlabs' (C:\Users\nazir\anaconda3\envs\tut\Lib\site-packages\elevenlabs\__init__.py)
