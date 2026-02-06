@@ -1,12 +1,12 @@
 """
-Centralized configuration for Wolf AI.
+Centralized configuration for jarvis AI.
 """
 
 # --- Model Configuration ---
 RESPONDER_MODEL = "llama3.2:3b"
 OLLAMA_URL = "http://localhost:11434/api"
 LOCAL_ROUTER_PATH = "./merged_model"
-HF_ROUTER_REPO = "nlouis/wolf-ai-router"  # Hugging Face repo for auto-download
+HF_ROUTER_REPO = "nlouis/jarvis-ai-router"  # Hugging Face repo for auto-download
 MAX_HISTORY = 20
 
 # --- TTS Configuration ---
@@ -23,7 +23,7 @@ WAKE_WORD_DETECTION_METHOD = "transcription"  # RealTimeSTT uses transcription-b
 REALTIMESTT_MODEL = "base"  # RealTimeSTT model: "tiny", "base", "small", "medium", "large"
 USE_PORCUPINE_WAKE_WORD = False  # Use Porcupine for wake word detection (more accurate, requires API key)
 PORCUPINE_ACCESS_KEY = None  # Get from https://console.picovoice.ai/ (optional, for better wake word detection)
-WAKE_WORD = "WOLF"
+WAKE_WORD = "jarvis"
 WAKE_WORD_SENSITIVITY = 0.4  # For audio pattern matching (0.0-1.0, higher = more sensitive) - Lowered to reduce false positives
 WAKE_WORD_CONFIRMATION_COUNT = 1  # Require multiple detections before triggering (reduces false positives)
 STT_SAMPLE_RATE = 16000

@@ -486,7 +486,7 @@ class SettingsTab(ScrollArea):
         self.about_card = PrimaryPushSettingCard(
             "Check Update",
             FIF.INFO,
-            "About Wolf",
+            "About jarvis",
             "Version 0.2.0 (Alpha)",
             self.about_group
         )

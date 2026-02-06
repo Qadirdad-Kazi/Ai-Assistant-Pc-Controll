@@ -1,5 +1,5 @@
 """
-Wolf AI - Main Entry Point
+jarvis AI - Main Entry Point
 """
 
 import warnings
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     app.setFont(QFont("Segoe UI", 10))
     
     # Create SplashScreen
-    splash = SplashScreen(QIcon("wolf_avatar.png"), None)
+    splash = SplashScreen(QIcon("jarvis_avatar.png"), None)
     splash.setIconSize(QSize(100, 100))
     splash.show()
     

@@ -1,15 +1,15 @@
-# Wolf AI - Project Structure Guide
+# jarvis AI - Project Structure Guide
 
 ## 📁 Organized Directory Structure
 
 ```
-wolf-ai/
+jarvis-ai/
 ├── 📄 Core Application Files
 │   ├── main.py                 # Application entry point
 │   ├── config.py               # Central configuration
 │   ├── requirements.txt        # Python dependencies
 │   ├── README.md               # Project documentation
-│   ├── wolf_avatar.png         # Your logo/brand image
+│   ├── jarvis_avatar.png         # Your logo/brand image
 │   ├── chat_history.db         # SQLite chat database
 │   └── .gitignore              # Git ignore rules
 │
@@ -104,7 +104,7 @@ wolf-ai/
 ## 🎯 Directory Purposes
 
 ### 📄 Core Application Files
-These are the essential files needed to run Wolf AI:
+These are the essential files needed to run jarvis AI:
 - **`main.py`** - Double-click this to start the app
 - **`config.py`** - All your settings and preferences
 - **`requirements.txt`** - Python packages to install
@@ -175,4 +175,4 @@ Useful utility scripts:
 | **Utilities** | `utilities/` | Helper scripts |
 | **Documentation** | `docs/`, `logs/` | Reference and debugging |
 
-This organization makes it easy to find what you need and understand how Wolf AI works! 🐺
+This organization makes it easy to find what you need and understand how jarvis AI works! 🐺

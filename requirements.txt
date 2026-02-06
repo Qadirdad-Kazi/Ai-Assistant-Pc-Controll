@@ -1,5 +1,5 @@
 # =====================================================
-# Pocket AI (Wolf) - Python Dependencies
+# Pocket AI (jarvis) - Python Dependencies
 # =====================================================
 # 
 # Install all dependencies with:

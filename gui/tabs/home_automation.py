@@ -13,7 +13,7 @@ from qfluentwidgets import (
 
 from core.kasa_control import kasa_manager
 
-# --- Wolf Knight Theme Constants ---
+# --- jarvis Knight Theme Constants ---
 THEME_GLASS = "rgba(16, 24, 40, 0.70)" 
 THEME_BORDER = "rgba(76, 201, 240, 0.3)" # Neon Cyan
 THEME_ACCENT = "#4cc9f0"
@@ -194,7 +194,7 @@ class DeviceCard(QFrame):
 class HomeAutomationTab(QWidget):
     """
     Environmental Control Dashboard.
-    Wolf Knight Theme.
+    jarvis Knight Theme.
     """
     def __init__(self, parent=None):
         super().__init__(parent)

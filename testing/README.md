@@ -1,6 +1,6 @@
-# 🐺 Wolf AI - Testing Suite
+# 🐺 jarvis AI - Testing Suite
 
-This directory contains all testing tools for Wolf AI to ensure quality, performance, and reliability.
+This directory contains all testing tools for jarvis AI to ensure quality, performance, and reliability.
 
 ## 📁 Subdirectories
 
@@ -128,7 +128,7 @@ python -m pytest testing/unit-tests/
 - **🔴 Connection Refused**: Start Ollama service with `ollama serve`
 
 ### Test Results:
-- 🟢 **All Pass**: Your Wolf AI is working perfectly!
+- 🟢 **All Pass**: Your jarvis AI is working perfectly!
 - 🟡 **Some Fail**: Check individual test output for details
 - 🔴 **Many Fail**: Verify Ollama installation and model availability
 
@@ -190,4 +190,4 @@ python testing/model-testing/verify_unload.py --detailed
 - Modify `QA_PAIRS` to test different question types
 - Adjust timeouts for slower/faster systems
 
-This testing suite ensures your Wolf AI runs reliably and performs optimally! 🐺✨
+This testing suite ensures your jarvis AI runs reliably and performs optimally! 🐺✨

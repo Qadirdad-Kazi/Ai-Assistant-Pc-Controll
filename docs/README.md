@@ -1,11 +1,11 @@
-# 📚 Wolf AI - Documentation & Reference
+# 📚 jarvis AI - Documentation & Reference
 
-This directory contains comprehensive documentation, guides, and reference materials for Wolf AI.
+This directory contains comprehensive documentation, guides, and reference materials for jarvis AI.
 
 ## 📁 Files
 
 ### 📖 `PROJECT_STRUCTURE.md` - Complete Project Guide
-**Purpose**: Detailed explanation of every file, directory, and component in Wolf AI
+**Purpose**: Detailed explanation of every file, directory, and component in jarvis AI
 
 #### What it contains:
 - 📁 **Directory Structure** - Complete file organization
@@ -48,7 +48,7 @@ less docs/PROJECT_STRUCTURE.md
 - 🍎 **macOS Only** - Finder folder settings
 - 📁 **Metadata** - Folder view preferences
 - 🔒 **System File** - Automatically managed by macOS
-- ⚠️ **Safe to Ignore** - Not used by Wolf AI
+- ⚠️ **Safe to Ignore** - Not used by jarvis AI
 
 #### Recommendation:
 ```bash
@@ -64,7 +64,7 @@ echo ".DS_Store" >> .gitignore
 ## 📚 Documentation Purpose
 
 ### For New Users:
-- 🎯 **Quick Start** - How to get Wolf AI running
+- 🎯 **Quick Start** - How to get jarvis AI running
 - 📁 **Project Overview** - Understanding the codebase
 - 🔧 **Configuration** - Setting up your preferences
 - 🐛 **Troubleshooting** - Common issues and solutions
@@ -127,7 +127,7 @@ cat logs/*.log
 
 ### High-Level Overview:
 ```
-Wolf AI Documentation
+jarvis AI Documentation
 ├── 📋 README.md (Root) - User guide & setup
 ├── 📁 docs/PROJECT_STRUCTURE.md - Technical overview
 ├── 📁 testing/README.md - Testing procedures
@@ -250,4 +250,4 @@ cat development/README.md
 
 ---
 
-This documentation serves as your complete guide to understanding, using, and developing Wolf AI. Whether you're a user wanting to get started, a developer extending functionality, or a contributor improving the project, you'll find the information you need here! 📚✨
+This documentation serves as your complete guide to understanding, using, and developing jarvis AI. Whether you're a user wanting to get started, a developer extending functionality, or a contributor improving the project, you'll find the information you need here! 📚✨

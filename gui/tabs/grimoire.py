@@ -11,7 +11,7 @@ from qfluentwidgets import (
     CaptionLabel, InfoBar, InfoBarPosition, ProgressBar
 )
 
-# --- Wolf Knight Theme Constants ---
+# --- jarvis Knight Theme Constants ---
 THEME_GLASS = "rgba(16, 24, 40, 0.70)" 
 THEME_BORDER = "rgba(76, 201, 240, 0.3)" # Neon Cyan
 THEME_ACCENT = "#4cc9f0"
@@ -21,7 +21,7 @@ THEME_TEXT_SUB = "#94a3b8"
 class GrimoireTab(QWidget):
     """
     Grimoire: Local Knowledge Base & Document Management.
-    Wolf Knight Theme.
+    jarvis Knight Theme.
     """
     def __init__(self, parent=None):
         super().__init__(parent)

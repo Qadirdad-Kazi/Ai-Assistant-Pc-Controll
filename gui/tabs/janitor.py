@@ -12,7 +12,7 @@ from qfluentwidgets import (
     SettingCardGroup, SettingCard
 )
 
-# --- Wolf Knight Theme Constants ---
+# --- jarvis Knight Theme Constants ---
 THEME_GLASS = "rgba(16, 24, 40, 0.75)" 
 THEME_BORDER = "rgba(76, 201, 240, 0.3)" 
 THEME_ACCENT = "#4cc9f0"

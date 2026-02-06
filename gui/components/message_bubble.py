@@ -70,7 +70,7 @@ class MessageBubble(QFrame):
     def _apply_style(self):
         is_user = self.role == "user"
         
-        # Wolf Knight Theme Colors
+        # jarvis Knight Theme Colors
         # User: Deep Blue Glass
         # AI: Dark Glass with Cyan Accent
         

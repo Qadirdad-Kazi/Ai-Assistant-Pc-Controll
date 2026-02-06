@@ -18,7 +18,7 @@ from core.weather import weather_manager
 from datetime import datetime, timedelta
 import asyncio
 
-# --- Wolf Knight Theme Constants ---
+# --- jarvis Knight Theme Constants ---
 # Colors
 THEME_BG = "#05080d"  # Deepest background
 THEME_GLASS = "rgba(16, 24, 40, 0.70)" # Main glass card background
@@ -231,7 +231,7 @@ class LevelingCard(QFrame):
         layout.addWidget(self.progress)
         
         # Rank
-        self.rank_lbl = QLabel("WOLF PUP PROTOCOL")
+        self.rank_lbl = QLabel("jarvis PUP PROTOCOL")
         self.rank_lbl.setStyleSheet(f"color: {THEME_ACCENT}; font-size: 9px; font-weight: bold; letter-spacing: 2px;")
         layout.addWidget(self.rank_lbl)
 
@@ -671,7 +671,7 @@ class DashboardView(QWidget):
         self.setAttribute(Qt.WA_StyledBackground, True)
         
         # Background gradient setup done in main window stylesheet or here
-        # For the 'spectral wolf' feel, we might want a background image or specific gradient
+        # For the 'spectral jarvis' feel, we might want a background image or specific gradient
         # But global styles handle the window bg. We'll handle layout here.
         
         main_layout = QVBoxLayout(self)

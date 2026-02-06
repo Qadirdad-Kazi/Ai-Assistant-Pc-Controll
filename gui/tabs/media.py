@@ -19,7 +19,7 @@ from utilities.youtube_handler import YouTubeHandler
 from utilities.spotify_handler import SpotifyHandler
 from config import SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET
 
-# --- Wolf Knight Theme Constants ---
+# --- jarvis Knight Theme Constants ---
 THEME_GLASS = "rgba(16, 24, 40, 0.75)" 
 THEME_BORDER = "rgba(76, 201, 240, 0.3)" 
 THEME_ACCENT = "#4cc9f0"
@@ -175,7 +175,7 @@ class SearchResultCard(CardWidget):
 
 class SonicInterface(QWidget):
     """
-    Sonic Interface: Unified Media Player with Wolf Knight aesthetic.
+    Sonic Interface: Unified Media Player with jarvis Knight aesthetic.
     """
     youtube_results_ready = Signal(list)
     youtube_stream_ready = Signal(str, str, str)

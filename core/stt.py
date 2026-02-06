@@ -52,7 +52,7 @@ class STTListener:
             print(f"{CYAN}[STT] Initializing AudioToTextRecorder with device='cuda'...{RESET}")
             
             # Initialize RealTimeSTT with built-in wake word detection
-            # Using pvporcupine backend since "WOLF" is a predefined Porcupine wake word
+            # Using pvporcupine backend since "jarvis" is a predefined Porcupine wake word
             self.recorder = AudioToTextRecorder(
                 model=REALTIMESTT_MODEL,  # Use configured model (base, small, etc.)
                 language="en",

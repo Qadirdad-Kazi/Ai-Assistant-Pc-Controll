@@ -64,7 +64,7 @@ class MainWindow(FluentWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Wolf AI")
+        self.setWindowTitle("jarvis AI")
         self.setMinimumSize(1100, 750)
         self.resize(1200, 800)
         

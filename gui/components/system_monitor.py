@@ -11,7 +11,7 @@ from PySide6.QtGui import QFont
 from config import OLLAMA_URL
 from core.llm import is_router_loaded
 
-# --- Wolf Knight Theme Constants ---
+# --- jarvis Knight Theme Constants ---
 THEME_GLASS = "rgba(16, 24, 40, 0.90)" 
 THEME_BORDER = "rgba(76, 201, 240, 0.3)" # Neon Cyan
 THEME_ACCENT = "#4cc9f0"
