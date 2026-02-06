@@ -12,7 +12,7 @@ from core.settings_store import settings as app_settings
 from core.function_executor import executor as function_executor
 
 # Functions that are actions (not passthrough)
-ACTION_FUNCTIONS = {"control_light", "set_timer", "set_alarm", "create_calendar_event", "add_task", "web_search"}
+ACTION_FUNCTIONS = {"control_light", "set_timer", "set_alarm", "create_calendar_event", "add_task", "web_search", "play_music"}
 
 
 # DEBUG: Set to True to test streaming without TTS blocking
@@ -38,6 +38,7 @@ class ChatWorker(QObject):
     reload_calendar = Signal()  # trigger calendar refresh
     search_start = Signal(str)  # query
     search_end = Signal()
+    play_music_signal = Signal(str, str)  # query, service
     
     def __init__(self, user_text: str, messages: list, is_tts_enabled: bool, 
                  current_session_id: str, stop_event):
@@ -86,6 +87,10 @@ class ChatWorker(QObject):
                     self.reload_alarms.emit()
                 elif func_name == "create_calendar_event" and result["success"]:
                     self.reload_calendar.emit()
+                elif func_name == "play_music" and result["success"]:
+                    query = result.get("data", {}).get("query", "")
+                    service = result.get("data", {}).get("service", "youtube")
+                    self.play_music_signal.emit(query, service)
                 
                 # Enable thinking for web_search
                 enable_thinking = (func_name == "web_search")
@@ -484,6 +489,21 @@ class ChatHandlers(QObject):
         except Exception as e:
             print(f"[Handlers] Calendar reload failed: {e}")
     
+    def _on_play_music(self, query: str, service: str):
+        """Update Sonic Interface when music is requested via voice."""
+        try:
+            # Access media component via media lazy tab
+            if hasattr(self.main_window, 'media_lazy') and self.main_window.media_lazy.actual_widget:
+                media = self.main_window.media_lazy.actual_widget
+                if service == "youtube":
+                    # Manually set search text and trigger search
+                    media.search_input.setText(query)
+                    media._search_youtube()
+                elif service == "spotify":
+                    media._sync_spotify()
+        except Exception as e:
+            print(f"[Handlers] Music control failed: {e}")
+    
     def _on_search_start(self, query: str):
         """Called when web search starts."""
         if self.streaming_state['search_indicator']:
@@ -592,6 +612,7 @@ class ChatHandlers(QObject):
         self._worker.set_timer_signal.connect(self._on_set_timer)
         self._worker.reload_alarms.connect(self._on_reload_alarms)
         self._worker.reload_calendar.connect(self._on_reload_calendar)
+        self._worker.play_music_signal.connect(self._on_play_music)
         self._worker.search_start.connect(self._on_search_start)
         self._worker.search_end.connect(self._on_search_end)
         self._worker.done.connect(self._on_done)

@@ -126,6 +126,16 @@ def get_system_info() -> str:
     """
     return "result"
 
+def play_music(query: str, service: str = "youtube") -> str:
+    """
+    Search and play music using YouTube or sync with Spotify.
+    
+    Args:
+        query: Song name, artist, or music genre to play.
+        service: 'youtube' to search and play a stream, or 'spotify' to sync/play via Spotify.
+    """
+    return "result"
+
 def thinking(prompt: str) -> str:
     """
     Use for complex queries requiring reasoning, math, coding, or multi-step analysis.
@@ -153,6 +163,7 @@ TOOLS = [
     get_json_schema(create_calendar_event),
     get_json_schema(add_task),
     get_json_schema(web_search),
+    get_json_schema(play_music),
     get_json_schema(get_system_info),
     get_json_schema(thinking),
     get_json_schema(nonthinking),
@@ -163,7 +174,7 @@ SYSTEM_MSG = "You are a model that can do function calling with the following fu
 # All valid function names
 VALID_FUNCTIONS = {
     "control_light", "set_timer", "set_alarm", "create_calendar_event",
-    "add_task", "web_search", "get_system_info", "thinking", "nonthinking"
+    "add_task", "web_search", "play_music", "get_system_info", "thinking", "nonthinking"
 }
 
 
@@ -261,6 +272,7 @@ class FunctionGemmaRouter:
         - set_timer(duration): Set countdown.
         - create_calendar_event(title, date, time): Schedule mission.
         - read_calendar(date): Check mission logs.
+        - play_music(query, service): Search and play music. # Added to fallback prompt
         - thinking(prompt): Multi-step reasoning, math, code, or complexity.
         - nonthinking(prompt): Simple greetings, chitchat, or direct facts.
 
@@ -406,6 +418,8 @@ class FunctionGemmaRouter:
         elif func_name == "add_task":
             return {"text": user_prompt}
         elif func_name == "web_search":
+            return {"query": user_prompt}
+        elif func_name == "play_music": # Added play_music fallback
             return {"query": user_prompt}
         
         return {}

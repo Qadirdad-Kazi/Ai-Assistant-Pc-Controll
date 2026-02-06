@@ -140,3 +140,9 @@ BOLD = "\033[1m"
 CYAN = "\033[36m"
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
+
+# --- Spotify Configuration ---
+# Get these from https://developer.spotify.com/dashboard
+SPOTIPY_CLIENT_ID = None
+SPOTIPY_CLIENT_SECRET = None
+SPOTIPY_REDIRECT_URI = "http://localhost:8888/callback"
