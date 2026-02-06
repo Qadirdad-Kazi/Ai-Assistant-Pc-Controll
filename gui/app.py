@@ -27,6 +27,10 @@ from gui.tabs.planner import PlannerTab
 from gui.tabs.settings import SettingsTab
 from gui.tabs.browser import BrowserTab
 from gui.tabs.home_automation import HomeAutomationTab
+from gui.tabs.grimoire import GrimoireTab
+from gui.tabs.media import SonicInterface
+from gui.tabs.sentinel import SentinelTab
+from gui.tabs.janitor import JanitorTab
 from gui.components.system_monitor import SystemMonitor
 from gui.components.voice_indicator import VoiceIndicator
 from core.llm import preload_models
@@ -209,19 +213,21 @@ class MainWindow(FluentWindow):
         self.chat_lazy = LazyTab(ChatTab, "chatInterface")
         self.planner_lazy = LazyTab(PlannerTab, "plannerInterface")
         
-from gui.tabs.grimoire import GrimoireTab
-
-# ... (inside MainWindow._init_window)
-        
         self.home_lazy = LazyTab(HomeAutomationTab, "homeInterface")
         self.browser_lazy = LazyTab(BrowserTab, "browserInterface")
         self.grimoire_lazy = LazyTab(GrimoireTab, "grimoireInterface")
+        self.media_lazy = LazyTab(SonicInterface, "mediaInterface")
+        self.sentinel_lazy = LazyTab(SentinelTab, "sentinelInterface")
+        self.janitor_lazy = LazyTab(JanitorTab, "janitorInterface")
         
         self.addSubInterface(self.chat_lazy, FIF.CHAT, "Chat")
         self.addSubInterface(self.planner_lazy, FIF.CALENDAR, "Planner")
         self.addSubInterface(self.home_lazy, FIF.HOME, "Home")
         self.addSubInterface(self.browser_lazy, FIF.GLOBE, "Web")
         self.addSubInterface(self.grimoire_lazy, FIF.BOOK_SHELF, "Grimoire")
+        self.addSubInterface(self.media_lazy, FIF.MUSIC, "Sonic")
+        self.addSubInterface(self.sentinel_lazy, FIF.IOT, "Sentinel")
+        self.addSubInterface(self.janitor_lazy, FIF.BASKETBALL, "Janitor") # Using Basketball as a placeholder icon for 'clean up' if broom missing
         
         # Settings at bottom
         self.settings_lazy = LazyTab(SettingsTab, "settingsInterface")
@@ -229,6 +235,15 @@ from gui.tabs.grimoire import GrimoireTab
             self.settings_lazy, FIF.SETTING, "Settings",
             NavigationItemPosition.BOTTOM
         )
+        
+        # Start Background Services
+        from core.janitor import DigitalJanitor
+        from core.network import PackLink
+        self.janitor = DigitalJanitor()
+        self.janitor.start()
+        
+        self.pack_link = PackLink()
+        self.pack_link.start()
         
     def _connect_signals(self):
         """Connect signals. Signals for lazy tabs are connected upon initialization."""
@@ -297,6 +312,18 @@ from gui.tabs.grimoire import GrimoireTab
                 self.planner_tab = real_widget
             elif obj_name == "homeInterface":
                 self.home_tab = real_widget
+            elif obj_name == "grimoireInterface":
+                # No special signals for now
+                pass
+            elif obj_name == "mediaInterface":
+                # No special signals for now
+                pass
+            elif obj_name == "sentinelInterface":
+                # No special signals for now
+                pass
+            elif obj_name == "janitorInterface":
+                # No special signals for now
+                pass
             elif obj_name == "browserInterface":
                 # No signals to connect for browser yet
                 pass

@@ -191,6 +191,64 @@ class WeatherWorker(QThread):
         data = weather_manager.get_weather()
         self.finished.emit(data or {})
 
+from core.gamification import game_manager
+from qfluentwidgets import ProgressBar
+
+class LevelingCard(QFrame):
+    """
+    HUD for XP and Level.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(260, 100)
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {THEME_GLASS};
+                border: 1px solid {THEME_BORDER};
+                border-radius: 12px;
+            }}
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 15, 20, 15)
+        
+        # Header: Level
+        top = QHBoxLayout()
+        self.lvl_lbl = QLabel("LEVEL 1")
+        self.lvl_lbl.setStyleSheet(f"color: {THEME_TEXT_MAIN}; font-weight: 800; font-size: 14px; letter-spacing: 1px;")
+        
+        self.xp_text = QLabel("0 / 100 XP")
+        self.xp_text.setStyleSheet(f"color: {THEME_TEXT_SUB}; font-size: 10px;")
+        
+        top.addWidget(self.lvl_lbl)
+        top.addStretch()
+        top.addWidget(self.xp_text)
+        layout.addLayout(top)
+        
+        # XP Bar
+        self.progress = ProgressBar()
+        self.progress.setFixedHeight(4)
+        layout.addWidget(self.progress)
+        
+        # Rank
+        self.rank_lbl = QLabel("WOLF PUP PROTOCOL")
+        self.rank_lbl.setStyleSheet(f"color: {THEME_ACCENT}; font-size: 9px; font-weight: bold; letter-spacing: 2px;")
+        layout.addWidget(self.rank_lbl)
+
+    def update_stats(self, data):
+        lvl = data.get('level', 1)
+        xp = data.get('xp', 0)
+        next_xp = data.get('xp_to_next', 100)
+        prog = data.get('progress', 0)
+        
+        self.lvl_lbl.setText(f"LEVEL {lvl}")
+        self.xp_text.setText(f"{xp} / {next_xp} XP")
+        self.progress.setValue(int(prog))
+        
+        ranks = ["PUP", "SCOUT", "HUNTER", "WARRIOR", "ALPHA", "FENRIR"]
+        idx = min(lvl // 5, len(ranks)-1)
+        self.rank_lbl.setText(f"{ranks[idx]} PROTOCOL")
+
 class StatCard(QFrame):
     """
     Glass card with neon silver borders.
@@ -610,6 +668,7 @@ class DashboardView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("dashboardView")
+        self.setAttribute(Qt.WA_StyledBackground, True)
         
         # Background gradient setup done in main window stylesheet or here
         # For the 'spectral wolf' feel, we might want a background image or specific gradient
@@ -639,6 +698,11 @@ class DashboardView(QWidget):
         self.device_stat.navigate_requested.connect(self._on_navigate)
         left.addWidget(self.device_stat)
         
+        self.leveling_hud = LevelingCard()
+        left.addWidget(self.leveling_hud)
+        # Initial stats
+        game_manager.stats_updated.connect(self.leveling_hud.update_stats)
+        
         self.scenes = HomeScenesCard()
         left.addWidget(self.scenes)
         
@@ -661,6 +725,8 @@ class DashboardView(QWidget):
         self.loader.finished.connect(self._on_data)
         self.loader.finished.connect(self.loader.deleteLater)
         self.loader.start()
+        # Trigger XP sync
+        game_manager._save_stats()
         
     def _on_data(self, data):
         if not data: return

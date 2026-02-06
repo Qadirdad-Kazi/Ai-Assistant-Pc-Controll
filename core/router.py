@@ -173,7 +173,7 @@ def ensure_model_available(model_path: str = LOCAL_ROUTER_PATH) -> str:
     Downloads from Hugging Face if not found.
     
     Returns:
-        str: Path to the model (local or downloaded)
+        str or None: Path to the model, or None if download fails
     """
     if os.path.exists(model_path) and os.path.isdir(model_path):
         # Check for essential files
@@ -182,9 +182,10 @@ def ensure_model_available(model_path: str = LOCAL_ROUTER_PATH) -> str:
     
     # Download from Hugging Face
     print(f"[Router] Model not found at {model_path}")
-    print(f"[Router] Downloading from Hugging Face: {HF_ROUTER_REPO}...")
+    print(f"[Router] Attempting download from Hugging Face: {HF_ROUTER_REPO}...")
     
     try:
+        from huggingface_hub import snapshot_download
         downloaded_path = snapshot_download(
             repo_id=HF_ROUTER_REPO,
             local_dir=model_path,
@@ -193,47 +194,97 @@ def ensure_model_available(model_path: str = LOCAL_ROUTER_PATH) -> str:
         print(f"[Router] ✓ Model downloaded to {downloaded_path}")
         return downloaded_path
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to download model from {HF_ROUTER_REPO}: {e}\n"
-            f"Train the model locally with: python train_function_gemma.py"
-        )
+        print(f"[Router] ERROR: Failed to download model from {HF_ROUTER_REPO}: {e}")
+        print(f"[Router] Falling back to Ollama-based routing.")
+        return None
 
 
 class FunctionGemmaRouter:
-    """Routes user prompts to appropriate functions using fine-tuned FunctionGemma."""
+    """Routes user prompts to appropriate functions using fine-tuned FunctionGemma or Ollama fallback."""
     
     def __init__(self, model_path: str = LOCAL_ROUTER_PATH, compile_model: bool = False):
         # Ensure model is available (download from HF if needed)
-        model_path = ensure_model_available(model_path)
+        self.model_path = ensure_model_available(model_path)
+        self.use_ollama_fallback = self.model_path is None
         
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Loading FunctionGemma Router on {device.upper()}...")
-        start = time.time()
-        
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        
-        # CPU often doesn't support bfloat16 natively
-        dtype = torch.bfloat16 if device == "cuda" else torch.float32
-        
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_path,
-            torch_dtype=dtype,
-            device_map=device,
-        )
-        self.model.eval()
-
-        
-        # Compile for speed (PyTorch 2.0+)
-        if compile_model:
+        if not self.use_ollama_fallback:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            print(f"Loading FunctionGemma Router on {device.upper()}...")
+            start = time.time()
+            
             try:
-                self.model = torch.compile(self.model, mode="reduce-overhead")
-                print("Model compiled with torch.compile()")
+                self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
+                
+                # CPU often doesn't support bfloat16 natively
+                dtype = torch.bfloat16 if device == "cuda" else torch.float32
+                
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_path,
+                    torch_dtype=dtype,
+                    device_map=device,
+                )
+                self.model.eval()
+
+                # Compile for speed (PyTorch 2.0+)
+                if compile_model:
+                    try:
+                        self.model = torch.compile(self.model, mode="reduce-overhead")
+                        print("Model compiled with torch.compile()")
+                    except Exception as e:
+                        print(f"torch.compile() not available: {e}")
+                
+                print(f"Router loaded in {time.time() - start:.2f}s")
+                print(f"Device: {self.model.device}, Dtype: {self.model.dtype}")
             except Exception as e:
-                print(f"torch.compile() not available: {e}")
-        
-        print(f"Router loaded in {time.time() - start:.2f}s")
-        print(f"Device: {self.model.device}, Dtype: {self.model.dtype}")
+                print(f"[Router] Failed to load local model: {e}")
+                print(f"[Router] Switching to Ollama-based routing.")
+                self.use_ollama_fallback = True
+                self.model = None
+                self.tokenizer = None
+        else:
+            self.model = None
+            self.tokenizer = None
+            print("[Router] Initialized in Ollama Fallback mode.")
     
+    def _ollama_route(self, user_prompt: str) -> str:
+        """Use the main LLM (Ollama) to perform routing via prompting."""
+        from config import OLLAMA_URL, RESPONDER_MODEL
+        import requests
+        
+        fallback_prompt = f"""
+        You are the neural mission router for Wolf AI.
+        Determine which holographic action to trigger for the user's prompt.
+        
+        Available functions:
+        - control_light(action, room): [action: 'on', 'off', 'dim']
+        - web_search(query): Search for external data.
+        - set_timer(duration): Set countdown.
+        - create_calendar_event(title, date, time): Schedule mission.
+        - read_calendar(date): Check mission logs.
+        - thinking(prompt): Multi-step reasoning, math, code, or complexity.
+        - nonthinking(prompt): Simple greetings, chitchat, or direct facts.
+
+        Output ONLY the function call in this syntax: call:function_name{{arg1:value1,arg2:value2}}
+        Example 1: Tasking to turn on kitchen lights -> call:control_light{{action:on,room:kitchen}}
+        Example 2: User says hello -> call:nonthinking{{prompt:hello}}
+        Example 3: Complex math -> call:thinking{{prompt:calculate 2+2}}
+
+        User Prompt: {user_prompt}
+        Decision:"""
+
+        try:
+            response = requests.post(f"{OLLAMA_URL}/generate", json={
+                "model": RESPONDER_MODEL,
+                "prompt": fallback_prompt,
+                "stream": False,
+                "options": {"num_predict": 50, "temperature": 0.1}
+            }, timeout=10).json()
+            
+            return response.get("response", "").strip()
+        except Exception as e:
+            print(f"[Router Fallback Error] {e}")
+            return f"call:nonthinking{{prompt:<escape>{user_prompt}<escape>}}"
+
     @torch.inference_mode()
     def route(self, user_prompt: str) -> Tuple[str, Dict[str, Any]]:
         """
@@ -242,6 +293,10 @@ class FunctionGemmaRouter:
         Returns:
             Tuple of (function_name, arguments_dict)
         """
+        if self.use_ollama_fallback:
+            response = self._ollama_route(user_prompt)
+            return self._parse_function_call(response, user_prompt)
+
         # Build messages
         messages = [
             {"role": "developer", "content": SYSTEM_MSG},

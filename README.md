@@ -22,6 +22,12 @@
 | 🌤️ **Weather** | Current weather and hourly forecast on your dashboard |
 | 🔍 **Web Search** | Search the web through voice or chat commands |
 | 🖥️ **System Monitor** | Real-time CPU and memory usage in the title bar |
+| 📚 **Grimoire** | Local personal knowledge base (RAG) using ChromaDB |
+| 🎵 **Sonic Interface** | Unified media controller with frequency visualizers |
+| 🛰️ **Sentinel** | Advanced hardware telemetry with real-time analytics graphs |
+| 🧹 **Digital Janitor** | Automated file organization agent powered by Watchdog |
+| 🏆 **Wolf Pack XP** | Gamified leveling system based on user productivity |
+| 🐺 **Pack Link** | Local P2P discovery between Wolf AI instances |
 
 ---
 
