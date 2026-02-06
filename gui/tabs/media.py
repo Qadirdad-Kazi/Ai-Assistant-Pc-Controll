@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QPushButton, QSlider, QFrame, QFileDialog,
     QStackedWidget, QSizePolicy, QGraphicsDropShadowEffect
 )
-from PySide6.QtCore import Qt, QTimer, QUrl, QPropertyAnimation, QEasingCurve, Property, QSize, Slot
+from PySide6.QtCore import Qt, QTimer, QUrl, QPropertyAnimation, QEasingCurve, Property, QSize, Slot, Signal
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtGui import QIcon, QColor, QPainter, QLinearGradient
 import hashlib
@@ -126,26 +126,38 @@ class NeuralCore(QFrame):
 
 class SearchResultCard(CardWidget):
     """A beautiful card representing a YouTube search result."""
-    clicked = Slot(dict)
+    result_clicked = Signal(dict)
 
     def __init__(self, track_data, parent=None):
         super().__init__(parent)
         self.track_data = track_data
         self.setFixedHeight(80)
         self.setCursor(Qt.PointingHandCursor)
+        self.setStyleSheet(f"""
+            SearchResultCard {{
+                background-color: rgba(255, 255, 255, 0.05);
+                border: 1px solid transparent;
+                border-radius: 12px;
+            }}
+            SearchResultCard:hover {{
+                background-color: rgba(76, 201, 240, 0.1);
+                border: 1px solid {THEME_ACCENT};
+            }}
+        """)
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(15, 10, 15, 10)
         
         # Icon/Thumbnail placeholder
-        self.icon_label = QLabel(FIF.VIDEO.icon().pixmap(40, 40), self)
+        self.icon_label = QLabel(self)
+        self.icon_label.setPixmap(FIF.VIDEO.icon().pixmap(40, 40))
         layout.addWidget(self.icon_label)
         
         # Info
         info_layout = QVBoxLayout()
-        self.title_label = StrongBodyLabel(track_data['title'], self)
+        self.title_label = StrongBodyLabel(track_data.get('title', 'Unknown'), self)
         self.title_label.setStyleSheet("font-size: 14px;")
-        self.uploader_label = CaptionLabel(track_data['uploader'], self)
+        self.uploader_label = CaptionLabel(track_data.get('uploader', 'Unknown'), self)
         info_layout.addWidget(self.title_label)
         info_layout.addWidget(self.uploader_label)
         layout.addLayout(info_layout)
@@ -154,17 +166,21 @@ class SearchResultCard(CardWidget):
         
         # Play Button
         self.play_btn = TransparentToolButton(FIF.PLAY, self)
-        self.play_btn.clicked.connect(lambda: self.clicked.emit(self.track_data))
+        self.play_btn.clicked.connect(lambda: self.result_clicked.emit(self.track_data))
         layout.addWidget(self.play_btn)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        self.clicked.emit(self.track_data)
+        self.result_clicked.emit(self.track_data)
 
 class SonicInterface(QWidget):
     """
     Sonic Interface: Unified Media Player with Wolf Knight aesthetic.
     """
+    youtube_results_ready = Signal(list)
+    youtube_stream_ready = Signal(str, str, str)
+    youtube_search_failed = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("MediaTab")
@@ -290,10 +306,17 @@ class SonicInterface(QWidget):
         
         results_header = QHBoxLayout()
         self.results_label = StrongBodyLabel("Search Results")
+        self.btn_clear_results = TransparentToolButton(FIF.DELETE)
+        self.btn_clear_results.setToolTip("Clear Search")
+        self.btn_clear_results.clicked.connect(self._clear_results_and_return)
+        
         self.btn_back_to_player = TransparentToolButton(FIF.CLOSE)
+        self.btn_back_to_player.setToolTip("Back to Player")
         self.btn_back_to_player.clicked.connect(lambda: self.view_stack.setCurrentIndex(0))
+        
         results_header.addWidget(self.results_label)
         results_header.addStretch()
+        results_header.addWidget(self.btn_clear_results)
         results_header.addWidget(self.btn_back_to_player)
         results_layout.addLayout(results_header)
 
@@ -409,6 +432,11 @@ class SonicInterface(QWidget):
         self.player.positionChanged.connect(self._on_position_changed)
         self.player.durationChanged.connect(self._on_duration_changed)
         self.progress_slider.sliderMoved.connect(self._on_slider_moved)
+        
+        # YouTube Signals
+        self.youtube_results_ready.connect(self._display_results)
+        self.youtube_stream_ready.connect(self._play_youtube_stream)
+        self.youtube_search_failed.connect(self._on_search_failed)
 
     def _search_youtube(self):
         query = self.search_input.text()
@@ -432,15 +460,23 @@ class SonicInterface(QWidget):
             if item.widget():
                 item.widget().deleteLater()
 
+    def _clear_results_and_return(self):
+        self._clear_results()
+        self.view_stack.setCurrentIndex(0)
+        self.search_input.clear()
+        self.track_title.setText("Search Cleared")
+        self.track_artist.setText("Ready for next mission")
+
     def _run_youtube_search(self, query):
-        results = self.yt_handler.search(query, limit=5)
-        if results:
-            from PySide6.QtCore import QMetaObject, Q_ARG, Slot
-            QMetaObject.invokeMethod(self, "_display_results", 
-                                   Qt.QueuedConnection, 
-                                   Q_ARG(list, results))
-        else:
-            QMetaObject.invokeMethod(self, "_on_search_failed", Qt.QueuedConnection)
+        try:
+            results = self.yt_handler.search(query, limit=5)
+            if results:
+                self.youtube_results_ready.emit(results)
+            else:
+                self.youtube_search_failed.emit()
+        except Exception as e:
+            print(f"Search thread error: {e}")
+            self.youtube_search_failed.emit()
 
     @Slot(list)
     def _display_results(self, results):
@@ -448,7 +484,7 @@ class SonicInterface(QWidget):
         self._clear_results()
         for track in results:
             card = SearchResultCard(track)
-            card.clicked.connect(self._on_result_clicked)
+            card.result_clicked.connect(self._on_result_clicked)
             self.results_list_layout.insertWidget(self.results_list_layout.count() - 1, card)
 
     def _on_result_clicked(self, track_data):
@@ -457,20 +493,20 @@ class SonicInterface(QWidget):
         threading.Thread(target=self._extract_and_play, args=(track_data,), daemon=True).start()
 
     def _extract_and_play(self, track_data):
-        stream_url = self.yt_handler.get_stream_url(track_data['url'])
-        if stream_url:
-            from PySide6.QtCore import QMetaObject, Q_ARG
-            QMetaObject.invokeMethod(self, "_play_youtube_stream", 
-                                   Qt.QueuedConnection, 
-                                   Q_ARG(str, track_data['title']), 
-                                   Q_ARG(str, track_data['uploader']),
-                                   Q_ARG(str, stream_url))
-            QMetaObject.invokeMethod(self.view_stack, "setCurrentIndex", Qt.QueuedConnection, Q_ARG(int, 0))
-        else:
-            QMetaObject.invokeMethod(self, "_on_search_failed", Qt.QueuedConnection)
+        try:
+            stream_url = self.yt_handler.get_stream_url(track_data['url'])
+            if stream_url:
+                self.youtube_stream_ready.emit(track_data['title'], track_data['uploader'], stream_url)
+                # Note: view change must happen in main thread, handled by play_youtube_stream slot
+            else:
+                self.youtube_search_failed.emit()
+        except Exception as e:
+            print(f"Extraction thread error: {e}")
+            self.youtube_search_failed.emit()
 
     @Slot(str, str, str)
     def _play_youtube_stream(self, title, uploader, url):
+        self.view_stack.setCurrentIndex(0) # Go back to player
         self.player.setSource(QUrl(url))
         self.track_title.setText(title)
         self.track_artist.setText(f"YouTube: {uploader}")

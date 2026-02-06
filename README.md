@@ -14,7 +14,7 @@
 
 | Feature | Description |
 |---------|-------------|
-| 🎤 **Voice Control** | Wake word detection ("Jarvis") with natural language commands |
+| 🎤 **Voice Control** | Wake word detection ("WOLF") with natural language commands |
 | 💬 **AI Chat** | Interactive chat with local LLMs via Ollama with streaming responses |
 | 🏠 **Smart Home** | Control TP-Link Kasa smart lights and plugs from the app |
 | 📅 **Planner** | Manage calendar events, alarms, and timers |
@@ -187,7 +187,7 @@ Wolf AI includes Alexa-like voice control with wake word detection.
 
 ### How It Works
 
-1. Say **"Jarvis"** to wake the assistant
+1. Say **"WOLF"** to wake the assistant
 2. Speak your command naturally
 3. Wolf AI processes your request and responds
 
@@ -195,19 +195,19 @@ Wolf AI includes Alexa-like voice control with wake word detection.
 
 | Command | What It Does |
 |---------|--------------|
-| *"Jarvis, turn on the office lights"* | Controls smart lights |
-| *"Jarvis, set a timer for 10 minutes"* | Creates a countdown timer |
-| *"Jarvis, what's on my schedule today?"* | Reads your calendar |
-| *"Jarvis, search the web for Python tutorials"* | Performs web search |
-| *"Jarvis, add buy groceries to my to-do list"* | Creates a task |
+| *"WOLF, turn on the office lights"* | Controls smart lights |
+| *"WOLF, set a timer for 10 minutes"* | Creates a countdown timer |
+| *"WOLF, what's on my schedule today?"* | Reads your calendar |
+| *"WOLF, search the web for Python tutorials"* | Performs web search |
+| *"WOLF, add buy groceries to my to-do list"* | Creates a task |
 
 ### Voice Configuration
 
 Edit `config.py` to customize:
 
 ```python
-# Change wake word (default: "jarvis")
-WAKE_WORD = "jarvis"
+# Change wake word (default: "WOLF")
+WAKE_WORD = "WOLF"
 
 # Adjust sensitivity (0.0-1.0, lower = less false positives)
 WAKE_WORD_SENSITIVITY = 0.4
