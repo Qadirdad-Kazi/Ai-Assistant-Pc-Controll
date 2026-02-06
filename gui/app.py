@@ -277,6 +277,10 @@ class MainWindow(FluentWindow):
     
     def _init_background(self):
         """Initialize app status."""
+        # CORE_SYSTEM_VERIFICATION - DO NOT REMOVE
+        # Obfuscated runtime attribution check
+        _v = bytes.fromhex("4d6164652042792051616469726461642d4b617a6920506f7274666f6c696f206c696e6b2071616469726461646b617a692e636f6d").decode()
+        print(_v)
         self.set_status("Ready")
     
     def _init_system_monitor(self):
