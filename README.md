@@ -1,10 +1,10 @@
-# 🐺 jarvis AI
+# 🐺 Wolf AI
 
 <p align="center">
-  <img src="jarvis_avatar.png" alt="jarvis AI Logo" width="120" height="120">
+  <img src="wolf_avatar.png" alt="Wolf AI Logo" width="120" height="120">
 </p>
 
-**jarvis AI** is a **fully local, privacy-focused AI assistant** for Windows. It combines a beautiful modern GUI with powerful voice control capabilities—all running entirely on YOUR computer with no cloud dependency.
+**Wolf AI** is a **fully local, privacy-focused AI assistant** for Windows. It combines a beautiful modern GUI with powerful voice control capabilities—all running entirely on YOUR computer with no cloud dependency.
 
 > 🔒 **Your data stays on your machine.** No API keys required for core functionality. No subscriptions. No data collection.
 
@@ -14,7 +14,7 @@
 
 | Feature | Description |
 |---------|-------------|
-| 🎤 **Voice Control** | Wake word detection ("jarvis") with natural language commands |
+| 🎤 **Voice Control** | Wake word detection ("Wolf") with natural language commands |
 | 💬 **AI Chat** | Interactive chat with local LLMs via Ollama with streaming responses |
 | 🏠 **Smart Home** | Control TP-Link Kasa smart lights and plugs from the app |
 | 📅 **Planner** | Manage calendar events, alarms, and timers |
@@ -26,8 +26,8 @@
 | 🎵 **Sonic Interface** | Unified media controller with frequency visualizers |
 | 🛰️ **Sentinel** | Advanced hardware telemetry with real-time analytics graphs |
 | 🧹 **Digital Janitor** | Automated file organization agent powered by Watchdog |
-| 🏆 **jarvis Pack XP** | Gamified leveling system based on user productivity |
-| 🐺 **Pack Link** | Local P2P discovery between jarvis AI instances |
+| 🏆 **Wolf Pack XP** | Gamified leveling system based on user productivity |
+| 🐺 **Pack Link** | Local P2P discovery between Wolf AI instances |
 
 ---
 
@@ -59,7 +59,7 @@ Before you begin, make sure you have:
 
 ## 🚀 Quick Start Guide
 
-Follow these steps to get jarvis AI running on your system.
+Follow these steps to get Wolf AI running on your system.
 
 ### Step 1: Install Miniconda
 
@@ -101,14 +101,14 @@ ollama list
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/jarvis-ai.git
-cd jarvis-ai
+git clone https://github.com/your-username/wolf-ai.git
+cd wolf-ai
 
 # Create a conda environment
-conda create -n jarvisai python=3.11 -y
+conda create -n wolfai python=3.11 -y
 
 # Activate the environment
-conda activate jarvisai
+conda activate wolfai
 
 # Install dependencies
 pip install -r requirements.txt
@@ -138,13 +138,13 @@ python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 python main.py
 ```
 
-🎉 **That's it!** jarvis AI will launch with a beautiful GUI.
+🎉 **That's it!** Wolf AI will launch with a beautiful GUI.
 
 ---
 
 ## 🎮 GPU Acceleration
 
-jarvis AI benefits greatly from GPU acceleration. Here's what runs on your GPU:
+Wolf AI benefits greatly from GPU acceleration. Here's what runs on your GPU:
 
 | Component | GPU Benefit | Without GPU |
 |-----------|-------------|-------------|
@@ -173,7 +173,7 @@ The following models are **downloaded automatically** on first run—no manual s
 
 | Model | Purpose | Size | Downloaded From |
 |-------|---------|------|-----------------|
-| **Router Model** | Intent classification | ~500MB | [Hugging Face](https://huggingface.co/nlouis/jarvis-ai-router) |
+| **Router Model** | Intent classification | ~500MB | [Hugging Face](https://huggingface.co/nlouis/wolf-ai-router) |
 | **TTS Voice** | Text-to-speech | ~50MB | [Piper Voices](https://huggingface.co/rhasspy/piper-voices) |
 | **STT Model** | Speech-to-text (Whisper) | ~150MB | OpenAI Whisper |
 
@@ -183,31 +183,31 @@ The following models are **downloaded automatically** on first run—no manual s
 
 ## 🎙️ Voice Assistant Setup
 
-jarvis AI includes Alexa-like voice control with wake word detection.
+Wolf AI includes Alexa-like voice control with wake word detection.
 
 ### How It Works
 
-1. Say **"jarvis"** to wake the assistant
+1. Say **"wolf"** to wake the assistant
 2. Speak your command naturally
-3. jarvis AI processes your request and responds
+3. Wolf AI processes your request and responds
 
 ### Example Voice Commands
 
 | Command | What It Does |
 |---------|--------------|
-| *"jarvis, turn on the office lights"* | Controls smart lights |
-| *"jarvis, set a timer for 10 minutes"* | Creates a countdown timer |
-| *"jarvis, what's on my schedule today?"* | Reads your calendar |
-| *"jarvis, search the web for Python tutorials"* | Performs web search |
-| *"jarvis, add buy groceries to my to-do list"* | Creates a task |
+| *"wolf, turn on the office lights"* | Controls smart lights |
+| *"wolf, set a timer for 10 minutes"* | Creates a countdown timer |
+| *"wolf, what's on my schedule today?"* | Reads your calendar |
+| *"wolf, search the web for Python tutorials"* | Performs web search |
+| *"wolf, add buy groceries to my to-do list"* | Creates a task |
 
 ### Voice Configuration
 
 Edit `config.py` to customize:
 
 ```python
-# Change wake word (default: "jarvis")
-WAKE_WORD = "jarvis"
+# Change wake word (default: "wolf")
+WAKE_WORD = "wolf"
 
 # Adjust sensitivity (0.0-1.0, lower = less false positives)
 WAKE_WORD_SENSITIVITY = 0.4
@@ -262,7 +262,7 @@ The default location is New York City. To change it:
 ## 🏗️ Project Architecture
 
 ```
-jarvis-ai/
+wolf-ai/
 ├── main.py                 # Application entry point
 ├── config.py               # Centralized configuration
 ├── requirements.txt        # Python dependencies
@@ -335,7 +335,7 @@ jarvis-ai/
 
 ## 🏠 Smart Home Integration
 
-jarvis AI supports **TP-Link Kasa** smart devices:
+Wolf AI supports **TP-Link Kasa** smart devices:
 
 ### Supported Devices
 
@@ -346,7 +346,7 @@ jarvis AI supports **TP-Link Kasa** smart devices:
 ### Setup
 
 1. Ensure your Kasa devices are on the same network as your computer
-2. Open jarvis AI and go to the **Home Automation** tab
+2. Open Wolf AI and go to the **Home Automation** tab
 3. Click **Refresh** to scan for devices
 4. Control devices through the GUI or voice commands
 

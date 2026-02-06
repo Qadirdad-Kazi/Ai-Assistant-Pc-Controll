@@ -24,7 +24,7 @@ THEME_TEXT_SUB = "#8b9bb4"
 
 class ChatTab(QWidget):
     """
-    Chat Tab Component - jarvis Knight Theme.
+    Chat Tab Component - Wolf Knight Theme.
     """
     
     # Signals

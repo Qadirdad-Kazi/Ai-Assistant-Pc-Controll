@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject, Signal
 
 class PackLink(QObject):
     """
-    Pack Link: Local P2P communication for jarvis AI instances.
+    Pack Link: Local P2P communication for Wolf AI instances.
     """
     peer_discovered = Signal(str, str) # IP, Hostname
     message_received = Signal(str, str) # Hostname, Message

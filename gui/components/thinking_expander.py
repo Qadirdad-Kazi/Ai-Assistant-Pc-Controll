@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, Property, QRectF, QPointF
 from PySide6.QtGui import QFont, QPainter, QColor
 
-# --- jarvis Knight Theme Constants ---
+# --- Wolf Knight Theme Constants ---
 THEME_GLASS_DARK = "rgba(10, 15, 25, 0.4)" 
 THEME_BORDER = "rgba(76, 201, 240, 0.3)" 
 THEME_ACCENT = "#4cc9f0"

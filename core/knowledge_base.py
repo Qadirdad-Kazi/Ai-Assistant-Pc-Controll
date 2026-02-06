@@ -39,7 +39,7 @@ class KnowledgeBase(QObject):
             self._db = Chroma(
                 persist_directory=DB_DIR,
                 embedding_function=self.embeddings,
-                collection_name="jarvis_grimoire"
+                collection_name="wolf_grimoire"
             )
             print("[KnowledgeBase] ✓ Vector DB initialized (Ollama).")
         except Exception as e:

@@ -28,6 +28,19 @@ RESET = "\033[0m"
 # HTTP session for downloads
 http_session = requests.Session()
 
+PIPER_VOICES = {
+    "Male (Northern)": {
+        "model": "en_GB-northern_english_male-medium",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium.onnx",
+        "config": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium.onnx.json"
+    },
+    "Female (Alba)": {
+        "model": "en_GB-alba-medium",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alba/medium/en_GB-alba-medium.onnx",
+        "config": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alba/medium/en_GB-alba-medium.onnx.json"
+    }
+}
+
 
 class SentenceBuffer:
     """Buffers streaming text and extracts complete sentences."""
@@ -65,9 +78,9 @@ class SentenceBuffer:
 class PiperTTS:
     """Piper TTS wrapper using pre-built executable for Windows compatibility."""
     
-    VOICE_MODEL = "en_GB-northern_english_male-medium"
-    MODEL_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium.onnx"
-    CONFIG_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium.onnx.json"
+    # Piper Windows executable
+    PIPER_VERSION = "2023.11.14-2"
+    PIPER_RELEASE_URL = f"https://github.com/rhasspy/piper/releases/download/{PIPER_VERSION}/piper_windows_amd64.zip"
     
     # Piper Windows executable
     PIPER_VERSION = "2023.11.14-2"
@@ -139,20 +152,25 @@ class PiperTTS:
             print(f"{YELLOW}[TTS] Failed to download Piper executable: {e}{RESET}")
             return None
     
-    def _download_model(self):
+    def _download_model(self, voice_key: str):
         """Download voice model if not present."""
+        voice_data = PIPER_VOICES.get(voice_key, PIPER_VOICES["Male (Northern)"])
+        model_name = voice_data["model"]
+        model_url = voice_data["url"]
+        config_url = voice_data["config"]
+        
         self.models_dir.mkdir(parents=True, exist_ok=True)
-        model_path = self.models_dir / f"{self.VOICE_MODEL}.onnx"
-        config_path = self.models_dir / f"{self.VOICE_MODEL}.onnx.json"
+        model_path = self.models_dir / f"{model_name}.onnx"
+        config_path = self.models_dir / f"{model_name}.onnx.json"
         
         if not model_path.exists():
-            print(f"{CYAN}[TTS] Downloading voice model ({self.VOICE_MODEL})...{RESET}")
-            r = http_session.get(self.MODEL_URL, stream=True)
+            print(f"{CYAN}[TTS] Downloading voice model ({model_name})...{RESET}")
+            r = http_session.get(model_url, stream=True)
             r.raise_for_status()
             with open(model_path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-            r = http_session.get(self.CONFIG_URL)
+            r = http_session.get(config_url)
             r.raise_for_status()
             with open(config_path, 'wb') as f:
                 f.write(r.content)
@@ -161,8 +179,11 @@ class PiperTTS:
         return str(model_path)
     
     def initialize(self):
-        """Set up Piper executable and voice model."""
+        """Set up Piper executable and initial voice model."""
         try:
+            from core.settings_store import settings
+            current_voice = settings.get("tts.voice", "Male (Northern)")
+            
             print(f"{CYAN}[TTS] Initializing Piper TTS (executable mode)...{RESET}")
             
             # Download/find piper executable
@@ -173,7 +194,7 @@ class PiperTTS:
                 return False
             
             # Download/find voice model
-            self.model_path = self._download_model()
+            self.model_path = self._download_model(current_voice)
             
             # Test the executable
             try:
@@ -303,6 +324,12 @@ class PiperTTS:
         if self.enabled:
             self.speech_queue.join()
     
+    def update_voice(self, voice_key: str):
+        """Switch to a different voice model."""
+        if voice_key in PIPER_VOICES:
+            self.model_path = self._download_model(voice_key)
+            print(f"{GREEN}[TTS] ✓ Switched to voice: {voice_key}{RESET}")
+
     def toggle(self, enable):
         """Enable/disable TTS."""
         if enable and not self.piper_exe:

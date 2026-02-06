@@ -263,7 +263,7 @@ class FunctionGemmaRouter:
         import requests
         
         fallback_prompt = f"""
-        You are the neural mission router for jarvis AI.
+        You are the neural mission router for Wolf AI.
         Determine which holographic action to trigger for the user's prompt.
         
         Available functions:

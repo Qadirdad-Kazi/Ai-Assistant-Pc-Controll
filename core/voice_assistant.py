@@ -120,7 +120,7 @@ class VoiceAssistant(QObject):
             return
         
         # Remove wake word from text if present
-        text = text.lower().replace("jarvis", "").strip()
+        text = text.lower().replace("Wolf", "").strip()
         if not text:
             return
         

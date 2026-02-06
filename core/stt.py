@@ -51,16 +51,27 @@ class STTListener:
             
             print(f"{CYAN}[STT] Initializing AudioToTextRecorder with device='cuda'...{RESET}")
             
-            # Initialize RealTimeSTT with built-in wake word detection
-            # Using pvporcupine backend since "jarvis" is a predefined Porcupine wake word
+            # Check if wake word is built-in (jarvis, alexa, etc.)
+            built_in_words = ["jarvis", "alexa", "hey_mycroft", "hey_jarvis", "hey_rhasspy"]
+            is_built_in = WAKE_WORD.lower() in built_in_words
+            
+            if is_built_in:
+                print(f"{CYAN}[STT] Using built-in wake word model for '{WAKE_WORD}'{RESET}")
+                backend = "openwakeword"
+                detect_word = WAKE_WORD
+            else:
+                print(f"{YELLOW}[STT] Custom wake word '{WAKE_WORD}' detected. Switching to transcription mode.{RESET}")
+                backend = "none" # No hardware backend, use whisper transcription
+                detect_word = "" # recorder.text() will return everything
+            
             self.recorder = AudioToTextRecorder(
-                model=REALTIMESTT_MODEL,  # Use configured model (base, small, etc.)
+                model=REALTIMESTT_MODEL,
                 language="en",
-                device="cuda",  # Use GPU for faster processing
-                spinner=False,  # Disable spinner for cleaner output
-                wakeword_backend="pvporcupine",  # Use Porcupine for wake word detection
-                wake_words=WAKE_WORD,  # Built-in wake word detection
-                wake_words_sensitivity=WAKE_WORD_SENSITIVITY,  # Sensitivity (0.0-1.0)
+                device="cuda",
+                spinner=False,
+                wakeword_backend=backend,
+                wake_words=detect_word,
+                wake_words_sensitivity=WAKE_WORD_SENSITIVITY,
                 on_wakeword_detected=self._on_wakeword_detected,
             )
             
@@ -131,15 +142,46 @@ class STTListener:
                 transcription_start = time.time()
                 text = self.recorder.text()
                 transcription_time = time.time() - transcription_start
+                text_clean = ""
                 
                 print(f"{CYAN}[STT] ✓ Transcription completed in {transcription_time:.2f}s{RESET}")
                 print(f"{CYAN}[STT] 📝 Raw transcribed text: '{text}'{RESET}")
                 
                 if text and text.strip():
-                    # Remove wake word from the text if present
-                    text_clean = text.replace(WAKE_WORD, "").replace(WAKE_WORD.capitalize(), "").strip()
+                    text_lower = text.lower()
                     
-                    print(f"{CYAN}[STT] 🧹 Cleaned text (after removing wake word): '{text_clean}'{RESET}")
+                    # Phonetic aliases for 'wolf' to handle mis-transcriptions
+                    WOLF_ALIASES = ["wolf", "wolff", "woof", "who", "wall", "well", "holy", "bolly", "wulf", "world", "worth"]
+                    
+                    # Check if wake word or any phonetic alias is in the text
+                    detected = False
+                    for alias in WOLF_ALIASES:
+                        if alias in text_lower:
+                            detected = True
+                            print(f"{GREEN}[STT] ✨ Wake word detected via alias: '{alias}'{RESET}")
+                            break
+                    
+                    if detected:
+                        if self.wake_word_callback:
+                            self.wake_word_callback()
+                    
+                    if detected:
+                        # Clean the text: find the best alias match to remove
+                        best_match = WAKE_WORD
+                        for alias in WOLF_ALIASES:
+                            if alias in text_lower:
+                                best_match = alias
+                                break
+
+                        import re
+                        pattern = re.compile(re.escape(best_match), re.IGNORECASE)
+                        match = pattern.search(text)
+                        if match:
+                            text_clean = text[match.end():].strip()
+                        else:
+                            text_clean = text.strip()
+                            
+                        print(f"{CYAN}[STT] 🧹 Cleaned text: '{text_clean}'{RESET}")
                     
                     if text_clean:
                         print(f"{CYAN}[STT] 🔊 Speech recognized: '{text_clean}'{RESET}")

@@ -1,6 +1,6 @@
 """
 Centralized settings storage with persistence.
-Saves settings to ~/.jarvis_ai/settings.json
+Saves settings to ~/.Wolf_ai/settings.json
 """
 
 import json
@@ -51,7 +51,7 @@ class SettingsStore(QObject):
         super().__init__()
         self._lock = threading.RLock()
         self._settings: Dict[str, Any] = {}
-        self._settings_dir = Path.home() / ".jarvis_ai"
+        self._settings_dir = Path.home() / ".Wolf_ai"
         self._settings_file = self._settings_dir / "settings.json"
         
         self._load()

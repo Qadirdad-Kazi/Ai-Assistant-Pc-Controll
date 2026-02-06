@@ -18,7 +18,7 @@ from gui.components.timer import TimerComponent
 from gui.components.alarm import AlarmComponent
 from core.tasks import task_manager
 
-# --- jarvis Knight Theme Constants ---
+# --- Wolf Knight Theme Constants ---
 THEME_GLASS = "rgba(16, 24, 40, 0.70)" 
 THEME_BORDER = "rgba(76, 201, 240, 0.3)" # Neon Cyan
 THEME_ACCENT = "#4cc9f0"
@@ -36,7 +36,7 @@ class GlowEffect(QGraphicsDropShadowEffect):
 class PlannerTab(QFrame):
     """
     Planner functionality: Focus Tasks, Schedule, and Flow State tools.
-    jarvis Knight Theme Edition.
+    Wolf Knight Theme Edition.
     """
     
     def __init__(self):

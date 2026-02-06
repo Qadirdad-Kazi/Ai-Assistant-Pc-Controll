@@ -3,11 +3,12 @@ Comprehensive Settings Tab with model selection, connection settings, and prefer
 """
 
 from config import LOCAL_ROUTER_PATH, RESPONDER_MODEL
-
+from core.tts import tts
 import requests
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QHBoxLayout
 )
+from typing import Any, List, Dict
 from PySide6.QtCore import Qt, QThread, Signal, Slot
 
 from qfluentwidgets import (
@@ -313,6 +314,13 @@ class SettingsTab(ScrollArea):
         
         self._init_ui()
         self._fetch_models()  # Auto-fetch on load
+        
+        # Connect settings change listener for dynamic voice switching
+        settings.setting_changed.connect(self._on_setting_changed)
+
+    def _on_setting_changed(self, key: str, value: Any):
+        if key == "tts.voice":
+            tts.update_voice(value)
 
     def _init_ui(self):
         # ─────────────────────────────────────────────────────────────
@@ -397,60 +405,17 @@ class SettingsTab(ScrollArea):
         # ─────────────────────────────────────────────────────────────
         self.voice_group = SettingCardGroup("Voice & Audio", self.scrollWidget)
         
-        piper_voices = [
-            "en_GB-alba-medium",
-            "en_US-amy-medium",
-            "en_US-lessac-medium",
-            "en_US-libritts-high",
-        ]
         self.tts_voice_card = ComboBoxCard(
             FIF.VOLUME,
             "TTS Voice",
-            "Voice model for text-to-speech",
-            piper_voices,
+            "Choose your assistant's personality",
+            ["Male (Northern)", "Female (Alba)"],
             "tts.voice",
             self.voice_group
         )
         self.voice_group.addSettingCard(self.tts_voice_card)
         
         self.expandLayout.addWidget(self.voice_group)
-
-        # ─────────────────────────────────────────────────────────────
-        # Weather Location Group
-        # ─────────────────────────────────────────────────────────────
-        self.weather_group = SettingCardGroup("Weather Location", self.scrollWidget)
-        
-        self.city_card = TextInputCard(
-            FIF.PIN,
-            "City Name",
-            "Display name for your location",
-            "weather.city",
-            "New York, NY",
-            self.weather_group
-        )
-        self.weather_group.addSettingCard(self.city_card)
-        
-        self.latitude_card = TextInputCard(
-            FIF.PIN,
-            "Latitude",
-            "Latitude coordinate (-90 to 90)",
-            "weather.latitude",
-            "40.7128",
-            self.weather_group
-        )
-        self.weather_group.addSettingCard(self.latitude_card)
-        
-        self.longitude_card = TextInputCard(
-            FIF.GLOBE,
-            "Longitude",
-            "Longitude coordinate (-180 to 180)",
-            "weather.longitude",
-            "-74.0060",
-            self.weather_group
-        )
-        self.weather_group.addSettingCard(self.longitude_card)
-        
-        self.expandLayout.addWidget(self.weather_group)
 
         # ─────────────────────────────────────────────────────────────
         # General Group
@@ -467,15 +432,6 @@ class SettingsTab(ScrollArea):
         )
         self.general_group.addSettingCard(self.max_history_card)
         
-        self.auto_news_card = SwitchCard(
-            FIF.DOCUMENT,
-            "Auto-fetch News",
-            "Automatically fetch news on startup",
-            "general.auto_fetch_news",
-            self.general_group
-        )
-        self.general_group.addSettingCard(self.auto_news_card)
-        
         self.expandLayout.addWidget(self.general_group)
 
         # ─────────────────────────────────────────────────────────────
@@ -486,7 +442,7 @@ class SettingsTab(ScrollArea):
         self.about_card = PrimaryPushSettingCard(
             "Check Update",
             FIF.INFO,
-            "About jarvis",
+            "About Wolf",
             "Version 0.2.0 (Alpha)",
             self.about_group
         )

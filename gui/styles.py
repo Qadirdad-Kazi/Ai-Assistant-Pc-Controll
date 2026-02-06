@@ -1,9 +1,9 @@
 """
-Global stylesheet for the jarvis AI application (Aura AI Theme).
+Global stylesheet for the Wolf AI application (Aura AI Theme).
 """
 
 
-# jarvis Knight Theme Colors
+# Wolf Knight Theme Colors
 # Background: #05080d
 # Surface: rgba(16, 24, 40, 0.70)
 # Border: rgba(76, 201, 240, 0.3)
