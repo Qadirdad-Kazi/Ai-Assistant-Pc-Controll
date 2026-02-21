@@ -13,7 +13,7 @@ from qfluentwidgets import (
 
 from gui.components.message_bubble import MessageBubble
 from gui.components import ThinkingExpander
-from core.history import history_manager
+from core.database import db
 
 # --- Theme Constants ---
 THEME_GLASS_SIDEBAR = "rgba(5, 8, 13, 0.6)"
@@ -351,7 +351,7 @@ class ChatTab(QWidget):
     def refresh_sidebar(self, current_session_id: str = None):
         """Refresh sidebar list."""
         self.session_list.clear()
-        sessions = history_manager.get_sessions()
+        sessions = db.get_sessions()
         
         for sess in sessions:
             title = sess['title']

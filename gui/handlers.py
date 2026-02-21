@@ -5,7 +5,7 @@ import re
 from config import RESPONDER_MODEL, OLLAMA_URL, MAX_HISTORY
 from core.llm import route_query, should_bypass_router, http_session
 from core.tts import tts, SentenceBuffer
-from core.history import history_manager
+from core.database import db
 from core.model_manager import ensure_exclusive_qwen
 from core.model_persistence import ensure_llama_loaded, mark_llama_used
 from core.settings_store import settings as app_settings
@@ -167,7 +167,7 @@ class ChatWorker(QObject):
         self.messages.append({'role': 'assistant', 'content': self.full_response})
         
         if self.current_session_id:
-            history_manager.add_message(self.current_session_id, "assistant", self.full_response)
+            db.add_message(self.current_session_id, "assistant", self.full_response)
     
     def _stream_qwen_response(self, enable_thinking: bool):
         """Stream a direct Qwen response (for thinking/nonthinking)."""
@@ -237,7 +237,7 @@ class ChatWorker(QObject):
         self.messages.append({'role': 'assistant', 'content': self.full_response})
         
         if self.current_session_id:
-            history_manager.add_message(self.current_session_id, "assistant", self.full_response)
+            db.add_message(self.current_session_id, "assistant", self.full_response)
 
 
 class ChatHandlers(QObject):
@@ -279,7 +279,7 @@ class ChatHandlers(QObject):
     
     def delete_session(self, session_id):
         """Delete a session from history."""
-        history_manager.delete_session(session_id)
+        db.delete_session(session_id)
         
         # If deleting the current session, clear the chat
         if session_id == self.current_session_id:
@@ -291,20 +291,20 @@ class ChatHandlers(QObject):
     
     def pin_session(self, session_id):
         """Toggle pin status of a session."""
-        is_pinned = history_manager.toggle_pin(session_id)
+        is_pinned = db.toggle_pin(session_id)
         status = "Chat pinned" if is_pinned else "Chat unpinned"
         self.main_window.set_status(status)
         self.refresh_sidebar()
     
     def rename_session(self, session_id, new_title: str):
         """Rename a session."""
-        history_manager.update_session_title(session_id, new_title)
+        db.update_session_title(session_id, new_title)
         self.refresh_sidebar()
 
     def load_session(self, session_id):
         """Load a specific chat session."""
         self.current_session_id = session_id
-        db_messages = history_manager.get_messages(session_id)
+        db_messages = db.get_messages(session_id)
         
         # Reset message context (keep system prompt)
         self.messages = [self.messages[0]]
@@ -325,7 +325,7 @@ class ChatHandlers(QObject):
     def init_new_session(self, first_message):
         """Create a new session in DB."""
         title = first_message[:30] + "..." if len(first_message) > 30 else first_message
-        self.current_session_id = history_manager.create_session(title=title)
+        self.current_session_id = db.create_session(title=title)
         return self.current_session_id
     
     def _on_think_start(self, thinking_enabled: bool):
@@ -372,7 +372,7 @@ class ChatHandlers(QObject):
         
         # Save simple response to history
         if self.current_session_id:
-            history_manager.add_message(self.current_session_id, "assistant", text)
+            db.add_message(self.current_session_id, "assistant", text)
     
     def _on_toast(self, message: str, success: bool):
         """Show toast notification for function execution result."""
@@ -443,7 +443,7 @@ class ChatHandlers(QObject):
             self.refresh_sidebar()
 
         # Save to DB
-        history_manager.add_message(self.current_session_id, "user", text)
+        db.add_message(self.current_session_id, "user", text)
         
         self._start_generation_state()
         
