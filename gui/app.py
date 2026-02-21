@@ -138,6 +138,8 @@ class MainWindow(FluentWindow):
             print(f"{GREEN}[App] Showing voice indicator...{RESET}")
             # Use system monitor's simple indicator instead of overlay
             self.system_monitor.show_listening()
+            if hasattr(self, 'dashboard_view') and self.dashboard_view:
+                self.dashboard_view.set_listening(True)
             print(f"{GREEN}[App] ✓ Voice indicator shown{RESET}")
         else:
             print(f"{GRAY}[App] Voice assistant disabled in config{RESET}")
@@ -153,6 +155,8 @@ class MainWindow(FluentWindow):
             # Small delay before hiding
             from PySide6.QtCore import QTimer
             QTimer.singleShot(500, lambda: self.system_monitor.hide_listening())
+            if hasattr(self, 'dashboard_view') and self.dashboard_view:
+                QTimer.singleShot(500, lambda: self.dashboard_view.set_listening(False))
     
         
     def _init_window(self):

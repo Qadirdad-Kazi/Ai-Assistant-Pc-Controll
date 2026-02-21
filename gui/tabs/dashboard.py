@@ -6,8 +6,8 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, 
     QGraphicsDropShadowEffect, QGridLayout
 )
-from PySide6.QtCore import Qt, QTimer, QDate, QTime, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt, QTimer, QDate, QTime, Signal, QPointF
+from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
 
 from qfluentwidgets import (
     StrongBodyLabel, FluentIcon as FIF, IconWidget, CardWidget
@@ -22,6 +22,7 @@ THEME_BORDER = "rgba(76, 201, 240, 0.3)"
 THEME_ACCENT = "#4cc9f0"
 THEME_TEXT_MAIN = "#e8f1ff"
 THEME_TEXT_SUB = "#94a3b8"
+THEME_LISTENING = "#ff007b" # Vibrant pink/red when listening
 
 class GlowEffect(QGraphicsDropShadowEffect):
     def __init__(self, color=THEME_ACCENT, blur=15, parent=None):
@@ -118,6 +119,11 @@ class DashboardView(QWidget):
         super().__init__(parent)
         self.setObjectName("dashboardInterface")
         
+        # Load the generated background image
+        import os
+        bg_path = os.path.join(os.getcwd(), "dashboard_bg.png")
+        self.bg_pixmap = QPixmap(bg_path)
+        
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(40, 40, 40, 40)
         main_layout.setSpacing(30)
@@ -141,10 +147,56 @@ class DashboardView(QWidget):
         
         main_layout.addLayout(grid)
         
-        # Large Mission Message
+        # Large Mission Message / Listening UI Container
+        self.center_container = QWidget()
+        self.center_layout = QVBoxLayout(self.center_container)
+        
         self.mission_lbl = QLabel("WOLF AI IS READY FOR ASSIGNMENT.")
         self.mission_lbl.setStyleSheet(f"font-family: 'Segoe UI'; font-size: 18px; color: {THEME_TEXT_SUB}; font-style: italic;")
         self.mission_lbl.setAlignment(Qt.AlignCenter)
+        
+        self.listening_lbl = QLabel("🎙️ LISTENING...")
+        self.listening_lbl.setStyleSheet(f"font-family: 'Segoe UI'; font-size: 42px; font-weight: 900; color: {THEME_LISTENING}; letter-spacing: 12px;")
+        self.listening_lbl.setAlignment(Qt.AlignCenter)
+        self.listening_lbl.hide()
+        
+        # Audio Pulse Glow Effect
+        self.listening_glow = GlowEffect(THEME_LISTENING, 40)
+        self.listening_lbl.setGraphicsEffect(self.listening_glow)
+        
+        self.center_layout.addWidget(self.mission_lbl)
+        self.center_layout.addWidget(self.listening_lbl)
+        
         main_layout.addStretch()
-        main_layout.addWidget(self.mission_lbl)
+        main_layout.addWidget(self.center_container)
         main_layout.addStretch()
+
+    def set_listening(self, is_listening: bool):
+        """Toggle the central dashboard listening mode UI."""
+        if is_listening:
+            self.mission_lbl.hide()
+            self.listening_lbl.show()
+            self.voice_card.set_status("ACTIVE")
+            self.voice_card.s.setStyleSheet(f"color: {THEME_LISTENING}; font-size: 18px; font-weight: bold;")
+        else:
+            self.listening_lbl.hide()
+            self.mission_lbl.show()
+            self.voice_card.set_status("LISTENING")
+            self.voice_card.s.setStyleSheet(f"color: {THEME_ACCENT}; font-size: 18px; font-weight: bold;")
+
+    def paintEvent(self, event):
+        """Draw the generated Wolf Couples image in the background."""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        
+        if not hasattr(self, 'bg_pixmap') or self.bg_pixmap.isNull():
+            return
+            
+        scaled_pixmap = self.bg_pixmap.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+        x = (self.width() - scaled_pixmap.width()) // 2
+        y = (self.height() - scaled_pixmap.height()) // 2
+        
+        # Make it subtle so it feels immersive but professional
+        painter.setOpacity(0.35) 
+        painter.drawPixmap(x, y, scaled_pixmap)
+        painter.setOpacity(1.0)
