@@ -113,6 +113,13 @@ Unlike standard web-based VoIP, Wolf 2.0 connects directly to local Pakistani ce
 4. Ensure the Audio Line-Out of the modem is routed to a PC Line-In, and the PC Line-Out is routed to the Modem Line-In.
 5. Open the **Receptionist Logs** tab in the GUI. You can now delegate calls, have the AI answer, or utilize the hold-and-announce handover protocol!
 
+## 📚 Comprehensive Documentation
+
+For advanced setup and testing of the "God-Mode" features, please refer to the markdown guides located in the `docs/` folder:
+
+- 🧪 **[docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)**: Includes step-by-step instructions on how to simulate phone handovers, trigger the OCR Bug Watcher manually, and test the Dev Agent's Vite scaffolding.
+- 📞 **[docs/PHONE_INTEGRATION_GUIDE.md](docs/PHONE_INTEGRATION_GUIDE.md)**: A complete guide on how to wire a physical GSM modem (SIM800L) or how to set up the **Hardware-Free SIP VoIP Pipeline** using your Android phone.
+
 ---
 
 ## 🛠️ Configuration
