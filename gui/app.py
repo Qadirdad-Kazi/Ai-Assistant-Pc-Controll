@@ -23,16 +23,9 @@ from gui.styles import AURA_STYLESHEET
 
 from gui.tabs.dashboard import DashboardView
 from gui.tabs.chat import ChatTab
-from gui.tabs.planner import PlannerTab
 from gui.tabs.settings import SettingsTab
-from gui.tabs.browser import BrowserTab
-from gui.tabs.home_automation import HomeAutomationTab
-from gui.tabs.grimoire import GrimoireTab
 from gui.tabs.media import SonicInterface
-from gui.tabs.sentinel import SentinelTab
-from gui.tabs.janitor import JanitorTab
 from gui.components.system_monitor import SystemMonitor
-from gui.components.voice_indicator import VoiceIndicator
 from core.llm import preload_models
 
 
@@ -80,9 +73,7 @@ class MainWindow(FluentWindow):
         
         # Initialize sub-interfaces pointers
         self.chat_tab = None
-        self.planner_tab = None
-        self.briefing_view = None
-        self.home_tab = None
+        self.dashboard_view = None
         
         # Flag to prevent duplicate signal connections
         self._chat_signals_connected = False
@@ -107,11 +98,6 @@ class MainWindow(FluentWindow):
             voice_assistant.wake_word_detected.connect(self._on_wake_word_detected)
             voice_assistant.speech_recognized.connect(self._on_speech_recognized)
             voice_assistant.processing_finished.connect(self._on_processing_finished)
-            # Connect GUI update signals
-            voice_assistant.timer_set.connect(self._on_voice_timer_set)
-            voice_assistant.alarm_added.connect(self._on_voice_alarm_added)
-            voice_assistant.calendar_updated.connect(self._on_voice_calendar_updated)
-            voice_assistant.task_added.connect(self._on_voice_task_added)
             print(f"[App] ✓ Signals connected")
             
             # Initialize in background thread to avoid blocking UI
@@ -156,50 +142,6 @@ class MainWindow(FluentWindow):
             from PySide6.QtCore import QTimer
             QTimer.singleShot(500, lambda: self.system_monitor.hide_listening())
     
-    def _on_voice_timer_set(self, seconds: int, label: str):
-        """Handle timer set via voice - update GUI."""
-        # Ensure planner tab is loaded
-        if not self.planner_tab:
-            # Try to initialize if lazy
-            if hasattr(self, 'planner_lazy'):
-                self.planner_tab = self.planner_lazy.initialize()
-        
-        if self.planner_tab and hasattr(self.planner_tab, 'timer_component'):
-            self.planner_tab.timer_component.set_and_start(seconds, label)
-            print(f"[App] Timer updated via voice: {seconds}s, {label}")
-    
-    def _on_voice_alarm_added(self):
-        """Handle alarm added via voice - update GUI."""
-        # Ensure planner tab is loaded
-        if not self.planner_tab:
-            if hasattr(self, 'planner_lazy'):
-                self.planner_tab = self.planner_lazy.initialize()
-        
-        if self.planner_tab and hasattr(self.planner_tab, 'alarm_component'):
-            self.planner_tab.alarm_component.reload()
-            print(f"[App] Alarms refreshed via voice")
-    
-    def _on_voice_calendar_updated(self):
-        """Handle calendar event added via voice - refresh calendar."""
-        # Ensure planner tab is loaded
-        if not self.planner_tab:
-            if hasattr(self, 'planner_lazy'):
-                self.planner_tab = self.planner_lazy.initialize()
-        
-        if self.planner_tab and hasattr(self.planner_tab, 'schedule_component'):
-            self.planner_tab.schedule_component.refresh_events()
-            print(f"[App] Calendar refreshed via voice")
-    
-    def _on_voice_task_added(self):
-        """Handle task added via voice - refresh task list."""
-        # Ensure planner tab is loaded
-        if not self.planner_tab:
-            if hasattr(self, 'planner_lazy'):
-                self.planner_tab = self.planner_lazy.initialize()
-        
-        if self.planner_tab and hasattr(self.planner_tab, '_load_tasks'):
-            self.planner_tab._load_tasks()
-            print(f"[App] Tasks refreshed via voice")
         
     def _init_window(self):
         # Dashboard is loaded immediately as it's the home screen
@@ -211,23 +153,10 @@ class MainWindow(FluentWindow):
 
         # Lazy load other tabs
         self.chat_lazy = LazyTab(ChatTab, "chatInterface")
-        self.planner_lazy = LazyTab(PlannerTab, "plannerInterface")
-        
-        self.home_lazy = LazyTab(HomeAutomationTab, "homeInterface")
-        self.browser_lazy = LazyTab(BrowserTab, "browserInterface")
-        self.grimoire_lazy = LazyTab(GrimoireTab, "grimoireInterface")
         self.media_lazy = LazyTab(SonicInterface, "mediaInterface")
-        self.sentinel_lazy = LazyTab(SentinelTab, "sentinelInterface")
-        self.janitor_lazy = LazyTab(JanitorTab, "janitorInterface")
         
         self.addSubInterface(self.chat_lazy, FIF.CHAT, "Chat")
-        self.addSubInterface(self.planner_lazy, FIF.CALENDAR, "Planner")
-        self.addSubInterface(self.home_lazy, FIF.HOME, "Home")
-        self.addSubInterface(self.browser_lazy, FIF.GLOBE, "Web")
-        self.addSubInterface(self.grimoire_lazy, FIF.BOOK_SHELF, "Grimoire")
         self.addSubInterface(self.media_lazy, FIF.MUSIC, "Sonic")
-        self.addSubInterface(self.sentinel_lazy, FIF.IOT, "Sentinel")
-        self.addSubInterface(self.janitor_lazy, FIF.BASKETBALL, "Janitor") # Using Basketball as a placeholder icon for 'clean up' if broom missing
         
         # Settings at bottom
         self.settings_lazy = LazyTab(SettingsTab, "settingsInterface")
@@ -236,14 +165,6 @@ class MainWindow(FluentWindow):
             NavigationItemPosition.BOTTOM
         )
         
-        # Start Background Services
-        from core.janitor import DigitalJanitor
-        from core.network import PackLink
-        self.janitor = DigitalJanitor()
-        self.janitor.start()
-        
-        self.pack_link = PackLink()
-        self.pack_link.start()
         
     def _connect_signals(self):
         """Connect signals. Signals for lazy tabs are connected upon initialization."""
@@ -312,24 +233,8 @@ class MainWindow(FluentWindow):
             if obj_name == "chatInterface":
                 self.chat_tab = real_widget
                 self._connect_chat_signals()
-            elif obj_name == "plannerInterface":
-                self.planner_tab = real_widget
-            elif obj_name == "homeInterface":
-                self.home_tab = real_widget
-            elif obj_name == "grimoireInterface":
-                # No special signals for now
-                pass
             elif obj_name == "mediaInterface":
                 # No special signals for now
-                pass
-            elif obj_name == "sentinelInterface":
-                # No special signals for now
-                pass
-            elif obj_name == "janitorInterface":
-                # No special signals for now
-                pass
-            elif obj_name == "browserInterface":
-                # No signals to connect for browser yet
                 pass
                 
         self.set_status("Ready")

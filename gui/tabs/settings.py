@@ -354,15 +354,6 @@ class SettingsTab(ScrollArea):
         )
         self.ai_group.addSettingCard(self.chat_model_card)
         
-        self.web_agent_model_card = ModelSelectCard(
-            FIF.GLOBE,
-            "Web Agent Model",
-            "Vision-language model for browser automation",
-            "models.web_agent",
-            self.ai_group
-        )
-        self.ai_group.addSettingCard(self.web_agent_model_card)
-        
         # Function Router (Local Gemma) - Read-Only Display
         self.router_model_card = SettingCard(
             FIF.ROBOT,
@@ -489,7 +480,6 @@ class SettingsTab(ScrollArea):
     def _on_models_fetched(self, models: list):
         self._available_models = models
         self.chat_model_card.update_models(models)
-        self.web_agent_model_card.update_models(models)
         
         InfoBar.success(
             title="Models Loaded",
