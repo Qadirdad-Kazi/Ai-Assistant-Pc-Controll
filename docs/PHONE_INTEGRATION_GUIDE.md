@@ -12,9 +12,13 @@ If you do not want to buy a physical SIM800L module or solder wires, you can lin
 Your Android phone acts as a "gateway". When a call comes to your normal phone number, an app on your phone forwards the audio over Wi-Fi to a SIP client running on your PC. Wolf AI intercepts the PC's audio.
 
 ### The Setup Steps:
-1. **Download a SIP Gateway App on Android:** Install an app like [Sipnetic](https://play.google.com/store/apps/details?id=com.sipnetic.app) or [Android SIP Server/Gateway]. These apps bind your cellular phone calls to a local IP address (e.g., `192.168.1.10:5060`).
+**You DO NOT need to build your own Android App.** There are several free, pre-existing apps on the Google Play Store that handle this out of the box.
+
+1. **Download a SIP Gateway App on Android:** 
+   - We recommend installing **[Linphone](https://play.google.com/store/apps/details?id=org.linphone)**, **[CSipSimple]**, or any generic "Android SIP Server/VoIP Gateway" app. 
+   - Once installed, the app will generate a local IP address on your Wi-Fi (e.g., `192.168.1.10:5060`).
 2. **Install a Softphone on your PC:** Install [MicroSIP](https://www.microsip.org/) or Zoiper on Windows. 
-3. **Connect them:** In MicroSIP on your PC, log into the SIP server hosted by your Android phone.
+3. **Connect them:** In MicroSIP on your PC, log into the SIP server IP hosted by your Android phone.
 4. **Link to Wolf AI:** 
    - Instead of routing audio through physical wires, you use **Virtual Audio Cables (VB-Audio)**. 
    - Set MicroSIP's Output ➜ `Virtual Cable A` (Wolf's STT hears this).
