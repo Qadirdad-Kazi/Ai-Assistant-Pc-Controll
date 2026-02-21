@@ -442,6 +442,18 @@ class SettingsTab(ScrollArea):
         # ─────────────────────────────────────────────────────────────
         self.god_mode_group = SettingCardGroup("God-Mode Integrations", self.scrollWidget)
 
+        # Phone Integration Switch
+        self.phone_mode_card = ComboBoxCard(
+            FIF.PHONE,
+            "Receptionist Connection Mode",
+            "Choose between Physical GSM Hardware or Wireless SIP/VoIP over Wi-Fi",
+            ["None", "GSM Hardware (Serial)", "Wi-Fi Softphone (SIP)"],
+            "phone.mode",
+            self.god_mode_group
+        )
+        self.god_mode_group.addSettingCard(self.phone_mode_card)
+
+        # GSM Port (only relevant if GSM Hardware selected, but we show it here)
         self.gsm_port_card = TextInputCard(
             FIF.DEVELOPER_TOOLS,
             "GSM Gateway COM Port",
@@ -451,6 +463,17 @@ class SettingsTab(ScrollArea):
             self.god_mode_group
         )
         self.god_mode_group.addSettingCard(self.gsm_port_card)
+        
+        # SIP Details
+        self.sip_ip_card = TextInputCard(
+            FIF.WIFI,
+            "SIP Server IP Address",
+            "IP of your Android Gateway (e.g. 192.168.1.10)",
+            "sip.ip",
+            "0.0.0.0",
+            self.god_mode_group
+        )
+        self.god_mode_group.addSettingCard(self.sip_ip_card)
 
         self.bug_watcher_card = SwitchCard(
             FIF.VIEW,
