@@ -57,5 +57,35 @@ class GSMAudioBridge:
         if self.call_active:
             print("[Audio Bridge] Playing 'Please wait' tone to caller.")
 
+    def hold_call(self):
+        """
+        Puts the caller on hold, muting the STT input from the modem so the AI stops listening to them,
+        and playing hold music/silence.
+        """
+        print("[Audio Bridge] Call put on hold. AI STT paused.")
+        self.play_on_hold_music()
+        
+    def announce_to_user(self, announcement: str):
+        """
+        Uses TTS to speak out of the PC's main speakers to get the user's attention,
+        without sending the audio down the phone line.
+        """
+        print(f"[Audio Bridge] (PC Speakers) ANNOUNCEMENT: {announcement}")
+        # In full implementation, we switch TTS output to default system speakers
+        # tts.change_output_device(self.system_output_device_index)
+        # tts.speak(announcement)
+        
+    def handover_to_user(self):
+        """
+        Connects the PC's default Microphone to the Modem's Line-Out (so the caller hears the user),
+        and the Modem's Line-In to the PC's default Speakers (so the user hears the caller).
+        The AI stops processing audio completely.
+        """
+        print("[Audio Bridge] HANDOVER ACTIVE! AI entering sleep mode for this call.")
+        print("[Audio Bridge] Routing PC Microphone -> Modem Line-Out")
+        print("[Audio Bridge] Routing Modem Line-In -> PC Speakers")
+        # Direct audio stream passthrough initialized here
+
+
 # Global instance for managing audio routes
 audio_bridge = GSMAudioBridge()

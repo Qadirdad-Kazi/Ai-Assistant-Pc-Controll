@@ -28,7 +28,7 @@ class Receptionist:
             "data": {"caller": caller_name, "instructions": instructions}
         }
 
-    def handle_incoming_call(self, caller_id: str):
+    def handle_incoming_call(self, caller_id: str, mock_caller_speech: str = None, mock_user_response: str = None):
         """Called by GSM Gateway when a call comes in."""
         print(f"[Receptionist] Incoming call from {caller_id}")
         
@@ -68,20 +68,64 @@ class Receptionist:
             print("[Receptionist] Listening to caller... (STT pipeline placeholder)")
             # In full dev mode, here is where RealTimeSTT listens via linked bridge.
             
-            # Let's mock a short call duration for now
-            time.sleep(5) 
+            # Let's mock the caller's response
+            caller_speech = mock_caller_speech if mock_caller_speech else "(silence)"
+            print(f"[Caller]: {caller_speech}")
             
-            # Step 5: Hangup and unbridge
-            print("[Receptionist] Call ended.")
-            gsm_gateway.hangup_call()
-            audio_bridge.sever_call()
+            transcript_log = f"Wolf: {greeting}\nCaller: {caller_speech}"
             
+            if "talk to qadirdad" in caller_speech.lower() or "speak to qadirdad" in caller_speech.lower():
+                print("[Receptionist] Intent detected: Handover to Boss.")
+                handover_msg = "Please hold for a moment, I am putting Qadirdad on the line."
+                print(f"[Receptionist] Saying: {handover_msg}")
+                tts.queue_sentence(handover_msg)
+                
+                # Wait for TTS to finish (mocked by sleep)
+                time.sleep(2)
+                
+                audio_bridge.hold_call()
+                audio_bridge.announce_to_user(f"Qadirdad, {matched_caller} wants to talk to you.")
+                
+                # Mock user interaction in console for demonstration
+                # In full GUI, this would be a prompt on the HUD or verbal wake word command
+                print("[Proactive Layer] Waiting for user approval... (Type 'ok' or 'no' in terminal)")
+                
+                # Use a background thread or a short wait to simulate user input if running headless
+                if mock_user_response is not None:
+                    user_response = mock_user_response.lower()
+                    print(f"Qadirdad's response (ok/no): {user_response}")
+                else:
+                    user_response = input("Qadirdad's response (ok/no): ").strip().lower()
+                
+                if user_response == 'ok':
+                    audio_bridge.handover_to_user()
+                    transcript_log += f"\n[Handover accepted by user. Agent sleeping.]"
+                    print("[Receptionist] Call handed over. Exiting AI loop.")
+                    
+                    # We leave the call active. The user hangs up mechanically.
+                else:
+                    audio_bridge.link_call() # Un-hold
+                    rejection_msg = "I'm sorry, he is currently unavailable. I will let him know you called."
+                    print(f"[Receptionist] Saying: {rejection_msg}")
+                    tts.queue_sentence(rejection_msg)
+                    time.sleep(2)
+                    gsm_gateway.hangup_call()
+                    audio_bridge.sever_call()
+                    transcript_log += f"\nWolf: {rejection_msg}\n[Call Terminated]"
+            else:
+                # No handover needed
+                time.sleep(2) 
+                # Step 5: Hangup and unbridge
+                print("[Receptionist] Call ended.")
+                gsm_gateway.hangup_call()
+                audio_bridge.sever_call()
+
             # Step 6: Log transcript
             log_entry = {
                 "caller": matched_caller,
                 "instructions": matched_instructions,
-                "transcript": f"Wolf: {greeting}\nCaller: (Unintelligible / Mocked)",
-                "status": "Completed"
+                "transcript": transcript_log,
+                "status": "Completed" if not ("talk to qadirdad" in caller_speech.lower() and user_response == 'ok') else "Handed Over"
             }
             self.call_logs.append(log_entry)
             

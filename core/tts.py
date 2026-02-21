@@ -105,7 +105,7 @@ class PiperTTS:
         piper_exe = piper_exe_dir / "piper.exe"
         
         if piper_exe.exists():
-            print(f"{GREEN}[TTS] ✓ Piper executable found{RESET}")
+            print(f"{GREEN}[TTS] [OK] Piper executable found{RESET}")
             return str(piper_exe)
         
         print(f"{CYAN}[TTS] Downloading Piper executable...{RESET}")
@@ -214,7 +214,7 @@ class PiperTTS:
             self.worker_thread = threading.Thread(target=self._speech_worker, daemon=True)
             self.worker_thread.start()
             
-            print(f"{GREEN}[TTS] ✓ Piper TTS ready ({current_voice}){RESET}")
+            print(f"{GREEN}[TTS] [OK] Piper TTS ready ({current_voice}){RESET}")
             return True
             
         except Exception as e:
