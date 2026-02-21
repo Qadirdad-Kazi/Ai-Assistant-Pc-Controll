@@ -105,13 +105,19 @@
   - *Completed: Implemented core/dev_agent.py with autonomous project generation.*
   - *How to test: Type "Build a React app for a todo list".*
 
-### Phase 2: Phone Integration (The "voice" via Local Carrier)
+### Phase 2: Phone Integration (The "voice" via Local Carrier) (Completed)
 - [x] Configure Physical GSM Gateway (AT commands over Serial) or setup SIP/VOIP.
   - *Completed: Built core/gsm_gateway.py to handle PySerial AT commands for devices like SIM800L.*
   - *How to test: Run a dummy script or interact with `gsm_gateway.connect()` via the Python console.*
-- [ ] Build the local Python audio bridge to handle streams from the GSM/SIP endpoint.
-- [ ] Implement ElevenLabs emotional TTS (or Piper equivalent) for phone calls.
-- [ ] Create the "Call Logs" GUI tab for logging intercepts and transcripts.
+- [x] Build the local Python audio bridge to handle streams from the GSM/SIP endpoint.
+  - *Completed: Built core/audio_bridge.py for isolating STT/TTS channels.*
+  - *How to test: Review `audio_bridge.py` logic to see the virtual audio cable mappings being maintained during a call link.*
+- [x] Implement ElevenLabs emotional TTS (or Piper equivalent) for phone calls.
+  - *Completed: Connected the ultra-fast local `PiperTTS` for all voice responses to handle real-time SIP/GSM conversations locally.*
+  - *How to test: Type a command via voice prompt and observe Piper responding rapidly.*
+- [x] Create the "Call Logs" GUI tab for logging intercepts and transcripts.
+  - *Completed: Created the Receptionist Logs tab UI and imported it into the Main Sidebar replacing older features.*
+  - *How to test: Launch `python main.py` and click the Phone icon on the sidebar.*
 
 ### Phase 3: The HUD & Proactive Layer
 - [ ] Build the transparent overlay UI.

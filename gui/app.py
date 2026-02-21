@@ -25,6 +25,7 @@ from gui.tabs.dashboard import DashboardView
 from gui.tabs.chat import ChatTab
 from gui.tabs.settings import SettingsTab
 from gui.tabs.media import SonicInterface
+from gui.tabs.call_logs import CallLogsTab
 from gui.components.system_monitor import SystemMonitor
 from core.llm import preload_models
 
@@ -154,9 +155,11 @@ class MainWindow(FluentWindow):
         # Lazy load other tabs
         self.chat_lazy = LazyTab(ChatTab, "chatInterface")
         self.media_lazy = LazyTab(SonicInterface, "mediaInterface")
+        self.call_logs_lazy = LazyTab(CallLogsTab, "callLogsInterface")
         
         self.addSubInterface(self.chat_lazy, FIF.CHAT, "Chat")
         self.addSubInterface(self.media_lazy, FIF.MUSIC, "Sonic")
+        self.addSubInterface(self.call_logs_lazy, FIF.PHONE, "Receptionist")
         
         # Settings at bottom
         self.settings_lazy = LazyTab(SettingsTab, "settingsInterface")
