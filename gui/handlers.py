@@ -12,7 +12,7 @@ from core.settings_store import settings as app_settings
 from core.function_executor import executor as function_executor
 
 # Functions that are actions (not passthrough)
-ACTION_FUNCTIONS = {"control_light", "set_timer", "set_alarm", "create_calendar_event", "add_task", "web_search", "play_music"}
+ACTION_FUNCTIONS = {"pc_control", "play_music"}
 
 
 # DEBUG: Set to True to test streaming without TTS blocking
@@ -33,11 +33,6 @@ class ChatWorker(QObject):
     done = Signal()
     ui_update = Signal()
     toast = Signal(str, bool)  # message, success
-    set_timer_signal = Signal(int, str)  # seconds, label
-    reload_alarms = Signal()  # trigger alarm list reload
-    reload_calendar = Signal()  # trigger calendar refresh
-    search_start = Signal(str)  # query
-    search_end = Signal()
     play_music_signal = Signal(str, str)  # query, service
     
     def __init__(self, user_text: str, messages: list, is_tts_enabled: bool, 
@@ -62,41 +57,18 @@ class ChatWorker(QObject):
             
             # Handle action functions
             if func_name in ACTION_FUNCTIONS:
-                self.status.emit(f"Executing {func_name}...")
-                
-                # Emit search start for web_search
-                if func_name == "web_search":
-                    query = params.get("query", "")
-                    self.search_start.emit(query)
-                
                 result = function_executor.execute(func_name, params)
-                
-                # Emit search end for web_search
-                if func_name == "web_search":
-                    self.search_end.emit()
                 
                 # Emit toast notification
                 self.toast.emit(result["message"], result["success"])
                 
-                # Emit GUI update signals for specific actions
-                if func_name == "set_timer" and result["success"]:
-                    seconds = result.get("data", {}).get("seconds", 0)
-                    label = result.get("data", {}).get("label", "Timer")
-                    self.set_timer_signal.emit(seconds, label)
-                elif func_name == "set_alarm" and result["success"]:
-                    self.reload_alarms.emit()
-                elif func_name == "create_calendar_event" and result["success"]:
-                    self.reload_calendar.emit()
-                elif func_name == "play_music" and result["success"]:
+                if func_name == "play_music" and result["success"]:
                     query = result.get("data", {}).get("query", "")
                     service = result.get("data", {}).get("service", "youtube")
                     self.play_music_signal.emit(query, service)
-                
-                # Enable thinking for web_search
-                enable_thinking = (func_name == "web_search")
-                
-                # Generate Qwen response with context
-                self._generate_response_with_context(func_name, result, enable_thinking)
+                    
+                # Direct response with context
+                self._generate_response_with_context(func_name, result, False)
                 
             # Handle get_system_info (context query)
             elif func_name == "get_system_info":
@@ -123,57 +95,8 @@ class ChatWorker(QObject):
     
     def _generate_response_with_context(self, func_name: str, result: dict, enable_thinking: bool = False):
         """Generate a Qwen response with function result as context."""
-        # Build system message with context
-        if func_name == "get_system_info" and result.get("success"):
-            data = result.get("data", {})
-            context_parts = []
-            
-            if data.get("timers"):
-                context_parts.append(f"Active timers: {data['timers']}")
-            if data.get("alarms"):
-                context_parts.append(f"Alarms: {data['alarms']}")
-            if data.get("calendar_today"):
-                context_parts.append(f"Today's events: {data['calendar_today']}")
-            if data.get("tasks"):
-                pending = [t for t in data['tasks'] if not t.get('completed')]
-                context_parts.append(f"Pending tasks: {len(pending)} items")
-            if data.get("smart_devices"):
-                on_devices = [d['name'] for d in data['smart_devices'] if d.get('is_on')]
-                context_parts.append(f"Devices on: {on_devices if on_devices else 'none'}")
-            if data.get("weather"):
-                w = data['weather']
-                context_parts.append(f"Weather: {w.get('temp')}°F, {w.get('condition')}")
-            if data.get("news"):
-                news_items = data['news']
-                if news_items:
-                    news_titles = [item.get('title', '')[:50] for item in news_items[:3]]
-                    context_parts.append(f"Top news: {', '.join(news_titles)}")
-            
-            context_msg = "SYSTEM CONTEXT:\n" + "\n".join(context_parts) if context_parts else ""
-        else:
-            # Action function result
-            status = "succeeded" if result.get("success") else "failed"
-            
-            # Special handling for web_search to include full results
-            if func_name == "web_search" and result.get("success") and result.get("data"):
-                search_data = result.get("data", {})
-                query = search_data.get("query", "")
-                results = search_data.get("results", [])
-                
-                if results:
-                    context_msg = f"SEARCH RESULTS for '{query}':\n\n"
-                    for i, r in enumerate(results, 1):
-                        title = r.get("title", "")
-                        body = r.get("body", "")
-                        url = r.get("url", "")
-                        context_msg += f"{i}. {title}\n"
-                        context_msg += f"   {body}\n"
-                        context_msg += f"   URL: {url}\n\n"
-                    context_msg += "Use the above search results to answer the user's question. Include relevant URLs in your response using markdown link format [text](url)."
-                else:
-                    context_msg = f"ACTION RESULT: {func_name} {status}. {result.get('message', '')}"
-            else:
-                context_msg = f"ACTION RESULT: {func_name} {status}. {result.get('message', '')}"
+        status = "succeeded" if result.get("success") else "failed"
+        context_msg = f"ACTION RESULT: {func_name} {status}. {result.get('message', '')}"
         
         # Prepare messages with context
         max_hist = app_settings.get("general.max_history", MAX_HISTORY)
@@ -456,38 +379,6 @@ class ChatHandlers(QObject):
         from gui.components.toast import ToastNotification
         ToastNotification.show_toast(self.main_window, message, success)
     
-    def _on_set_timer(self, seconds: int, label: str):
-        """Update timer GUI when set via voice command."""
-        try:
-            # Access timer component via planner lazy tab
-            if hasattr(self.main_window, 'planner_lazy') and self.main_window.planner_lazy.actual_widget:
-                planner = self.main_window.planner_lazy.actual_widget
-                if hasattr(planner, 'timer_component'):
-                    planner.timer_component.set_and_start(seconds, label)
-        except Exception as e:
-            print(f"[Handlers] Timer update failed: {e}")
-    
-    def _on_reload_alarms(self):
-        """Reload alarms GUI when added via voice command."""
-        try:
-            # Access alarm component via planner lazy tab
-            if hasattr(self.main_window, 'planner_lazy') and self.main_window.planner_lazy.actual_widget:
-                planner = self.main_window.planner_lazy.actual_widget
-                if hasattr(planner, 'alarm_component'):
-                    planner.alarm_component.reload()
-        except Exception as e:
-            print(f"[Handlers] Alarm reload failed: {e}")
-
-    def _on_reload_calendar(self):
-        """Reload calendar GUI when event added via voice command."""
-        try:
-            # Access schedule component via planner lazy tab
-            if hasattr(self.main_window, 'planner_lazy') and self.main_window.planner_lazy.actual_widget:
-                planner = self.main_window.planner_lazy.actual_widget
-                if hasattr(planner, 'schedule_component'):
-                    planner.schedule_component.refresh_events()
-        except Exception as e:
-            print(f"[Handlers] Calendar reload failed: {e}")
     
     def _on_play_music(self, query: str, service: str):
         """Update Sonic Interface when music is requested via voice."""
@@ -504,16 +395,6 @@ class ChatHandlers(QObject):
         except Exception as e:
             print(f"[Handlers] Music control failed: {e}")
     
-    def _on_search_start(self, query: str):
-        """Called when web search starts."""
-        if self.streaming_state['search_indicator']:
-            self.streaming_state['search_indicator'].add_query(query)
-            self.streaming_state['search_indicator'].setVisible(True)
-    
-    def _on_search_end(self):
-        """Called when web search completes."""
-        if self.streaming_state['search_indicator']:
-            self.streaming_state['search_indicator'].complete()
             
     def _on_error(self, text):
         self.main_window.add_message_bubble("system", f"Error: {text}", is_thinking=True)
@@ -609,12 +490,7 @@ class ChatHandlers(QObject):
         self._worker.error.connect(self._on_error)
         self._worker.status.connect(self._on_status)
         self._worker.toast.connect(self._on_toast)
-        self._worker.set_timer_signal.connect(self._on_set_timer)
-        self._worker.reload_alarms.connect(self._on_reload_alarms)
-        self._worker.reload_calendar.connect(self._on_reload_calendar)
         self._worker.play_music_signal.connect(self._on_play_music)
-        self._worker.search_start.connect(self._on_search_start)
-        self._worker.search_end.connect(self._on_search_end)
         self._worker.done.connect(self._on_done)
         self._worker.done.connect(self._thread.quit)
         self._worker.done.connect(self._worker.deleteLater)

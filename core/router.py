@@ -171,12 +171,8 @@ class FunctionGemmaRouter:
         Determine which holographic action to trigger for the user's prompt.
         
         Available functions:
-        - control_light(action, room): [action: 'on', 'off', 'dim']
-        - web_search(query): Search for external data.
-        - set_timer(duration): Set countdown.
-        - create_calendar_event(title, date, time): Schedule mission.
-        - read_calendar(date): Check mission logs.
-        - play_music(query, service): Search and play music. # Added to fallback prompt
+        - pc_control(action, target): Execute system commands. [action: 'open_app', 'close_app', 'volume', 'lock']
+        - play_music(query, service): Search and play music. [service: 'youtube', 'spotify']
         - thinking(prompt): Multi-step reasoning, math, code, or complexity.
         - nonthinking(prompt): Simple greetings, chitchat, or direct facts.
 
@@ -274,9 +270,6 @@ class FunctionGemmaRouter:
         if func_name in ("thinking", "nonthinking"):
             return {"prompt": user_prompt}
         
-        # For get_system_info, no args needed
-        if func_name == "get_system_info":
-            return {}
         
         # Parse the model's custom format: {key:<escape>value<escape>,key2:<escape>value2<escape>}
         # Find the arguments block after the function name
@@ -310,19 +303,8 @@ class FunctionGemmaRouter:
             if args:
                 return args
         
-        # Fallback: return user prompt as main argument
-        if func_name == "control_light":
-            return {"action": "toggle", "device_name": user_prompt}
-        elif func_name == "set_timer":
-            return {"duration": user_prompt}
-        elif func_name == "set_alarm":
-            return {"time": user_prompt}
-        elif func_name == "create_calendar_event":
-            return {"title": user_prompt}
-        elif func_name == "add_task":
-            return {"text": user_prompt}
-        elif func_name == "web_search":
-            return {"query": user_prompt}
+        if func_name == "pc_control":
+            return {"action": "open_app", "target": user_prompt}
         elif func_name == "play_music": # Added play_music fallback
             return {"query": user_prompt}
         
@@ -341,27 +323,10 @@ if __name__ == "__main__":
     
     test_prompts = [
         # Action functions
-        ("Turn on the living room lights", "control_light"),
-        ("Set a timer for 10 minutes", "set_timer"),
-        ("Wake me up at 7am", "set_alarm"),
-        ("Schedule meeting tomorrow at 3pm", "create_calendar_event"),
-        ("Add buy groceries to my list", "add_task"),
-        ("Search for Italian recipes", "web_search"),
-        
-        # New Smart Home Examples
-        ("Dim the kitchen lights to 50%", "control_light"),
-        ("Make the bedroom lights blue", "control_light"),
-        ("Turn off all the lights", "control_light"),
-        ("Toggle the hallway light", "control_light"),
-        ("Set the thermostat to 72 degrees", "control_light"), # Intentionally testing boundary/potential misclassification
-        ("Brightness up in the study", "control_light"),
-        ("Set movie mode lighting", "control_light"),
-        
-        # Context function
-        ("How much time is left on my timer?", "get_system_info"),
-        ("What's on my calendar today?", "get_system_info"),
-        ("Are any lights on?", "get_system_info"),
-        ("Is the front door locked?", "get_system_info"),
+        ("Open Spotify", "pc_control"),
+        ("Lower the volume to 20", "pc_control"),
+        ("Lock the computer", "pc_control"),
+        ("Play some lo-fi music", "play_music"),
         
         # Passthrough functions
         ("Explain quantum computing", "thinking"),
