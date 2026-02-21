@@ -40,32 +40,33 @@ LLM_KEEP_ALIVE = "5m"  # Keep in memory for 5 minutes after last use
 # REMOVED: ROUTER_KEYWORDS - All queries now go through Function Gemma router
 # The router handles all routing decisions, so keyword-based bypass is no longer needed
 
-# --- Function Definitions (Official JSON Schema) ---
+# --- Function Definitions (Simplified for PC Control & Brain) ---
 FUNCTIONS = [
     {
         "type": "function",
         "function": {
-            "name": "control_light",
-            "description": "Controls smart lights - turn on, off, or dim lights in a room",
+            "name": "pc_control",
+            "description": "Execute system-level commands like controlling volume, opening apps, or locking the PC.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "action": {"type": "string", "description": "The action to perform: on, off, or dim"},
-                    "room": {"type": "string", "description": "The room name where the light is located"}
+                    "action": {"type": "string", "description": "The system action: open_app, close_app, volume, lock, etc."},
+                    "target": {"type": "string", "description": "The app name or specific value (e.g., 'Spotify', '50')"}
                 },
-                "required": ["action", "room"]
+                "required": ["action"]
             }
         }
     },
     {
         "type": "function",
         "function": {
-            "name": "web_search",
-            "description": "Searches the web for information using Google",
+            "name": "play_music",
+            "description": "Play a song, artist, or playlist via YouTube or Spotify.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "The search query string"}
+                    "query": {"type": "string", "description": "The song title or artist"},
+                    "service": {"type": "string", "enum": ["youtube", "spotify"], "description": "Preferred service"}
                 },
                 "required": ["query"]
             }
@@ -74,59 +75,12 @@ FUNCTIONS = [
     {
         "type": "function",
         "function": {
-            "name": "set_timer",
-            "description": "Sets a countdown timer for a specified duration",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "duration": {"type": "string", "description": "Time duration like 5 minutes or 1 hour"},
-                    "label": {"type": "string", "description": "Optional timer name or label"}
-                },
-                "required": ["duration"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "create_calendar_event",
-            "description": "Creates a new calendar event or appointment",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string", "description": "The event title"},
-                    "date": {"type": "string", "description": "The date of the event"},
-                    "time": {"type": "string", "description": "The time of the event"},
-                    "description": {"type": "string", "description": "Optional event details"}
-                },
-                "required": ["title", "date"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "read_calendar",
-            "description": "Reads and retrieves calendar events for a date or time range",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "date": {"type": "string", "description": "The date or date range to check"},
-                    "filter": {"type": "string", "description": "Optional filter like meetings or appointments"}
-                },
-                "required": ["date"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
             "name": "passthrough",
-            "description": "DEFAULT FUNCTION - Use this whenever no other function is clearly needed. This is the fallback for: greetings (hello, hi, good morning), chitchat (how are you, what's your name), general knowledge questions, explanations, conversations, and ANY query that does NOT explicitly require controlling lights, setting timers, searching the web, or managing calendar events. When in doubt, use passthrough.",
+            "description": "DEFAULT - Use for greetings, chitchat, and general knowledge questions.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "thinking": {"type": "boolean", "description": "Set to true for complex reasoning/math/logic, false for simple greetings and chitchat."}
+                    "thinking": {"type": "boolean", "description": "True for complex logic, False for simple chat."}
                 },
                 "required": ["thinking"]
             }

@@ -28,105 +28,18 @@ from config import LOCAL_ROUTER_PATH, HF_ROUTER_REPO
 DEBUG_ROUTER = False
 
 
-# --- Tool Definitions (all 9 functions) ---
-
-def control_light(action: str, device_name: str = None, brightness: int = None, color: str = None) -> str:
+# --- Tool Definitions (God-Mode essentials) ---
+def pc_control(action: str, target: str = None):
     """
-    Control smart lights - turn on, off, dim, or change color.
+    Execute system-level commands like controlling volume, opening apps, or locking the PC.
     
     Args:
-        action: Action to perform: on, off, dim, toggle
-        device_name: Name of the light or room
-        brightness: Brightness level 0-100
-        color: Color name or hex code
+        action: The system action: open_app, close_app, volume, lock, etc.
+        target: The app name or specific value (e.g., 'Spotify', '50')
     """
-    return "result"
+    pass
 
-def set_timer(duration: str, label: str = None) -> str:
-    """
-    Set a countdown timer.
-    
-    Args:
-        duration: Duration like '5 minutes' or '1 hour'
-        label: Optional label for the timer
-    """
-    return "result"
-
-def set_alarm(time: str, label: str = None) -> str:
-    """
-    Set an alarm for a specific time.
-    
-    Args:
-        time: Time for alarm like '7am' or '14:30'
-        label: Optional label
-    """
-    return "result"
-
-def create_calendar_event(title: str, date: str = None, time: str = None, duration: int = None) -> str:
-    """
-    Create a calendar event.
-    
-    Args:
-        title: Event title
-        date: Date like 'tomorrow' or '2024-01-15'
-        time: Time like '3pm'
-        duration: Duration in minutes
-    """
-    return "result"
-
-def add_task(text: str, priority: str = None) -> str:
-    """
-    Add a task to the to-do list.
-    
-    Args:
-        text: Task description
-        priority: Priority level
-    """
-    return "result"
-
-def web_search(query: str) -> str:
-    """
-    Search the web for information using DuckDuckGo.
-    Returns up to 5 search results including titles, snippets, and URLs.
-    
-    Use this when the user asks to:
-    - Search for information online
-    - Look up current events or news
-    - Find facts, definitions, or explanations
-    - Research a topic
-    
-    Args:
-        query: Search query string (e.g., "Python programming best practices")
-    
-    Returns:
-        Search results with titles, body snippets (200 chars), and URLs
-    """
-    return "result"
-
-def get_system_info() -> str:
-    """
-    Get comprehensive current system state snapshot.
-    
-    Returns information about:
-    - Current time and date
-    - Active countdown timers (label, remaining time)
-    - Upcoming alarms (time, label)
-    - Today's calendar events (title, time)
-    - Pending tasks from to-do list (text, completion status)
-    - Smart home devices (name, on/off status, type)
-    - Current weather (temperature, condition, high/low)
-    - Recent news headlines (title, category, URL)
-    
-    Use this when the user asks:
-    - "What's on my schedule today?"
-    - "What's my current status?"
-    - "What do I have coming up?"
-    - "Give me a summary of everything"
-    - Questions about their timers, tasks, or calendar
-    """
-    return "result"
-
-def play_music(query: str, service: str = "youtube") -> str:
+def play_music(query: str, service: str = "youtube"):
     """
     Search and play music using YouTube or sync with Spotify.
     
@@ -134,47 +47,38 @@ def play_music(query: str, service: str = "youtube") -> str:
         query: Song name, artist, or music genre to play.
         service: 'youtube' to search and play a stream, or 'spotify' to sync/play via Spotify.
     """
-    return "result"
+    pass
 
-def thinking(prompt: str) -> str:
+def thinking(prompt: str):
     """
     Use for complex queries requiring reasoning, math, coding, or multi-step analysis.
     
     Args:
         prompt: The user's original prompt
     """
-    return "result"
+    pass
 
-def nonthinking(prompt: str) -> str:
+def nonthinking(prompt: str):
     """
-    Use for simple queries, greetings, factual questions not requiring deep reasoning.
+    Use for simple queries, greetings, chitchat, and general knowledge.
     
     Args:
         prompt: The user's original prompt
     """
-    return "result"
+    pass
 
 
 # Pre-compute tool schemas
 TOOLS = [
-    get_json_schema(control_light),
-    get_json_schema(set_timer),
-    get_json_schema(set_alarm),
-    get_json_schema(create_calendar_event),
-    get_json_schema(add_task),
-    get_json_schema(web_search),
+    get_json_schema(pc_control),
     get_json_schema(play_music),
-    get_json_schema(get_system_info),
     get_json_schema(thinking),
-    get_json_schema(nonthinking),
+    get_json_schema(nonthinking)
 ]
-
-SYSTEM_MSG = "You are a model that can do function calling with the following functions"
 
 # All valid function names
 VALID_FUNCTIONS = {
-    "control_light", "set_timer", "set_alarm", "create_calendar_event",
-    "add_task", "web_search", "play_music", "get_system_info", "thinking", "nonthinking"
+    "pc_control", "play_music", "thinking", "nonthinking"
 }
 
 
