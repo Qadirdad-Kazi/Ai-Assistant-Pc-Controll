@@ -5,6 +5,7 @@ Simplified Function Executor for Wolf AI.
 from typing import Dict, Any
 from core.pc_control import pc_controller
 from core.dev_agent import dev_agent
+from core.receptionist import receptionist
 
 class FunctionExecutor:
     """Central executor for simplified core functions."""
@@ -22,6 +23,8 @@ class FunctionExecutor:
                 return self._play_music(params)
             elif func_name == "scaffold_website":
                 return self._scaffold_website(params)
+            elif func_name == "set_call_directive":
+                return self._set_call_directive(params)
             elif func_name in ("thinking", "nonthinking"):
                 return {"success": True, "message": "Direct LLM response."}
             else:
@@ -54,6 +57,12 @@ class FunctionExecutor:
         framework = params.get("framework", "html")
         
         return dev_agent.scaffold_project(prompt, framework)
+
+    def _set_call_directive(self, params: Dict):
+        """Handle expecting an incoming call."""
+        caller = params.get("caller_name", "Unknown caller")
+        instructions = params.get("instructions", "Say hello")
+        return receptionist.add_directive(caller, instructions)
 
 # Global instance
 executor = FunctionExecutor()

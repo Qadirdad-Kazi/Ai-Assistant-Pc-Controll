@@ -100,6 +100,21 @@ FUNCTIONS = [
                 "required": ["prompt"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_call_directive",
+            "description": "Instruct the AI to handle an expected incoming phone call on your behalf.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "caller_name": {"type": "string", "description": "Name or number of the person expected to call"},
+                    "instructions": {"type": "string", "description": "Detailed instructions on what to ask or say to the caller"}
+                },
+                "required": ["caller_name", "instructions"]
+            }
+        }
     }
 ]
 

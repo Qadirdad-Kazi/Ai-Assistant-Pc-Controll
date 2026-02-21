@@ -12,7 +12,7 @@ from core.settings_store import settings as app_settings
 from core.function_executor import executor as function_executor
 
 # Functions that are actions (not passthrough)
-ACTION_FUNCTIONS = {"pc_control", "play_music", "scaffold_website"}
+ACTION_FUNCTIONS = {"pc_control", "play_music", "scaffold_website", "set_call_directive"}
 
 
 # DEBUG: Set to True to test streaming without TTS blocking

@@ -78,18 +78,25 @@ def scaffold_website(prompt: str, framework: str = "html"):
     """
     pass
 
+def set_call_directive(caller_name: str, instructions: str):
+    """
+    Instruct the AI to handle an expected incoming phone call on your behalf.
+    """
+    pass
+
 # Pre-compute tool schemas
 TOOLS = [
     get_json_schema(pc_control),
     get_json_schema(play_music),
     get_json_schema(thinking),
     get_json_schema(nonthinking),
-    get_json_schema(scaffold_website)
+    get_json_schema(scaffold_website),
+    get_json_schema(set_call_directive)
 ]
 
 # All valid function names
 VALID_FUNCTIONS = {
-    "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website"
+    "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website", "set_call_directive"
 }
 
 
@@ -185,6 +192,7 @@ class FunctionGemmaRouter:
         - pc_control(action, target): Execute system commands. [action: 'open_app', 'close_app', 'volume', 'lock', 'shutdown', 'restart', 'sleep', 'empty_trash', 'minimize_all', 'screenshot', 'mute', 'media']
         - play_music(query, service): Search and play music. [service: 'youtube', 'spotify']
         - scaffold_website(prompt, framework): Build an entire website/app. [framework: 'react', 'nextjs', 'html', 'python']
+        - set_call_directive(caller_name, instructions): Delegate an upcoming phone call.
         - thinking(prompt): Multi-step reasoning, math, code, or complexity.
         - nonthinking(prompt): Simple greetings, chitchat, or direct facts.
 
@@ -192,6 +200,7 @@ class FunctionGemmaRouter:
         Example 1: Tasking to turn on kitchen lights -> call:control_light{{action:on,room:kitchen}}
         Example 2: User says hello -> call:nonthinking{{prompt:hello}}
         Example 3: Complex math -> call:thinking{{prompt:calculate 2+2}}
+        Example 4: Rafay will call, ask about the meeting -> call:set_call_directive{{caller_name:Rafay,instructions:ask about the meeting}}
 
         User Prompt: {user_prompt}
         Decision:"""
@@ -321,6 +330,8 @@ class FunctionGemmaRouter:
             return {"query": user_prompt}
         elif func_name == "scaffold_website":
             return {"prompt": user_prompt, "framework": "html"}
+        elif func_name == "set_call_directive":
+            return {"caller_name": "Unknown", "instructions": user_prompt}
         
         return {}
     
@@ -342,6 +353,7 @@ if __name__ == "__main__":
         ("Lock the computer", "pc_control"),
         ("Play some lo-fi music", "play_music"),
         ("Build a quick react app for a todo list", "scaffold_website"),
+        ("Rafay will call you soon, ask him what time the meeting is", "set_call_directive"),
         
         # Passthrough functions
         ("Explain quantum computing", "thinking"),
