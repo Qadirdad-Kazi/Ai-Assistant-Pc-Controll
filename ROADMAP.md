@@ -58,7 +58,7 @@
 ## 📞 AI Phone Assistant (Receptionist Mode)
 *Your personal assistant on the phone line.*
 
-- **Twilio/VAPI Bridge:** Handle real-time phone calls over VoIP.
+- **Local GSM / SIP Bridge:** Handle real-time phone calls via a Physical GSM Gateway (e.g., SIM module via AT commands), a SIP/VOIP line from a local Pakistani telecom, or an Android auto-responder bridge. (Twilio/VAPI is not supported locally).
 - **Hybrid TTS:** Socially-tuned, emotional voices for calls (ElevenLabs) vs. fast local voices (Piper) for utility.
 - **Real-time Research:** If a caller asks for a price or date, Wolf searches the web *live* and answers them.
 - **Call Archives:** Full transcripts, summaries, and sentiment analysis for every incoming call.
@@ -94,15 +94,24 @@
 
 ## 🚀 Implementation Phases
 
-### Phase 1: PC Control & Dev Agent (Current Goal)
-- [ ] Build `core/pc_control.py` (The "Hands").
-- [ ] Add 15+ System Actions (Volume, Apps, Windows).
-- [ ] Implement the first "Website Scaffolder" command.
+### Phase 1: PC Control & Dev Agent (Completed)
+- [x] Build `core/pc_control.py` (The "Hands").
+  - *Completed: Built core OS automation methods using subprocess and pyautogui.*
+  - *How to test: Run the app and type "Lock the PC" or "Open Calculator".*
+- [x] Add 15+ System Actions (Volume, Apps, Windows).
+  - *Completed: Added 15+ varied system commands including sleep, restart, screenshots, mute, and media controls.*
+  - *How to test: Type "Take a screenshot" or "Mute the volume".*
+- [x] Implement the first "Website Scaffolder" command.
+  - *Completed: Implemented core/dev_agent.py with autonomous project generation.*
+  - *How to test: Type "Build a React app for a todo list".*
 
-### Phase 2: Phone Integration (The "voice")
-- [ ] Set up Twilio/VAPI Webhook.
-- [ ] Implement ElevenLabs emotional TTS for phone calls.
-- [ ] Create the "Call Logs" GUI tab.
+### Phase 2: Phone Integration (The "voice" via Local Carrier)
+- [x] Configure Physical GSM Gateway (AT commands over Serial) or setup SIP/VOIP.
+  - *Completed: Built core/gsm_gateway.py to handle PySerial AT commands for devices like SIM800L.*
+  - *How to test: Run a dummy script or interact with `gsm_gateway.connect()` via the Python console.*
+- [ ] Build the local Python audio bridge to handle streams from the GSM/SIP endpoint.
+- [ ] Implement ElevenLabs emotional TTS (or Piper equivalent) for phone calls.
+- [ ] Create the "Call Logs" GUI tab for logging intercepts and transcripts.
 
 ### Phase 3: The HUD & Proactive Layer
 - [ ] Build the transparent overlay UI.
@@ -116,7 +125,7 @@
 - **Automation:** PyAutoGUI + PyGetWindow + Playwright.
 - **Performance:** Rust extensions (via PyO3) for screen capture and UI events.
 - **Storage:** SQLite (History) + ChromaDB (Vector Knowledge).
-- **Communication:** Twilio API (Phone) + FastAPI (Mobile Bridge).
+- **Communication:** GSM Gateway / SIP (Phone) + FastAPI (Mobile Bridge).
 
 ---
 

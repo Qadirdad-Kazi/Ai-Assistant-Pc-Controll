@@ -50,7 +50,7 @@ FUNCTIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "action": {"type": "string", "description": "The system action: open_app, close_app, volume, lock, etc."},
+                    "action": {"type": "string", "description": "The system action: open_app, close_app, volume, lock, shutdown, restart, sleep, empty_trash, minimize_all, screenshot, mute, media"},
                     "target": {"type": "string", "description": "The app name or specific value (e.g., 'Spotify', '50')"}
                 },
                 "required": ["action"]
@@ -83,6 +83,21 @@ FUNCTIONS = [
                     "thinking": {"type": "boolean", "description": "True for complex logic, False for simple chat."}
                 },
                 "required": ["thinking"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "scaffold_website",
+            "description": "Build an entire React/Next.js/Python project or website from a prompt.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "prompt": {"type": "string", "description": "The user's description of what to build"},
+                    "framework": {"type": "string", "description": "react, nextjs, python, html"}
+                },
+                "required": ["prompt"]
             }
         }
     }

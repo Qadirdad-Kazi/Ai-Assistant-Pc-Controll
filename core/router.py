@@ -68,17 +68,28 @@ def nonthinking(prompt: str):
     pass
 
 
+def scaffold_website(prompt: str, framework: str = "html"):
+    """
+    Build an entire React/Next.js/Python project or website from a prompt.
+    
+    Args:
+        prompt: The user's description of what to build
+        framework: react, nextjs, python, html
+    """
+    pass
+
 # Pre-compute tool schemas
 TOOLS = [
     get_json_schema(pc_control),
     get_json_schema(play_music),
     get_json_schema(thinking),
-    get_json_schema(nonthinking)
+    get_json_schema(nonthinking),
+    get_json_schema(scaffold_website)
 ]
 
 # All valid function names
 VALID_FUNCTIONS = {
-    "pc_control", "play_music", "thinking", "nonthinking"
+    "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website"
 }
 
 
@@ -171,8 +182,9 @@ class FunctionGemmaRouter:
         Determine which holographic action to trigger for the user's prompt.
         
         Available functions:
-        - pc_control(action, target): Execute system commands. [action: 'open_app', 'close_app', 'volume', 'lock']
+        - pc_control(action, target): Execute system commands. [action: 'open_app', 'close_app', 'volume', 'lock', 'shutdown', 'restart', 'sleep', 'empty_trash', 'minimize_all', 'screenshot', 'mute', 'media']
         - play_music(query, service): Search and play music. [service: 'youtube', 'spotify']
+        - scaffold_website(prompt, framework): Build an entire website/app. [framework: 'react', 'nextjs', 'html', 'python']
         - thinking(prompt): Multi-step reasoning, math, code, or complexity.
         - nonthinking(prompt): Simple greetings, chitchat, or direct facts.
 
@@ -307,6 +319,8 @@ class FunctionGemmaRouter:
             return {"action": "open_app", "target": user_prompt}
         elif func_name == "play_music": # Added play_music fallback
             return {"query": user_prompt}
+        elif func_name == "scaffold_website":
+            return {"prompt": user_prompt, "framework": "html"}
         
         return {}
     
@@ -327,6 +341,7 @@ if __name__ == "__main__":
         ("Lower the volume to 20", "pc_control"),
         ("Lock the computer", "pc_control"),
         ("Play some lo-fi music", "play_music"),
+        ("Build a quick react app for a todo list", "scaffold_website"),
         
         # Passthrough functions
         ("Explain quantum computing", "thinking"),

@@ -45,6 +45,18 @@ class PCController:
                 return self._set_volume(target)
             elif action == "lock":
                 return self._lock_pc()
+            elif action == "shutdown":
+                return self._shutdown_pc()
+            elif action == "restart":
+                return self._restart_pc()
+            elif action == "sleep":
+                return self._sleep_pc()
+            elif action == "empty_trash":
+                return self._empty_recycle_bin()
+            elif action == "minimize_all":
+                return self._minimize_all()
+            elif action == "screenshot":
+                return self._screenshot()
             elif action in ("mute", "unmute"):
                 return self._mute_volume()
             elif action == "media":
@@ -149,6 +161,57 @@ class PCController:
             return {"success": True, "message": "Locked the PC."}
         except Exception as e:
             return {"success": False, "message": f"Could not lock PC: {e}"}
+
+    def _shutdown_pc(self) -> Dict[str, Any]:
+        try:
+            os.system("shutdown /s /t 1")
+            return {"success": True, "message": "Shutting down the PC."}
+        except Exception as e:
+            return {"success": False, "message": f"Could not shutdown PC: {e}"}
+
+    def _restart_pc(self) -> Dict[str, Any]:
+        try:
+            os.system("shutdown /r /t 1")
+            return {"success": True, "message": "Restarting the PC."}
+        except Exception as e:
+            return {"success": False, "message": f"Could not restart PC: {e}"}
+
+    def _sleep_pc(self) -> Dict[str, Any]:
+        try:
+            os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
+            return {"success": True, "message": "Put the PC to sleep."}
+        except Exception as e:
+            return {"success": False, "message": f"Could not sleep PC: {e}"}
+
+    def _empty_recycle_bin(self) -> Dict[str, Any]:
+        try:
+            # SHEmptyRecycleBinW
+            result = ctypes.windll.shell32.SHEmptyRecycleBinW(None, None, 7) # 7 = no confirmation, no progress, no sound
+            if result == 0:
+                return {"success": True, "message": "Emptied the recycle bin."}
+            else:
+                return {"success": False, "message": "Recycle bin might already be empty."}
+        except Exception as e:
+            return {"success": False, "message": f"Could not empty recycle bin: {e}"}
+
+    def _minimize_all(self) -> Dict[str, Any]:
+        if not pyautogui:
+            return {"success": False, "message": "pyautogui is missing."}
+        try:
+            pyautogui.hotkey('win', 'd')
+            return {"success": True, "message": "Toggled minimize all windows."}
+        except Exception as e:
+            return {"success": False, "message": f"Could not minimize windows: {e}"}
+
+    def _screenshot(self) -> Dict[str, Any]:
+        if not pyautogui:
+            return {"success": False, "message": "pyautogui is missing."}
+        try:
+            out_file = "screenshot.png"
+            pyautogui.screenshot(out_file)
+            return {"success": True, "message": f"Saved screenshot to {os.path.abspath(out_file)}."}
+        except Exception as e:
+            return {"success": False, "message": f"Could not take screenshot: {e}"}
 
 # Global instance
 pc_controller = PCController()

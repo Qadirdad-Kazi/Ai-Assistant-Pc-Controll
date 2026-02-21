@@ -4,6 +4,7 @@ Simplified Function Executor for Wolf AI.
 
 from typing import Dict, Any
 from core.pc_control import pc_controller
+from core.dev_agent import dev_agent
 
 class FunctionExecutor:
     """Central executor for simplified core functions."""
@@ -19,6 +20,8 @@ class FunctionExecutor:
                 return self._pc_control(params)
             elif func_name == "play_music":
                 return self._play_music(params)
+            elif func_name == "scaffold_website":
+                return self._scaffold_website(params)
             elif func_name in ("thinking", "nonthinking"):
                 return {"success": True, "message": "Direct LLM response."}
             else:
@@ -44,6 +47,13 @@ class FunctionExecutor:
             "message": f"Now playing {query} on {service}", 
             "data": {"query": query, "service": service}
         }
+
+    def _scaffold_website(self, params: Dict):
+        """Handle website scaffolding."""
+        prompt = params.get("prompt", "")
+        framework = params.get("framework", "html")
+        
+        return dev_agent.scaffold_project(prompt, framework)
 
 # Global instance
 executor = FunctionExecutor()

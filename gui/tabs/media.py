@@ -9,6 +9,8 @@ from PySide6.QtGui import QIcon, QColor, QPainter, QLinearGradient
 import hashlib
 import random
 import threading
+import time
+import math
 
 from qfluentwidgets import (
     CardWidget, PrimaryPushButton, Slider, CaptionLabel,
@@ -584,18 +586,19 @@ class SonicInterface(QWidget):
             self.player.setPosition(int(pos / 1000 * duration))
 
     def _update_loop(self):
-        """Update simulated visualizer bars with BPM syncing."""
+        """Update simulated visualizer bars with BPM syncing and wave effects."""
         is_playing = self.player.playbackState() == QMediaPlayer.PlayingState
         
         # Poll Spotify if synced
         if self.spotify_synced:
-            track = self.spotify_handler.get_current_track()
+            track = getattr(self.spotify_handler, 'get_current_track', lambda: None)()
             if track:
                 is_playing = True # Force visualizer if spotify is playing
                 self.track_title.setText(track['title'])
                 self.track_artist.setText(f"Spotify: {track['artist']}")
                 # Update progress slider
-                self.progress_slider.setValue(int(track['progress_ms'] / track['duration_ms'] * 1000))
+                if track.get('duration_ms', 0) > 0:
+                    self.progress_slider.setValue(int(track['progress_ms'] / track['duration_ms'] * 1000))
                 
                 # Update BPM seed from title occasionally
                 h = hashlib.md5(track['title'].encode()).hexdigest()
@@ -605,19 +608,25 @@ class SonicInterface(QWidget):
         self.core.set_pulse(is_playing)
         
         # Smoothly transition energy for "breathing" effect
-        self.current_energy = self.current_energy * 0.9 + self.target_energy * 0.1
+        self.current_energy = self.current_energy * 0.8 + self.target_energy * 0.2
         if random.random() > 0.8:
             # Occasional spikes in intensity
             self.target_energy = 0.5 + (random.random() * self.bpm_seed * 1.5)
+        else:
+            # Gradually decay target
+            self.target_energy *= 0.95
 
-        for bar in self.bars:
+        time_factor = time.time() * (2 + self.bpm_seed * 3)
+        
+        for i, bar in enumerate(self.bars):
             if is_playing:
-                # Height based on track energy and current pulse
-                base_h = 20 + (self.bpm_seed * 40)
-                var_h = random.randint(10, 40) * self.current_energy
-                target = int(min(100, base_h + var_h))
+                # Flowing sine wave effect mixed with energy and random bumps
+                wave = math.sin(time_factor + (i * 0.4)) * 0.5 + 0.5
+                base_h = 15 + (self.bpm_seed * 20)
+                var_h = (wave * 40 + random.randint(0, 10)) * self.current_energy
+                target = int(min(120, base_h + var_h))
                 bar.set_target_height(target)
             else:
-                # Settle down
-                bar.set_target_height(10)
+                # Settle down to idle state smoothly
+                bar.set_target_height(6)
 
