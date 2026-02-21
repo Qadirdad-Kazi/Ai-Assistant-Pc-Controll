@@ -20,6 +20,9 @@ from core.tts import tts
 from config import VOICE_ASSISTANT_ENABLED, GREEN, RESET
 
 from gui.styles import AURA_STYLESHEET 
+from core.settings_store import settings
+from core.bug_watcher import bug_watcher
+from gui.windows.hud_window import init_hud
 
 from gui.tabs.dashboard import DashboardView
 from gui.tabs.chat import ChatTab
@@ -84,6 +87,14 @@ class MainWindow(FluentWindow):
         self._init_background()
         self._preload_models()
         self._init_voice_assistant()
+        self._init_god_mode()
+
+    def _init_god_mode(self):
+        """Initialize proactive layer features on startup if enabled."""
+        if settings.get("bug_watcher.enabled", False):
+            bug_watcher.start()
+        if settings.get("hud.enabled", False):
+            init_hud()
         
     def _preload_models(self):
         """Start the background thread to preload models."""

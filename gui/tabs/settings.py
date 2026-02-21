@@ -4,6 +4,7 @@ Comprehensive Settings Tab with model selection, connection settings, and prefer
 
 from config import LOCAL_ROUTER_PATH, RESPONDER_MODEL
 from core.tts import tts
+from core.bug_watcher import bug_watcher
 import requests
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QHBoxLayout
@@ -321,6 +322,17 @@ class SettingsTab(ScrollArea):
     def _on_setting_changed(self, key: str, value: Any):
         if key == "tts.voice":
             tts.update_voice(value)
+        elif key == "bug_watcher.enabled":
+            if value:
+                bug_watcher.start()
+            else:
+                bug_watcher.stop()
+        elif key == "hud.enabled":
+            from gui.windows.hud_window import init_hud, hud_window
+            if value:
+                init_hud()
+            elif hud_window:
+                hud_window.hide()
 
     def _init_ui(self):
         # ─────────────────────────────────────────────────────────────
@@ -424,6 +436,41 @@ class SettingsTab(ScrollArea):
         self.general_group.addSettingCard(self.max_history_card)
         
         self.expandLayout.addWidget(self.general_group)
+
+        # ─────────────────────────────────────────────────────────────
+        # God-Mode Integrations Group
+        # ─────────────────────────────────────────────────────────────
+        self.god_mode_group = SettingCardGroup("God-Mode Integrations", self.scrollWidget)
+
+        self.gsm_port_card = TextInputCard(
+            FIF.DEVELOPER_TOOLS,
+            "GSM Gateway COM Port",
+            "Physical USB Serial port for SIM800L (e.g. COM3)",
+            "gsm.port",
+            "COM3",
+            self.god_mode_group
+        )
+        self.god_mode_group.addSettingCard(self.gsm_port_card)
+
+        self.bug_watcher_card = SwitchCard(
+            FIF.VIEW,
+            "Proactive Bug Watcher",
+            "Background OCR thread that scans screen for crashes",
+            "bug_watcher.enabled",
+            self.god_mode_group
+        )
+        self.god_mode_group.addSettingCard(self.bug_watcher_card)
+
+        self.hud_card = SwitchCard(
+            FIF.LAYOUT,
+            "Transparent Desktop HUD",
+            "Enable the ghostly overlay for proactive alerts",
+            "hud.enabled",
+            self.god_mode_group
+        )
+        self.god_mode_group.addSettingCard(self.hud_card)
+
+        self.expandLayout.addWidget(self.god_mode_group)
 
         # ─────────────────────────────────────────────────────────────
         # About Group
