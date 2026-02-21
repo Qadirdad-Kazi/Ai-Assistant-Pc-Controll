@@ -81,6 +81,10 @@ def scaffold_website(prompt: str, framework: str = "html"):
 def set_call_directive(caller_name: str, instructions: str):
     """
     Instruct the AI to handle an expected incoming phone call on your behalf.
+    
+    Args:
+        caller_name: Name or number of the person expected to call
+        instructions: Detailed instructions on what to ask or say to the caller
     """
     pass
 
