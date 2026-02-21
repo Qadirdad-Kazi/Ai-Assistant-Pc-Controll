@@ -3,6 +3,7 @@ Simplified Function Executor for Wolf AI.
 """
 
 from typing import Dict, Any
+from core.pc_control import pc_controller
 
 class FunctionExecutor:
     """Central executor for simplified core functions."""
@@ -29,12 +30,10 @@ class FunctionExecutor:
         """Handle system level commands."""
         action = params.get("action", "unknown")
         target = params.get("target", "")
-        # Actual implementation will be in core/pc_control.py later
-        return {
-            "success": True, 
-            "message": f"System action: {action} {target}", 
-            "data": {"action": action, "target": target}
-        }
+        
+        result = pc_controller.execute(action, target)
+        result["data"] = {"action": action, "target": target}
+        return result
 
     def _play_music(self, params: Dict):
         """Handle music commands."""

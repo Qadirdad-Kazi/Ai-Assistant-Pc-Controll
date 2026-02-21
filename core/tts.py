@@ -208,12 +208,13 @@ class PiperTTS:
             except Exception as e:
                 print(f"{YELLOW}[TTS] Warning: Could not get Piper version: {e}{RESET}")
             
+            
             # Start the worker thread
             self.running = True
             self.worker_thread = threading.Thread(target=self._speech_worker, daemon=True)
             self.worker_thread.start()
             
-            print(f"{GREEN}[TTS] ✓ Piper TTS ready ({self.VOICE_MODEL}){RESET}")
+            print(f"{GREEN}[TTS] ✓ Piper TTS ready ({current_voice}){RESET}")
             return True
             
         except Exception as e:
