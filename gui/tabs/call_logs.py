@@ -10,6 +10,8 @@ from qfluentwidgets import (
     StrongBodyLabel, CaptionLabel
 )
 
+from core.receptionist import receptionist
+
 THEME_GLASS = "rgba(10, 15, 30, 0.8)"
 THEME_BORDER = "rgba(76, 201, 240, 0.3)"
 THEME_TEXT_MAIN = "#e8eaed"
@@ -85,25 +87,47 @@ class CallLogsTab(QWidget):
             }}
         """)
         
-        # Add a dummy log
-        dummy_item = QListWidgetItem()
-        self.log_list.addItem(dummy_item)
-        
-        dummy_widget = QWidget()
-        dummy_layout = QVBoxLayout(dummy_widget)
-        dummy_layout.setContentsMargins(0, 0, 0, 0)
-        dummy_title = StrongBodyLabel("[GSM GATEWAY] Incoming Call from +923001234567")
-        dummy_time = CaptionLabel("Today at 10:45 AM | Duration: 4m 12s | Status: Answered")
-        dummy_transcript = CaptionLabel("Transcript: Hello, I would like to book an appointment...")
-        dummy_transcript.setStyleSheet(f"color: {THEME_TEXT_SUB};")
-        
-        dummy_layout.addWidget(dummy_title)
-        dummy_layout.addWidget(dummy_time)
-        dummy_layout.addWidget(dummy_transcript)
-        
-        dummy_item.setSizeHint(dummy_widget.sizeHint())
-        self.log_list.setItemWidget(dummy_item, dummy_widget)
+        self.btn_refresh.clicked.connect(self.refresh_logs)
 
+        # Remove dummy initialization and call refresh
         panel_layout.addWidget(self.log_list)
         grid.addWidget(log_panel)
+        
+        self.refresh_logs()
+
+    def refresh_logs(self):
+        """Pulls the latest call logs from the receptionist module and populates the UI list."""
+        self.log_list.clear()
+        
+        logs = receptionist.call_logs
+        if not logs:
+            empty_item = QListWidgetItem("No phone calls have been logged yet.")
+            empty_item.setTextAlignment(Qt.AlignCenter)
+            self.log_list.addItem(empty_item)
+            return
+
+        for log in reversed(logs):
+            item = QListWidgetItem()
+            self.log_list.addItem(item)
+            
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            
+            caller = log.get("caller", "Unknown")
+            status = log.get("status", "Completed")
+            instructions = log.get("instructions", "No instructions")
+            transcript = log.get("transcript", "No transcript available")
+            
+            title = StrongBodyLabel(f"[GSM GATEWAY] Incoming Call from {caller.upper()}")
+            meta = CaptionLabel(f"Status: {status} | Intent Executed: {instructions}")
+            trans = CaptionLabel(f"Transcript:\n{transcript}")
+            trans.setStyleSheet(f"color: {THEME_TEXT_SUB};")
+            
+            layout.addWidget(title)
+            layout.addWidget(meta)
+            layout.addWidget(trans)
+            
+            item.setSizeHint(widget.sizeHint())
+            self.log_list.setItemWidget(item, widget)
 
