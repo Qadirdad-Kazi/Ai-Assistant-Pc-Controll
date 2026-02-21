@@ -301,6 +301,8 @@ class SettingsTab(ScrollArea):
         self.setObjectName("settingsInterface")
         self.scrollWidget = QWidget()
         self.expandLayout = ExpandLayout(self.scrollWidget)
+        self.expandLayout.setContentsMargins(40, 20, 60, 40)
+        self.expandLayout.setSpacing(10)
         
         self.setStyleSheet("background-color: transparent;")
         self.scrollWidget.setObjectName("scrollWidget")
@@ -314,6 +316,7 @@ class SettingsTab(ScrollArea):
         self._available_models = []
         
         self._init_ui()
+        self._apply_premium_styling()
         self._fetch_models()  # Auto-fetch on load
         
         # Connect settings change listener for dynamic voice switching
@@ -334,7 +337,59 @@ class SettingsTab(ScrollArea):
             elif hud_window:
                 hud_window.hide()
 
+    def _apply_premium_styling(self):
+        """Apply a master glossy stylesheet to the settings interface."""
+        self.scrollWidget.setStyleSheet("""
+            QWidget#scrollWidget {
+                background: transparent;
+            }
+            SettingCardGroup {
+                background: rgba(16, 24, 40, 0.4);
+                border: 1px solid rgba(76, 201, 240, 0.15);
+                border-radius: 16px;
+                margin-bottom: 25px;
+            }
+            SettingCardGroup > QLabel {
+                color: #4cc9f0;
+                font-family: 'Segoe UI';
+                font-size: 16px;
+                font-weight: 800;
+                padding-left: 10px;
+                margin-bottom: 15px;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+            }
+            SettingCard {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                border-radius: 12px;
+                margin: 4px 8px;
+            }
+            SettingCard:hover {
+                background: rgba(76, 201, 240, 0.08);
+                border: 1px solid rgba(76, 201, 240, 0.3);
+            }
+        """)
+
     def _init_ui(self):
+        # ─────────────────────────────────────────────────────────────
+        # Page Header
+        # ─────────────────────────────────────────────────────────────
+        header_container = QWidget()
+        header_layout = QVBoxLayout(header_container)
+        header_layout.setContentsMargins(10, 20, 10, 30)
+        
+        title_lbl = QLabel("WOLF SYSTEM SETTINGS")
+        title_lbl.setStyleSheet("font-size: 32px; font-weight: 900; color: white; letter-spacing: 4px;")
+        
+        subtitle_lbl = QLabel("CONFIGURE YOUR ARTIFICIALLY INTELLIGENT ADVISOR")
+        subtitle_lbl.setStyleSheet("font-size: 12px; color: #4cc9f0; font-weight: bold; letter-spacing: 2px;")
+        
+        header_layout.addWidget(title_lbl)
+        header_layout.addWidget(subtitle_lbl)
+        
+        self.expandLayout.addWidget(header_container)
+
         # ─────────────────────────────────────────────────────────────
         # Personalization Group
         # ─────────────────────────────────────────────────────────────

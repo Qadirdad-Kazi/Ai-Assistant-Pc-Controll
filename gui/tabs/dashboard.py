@@ -145,7 +145,6 @@ class DashboardView(QWidget):
         grid.addWidget(self.media_card, 1, 0)
         grid.addWidget(self.dev_card, 1, 1)
         
-        main_layout.addLayout(grid)
         
         # Large Mission Message / Listening UI Container
         self.center_container = QWidget()
@@ -170,6 +169,8 @@ class DashboardView(QWidget):
         main_layout.addStretch()
         main_layout.addWidget(self.center_container)
         main_layout.addStretch()
+        
+        main_layout.addLayout(grid)
 
     def set_listening(self, is_listening: bool):
         """Toggle the central dashboard listening mode UI."""
