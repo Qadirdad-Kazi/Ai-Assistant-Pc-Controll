@@ -55,7 +55,15 @@ class STTListener:
             built_in_words = ["jarvis", "alexa", "hey_mycroft", "hey_jarvis", "hey_rhasspy"]
             is_built_in = WAKE_WORD.lower() in built_in_words
             
-            if is_built_in:
+            # Switch backend depending on config
+            from core.settings_store import settings
+            porcupine_key = settings.get("picovoice.key", "")
+            
+            if porcupine_key:
+                print(f"{GREEN}[STT] 🦔 Access Key found. Switching to high-performance Porcupine engine...{RESET}")
+                backend = "pvporcupine"
+                detect_word = "wolf" # Needs generic placeholder, actual file path is passed in wakeword_model_paths
+            elif is_built_in:
                 print(f"{CYAN}[STT] Using built-in wake word model for '{WAKE_WORD}'{RESET}")
                 backend = "openwakeword"
                 detect_word = WAKE_WORD
@@ -64,15 +72,26 @@ class STTListener:
                 backend = "none" # No hardware backend, use whisper transcription
                 detect_word = "" # recorder.text() will return everything
             
+            # Optionally get custom PPN file path
+            ppn_path = settings.get("picovoice.ppn_path", "")
+            wakeword_args = {}
+            if backend == "pvporcupine" and porcupine_key:
+                import os
+                wakeword_args["picovoice_access_key"] = porcupine_key
+                if ppn_path and os.path.exists(ppn_path):
+                    wakeword_args["picovoice_keyword_paths"] = [ppn_path]
+                    detect_word = "" # Override string word
+            
             self.recorder = AudioToTextRecorder(
                 model=REALTIMESTT_MODEL,
                 language="en",
-                device="cuda",
+                device="cuda" if cuda_available else "cpu",
                 spinner=False,
                 wakeword_backend=backend,
                 wake_words=detect_word,
                 wake_words_sensitivity=WAKE_WORD_SENSITIVITY,
                 on_wakeword_detected=self._on_wakeword_detected,
+                **wakeword_args
             )
             
             # Verify device after initialization

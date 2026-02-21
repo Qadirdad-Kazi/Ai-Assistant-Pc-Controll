@@ -438,6 +438,33 @@ class SettingsTab(ScrollArea):
         self.expandLayout.addWidget(self.general_group)
 
         # ─────────────────────────────────────────────────────────────
+        # Wake Word Engine Group (High Performance)
+        # ─────────────────────────────────────────────────────────────
+        self.wakeword_group = SettingCardGroup("Wake Word Engine", self.scrollWidget)
+
+        self.pv_key_card = TextInputCard(
+            FIF.FINGERPRINT,
+            "Picovoice Access Key",
+            "Required to bypass Whisper and use 0% CPU wake-word detection",
+            "picovoice.key",
+            "",
+            self.wakeword_group
+        )
+        self.wakeword_group.addSettingCard(self.pv_key_card)
+
+        self.pv_model_card = TextInputCard(
+            FIF.DOCUMENT,
+            "Custom .ppn File Path",
+            "Physical path to your trained Picovoice model (e.g., C:/wolf.ppn)",
+            "picovoice.ppn_path",
+            "",
+            self.wakeword_group
+        )
+        self.wakeword_group.addSettingCard(self.pv_model_card)
+
+        self.expandLayout.addWidget(self.wakeword_group)
+
+        # ─────────────────────────────────────────────────────────────
         # God-Mode Integrations Group
         # ─────────────────────────────────────────────────────────────
         self.god_mode_group = SettingCardGroup("God-Mode Integrations", self.scrollWidget)

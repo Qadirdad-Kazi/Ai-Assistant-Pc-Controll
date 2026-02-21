@@ -118,7 +118,8 @@ Unlike standard web-based VoIP, Wolf 2.0 connects directly to local Pakistani ce
 For advanced setup and testing of the "God-Mode" features, please refer to the markdown guides located in the `docs/` folder:
 
 - 🧪 **[docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)**: Includes step-by-step instructions on how to simulate phone handovers, trigger the OCR Bug Watcher manually, and test the Dev Agent's Vite scaffolding.
-- 📞 **[docs/PHONE_INTEGRATION_GUIDE.md](docs/PHONE_INTEGRATION_GUIDE.md)**: A complete guide on how to wire a physical GSM modem (SIM800L) or how to set up the **Hardware-Free SIP VoIP Pipeline** using your Android phone.
+- 📞 **[docs/PHONE_INTEGRATION_GUIDE.md](docs/PHONE_INTEGRATION_GUIDE.md)**: A complete guide on how to wire a physical GSM modem (SIM800L) or set up the **Hardware-Free SIP VoIP Pipeline** using your Android phone.
+- 🎙️ **[docs/WAKE_WORD_GUIDE.md](docs/WAKE_WORD_GUIDE.md)**: Instructions on how to compile a custom Picovoice `.ppn` wake word and drop CPU latency to 0%.
 
 ---
 

@@ -190,6 +190,7 @@ class DashboardView(QWidget):
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
         
         if not hasattr(self, 'bg_pixmap') or self.bg_pixmap.isNull():
+            painter.end()
             return
             
         scaled_pixmap = self.bg_pixmap.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
