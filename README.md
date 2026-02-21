@@ -1,45 +1,41 @@
-# 🐺 Wolf AI
+# 🐺 Wolf AI 2.0 — The "God-Mode" Agent
 
 <p align="center">
   <img src="wolf_avatar.png" alt="Wolf AI Logo" width="120" height="120">
 </p>
 
-**Wolf AI** is a **fully local, privacy-focused AI assistant** for Windows. It combines a beautiful modern GUI with powerful voice control capabilities—all running entirely on YOUR computer with no cloud dependency.
+**Wolf AI 2.0** is the ultimate local, privacy-first AI agent designed to command your PC, handle your mobile phone calls via GSM, and master your developer workflow. Moving beyond a simple chatbot, Wolf is a high-performance modular system running entirely on YOUR machine.
 
-> 🔒 **Your data stays on your machine.** No API keys required for core functionality. No subscriptions. No data collection.
+> 🔒 **God-Mode, Offline.** No cloud dependencies. No mandatory API keys. Absolute control over your Windows OS and telephony.
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features (Wolf 2.0)
 
 | Feature | Description |
 |---------|-------------|
-| 🎤 **Voice Control** | Wake word detection ("Wolf") with natural language commands |
-| 💬 **AI Chat** | Interactive chat with local LLMs via Ollama with streaming responses |
-| 🏠 **Smart Home** | Control TP-Link Kasa smart lights and plugs from the app |
-| 📅 **Planner** | Manage calendar events, alarms, and timers |
-| 📰 **Daily Briefing** | AI-curated news from Technology, Science, and Top Stories |
-| 🌤️ **Weather** | Current weather and hourly forecast on your dashboard |
-| 🔍 **Web Search** | Search the web through voice or chat commands |
-| 🖥️ **System Monitor** | Real-time CPU and memory usage in the title bar |
-| 📚 **Grimoire** | Local personal knowledge base (RAG) using ChromaDB |
-| 🎵 **Sonic Interface** | Unified media controller with frequency visualizers |
-| 🛰️ **Sentinel** | Advanced hardware telemetry with real-time analytics graphs |
-| 🧹 **Digital Janitor** | Automated file organization agent powered by Watchdog |
-| 🏆 **Wolf Pack XP** | Gamified leveling system based on user productivity |
-| 🐺 **Pack Link** | Local P2P discovery between Wolf AI instances |
+| 🖥️ **PC Commander** | Full OS integration. Control volume, power states, manage windows, and take screenshots via natural language. |
+| 💻 **Dev Agent** | Autonomous scaffolding. Ask Wolf to "Build a React app" and it generates the directory, `package.json`, and source code instantly. |
+| 📞 **Receptionist Mode** | Local GSM/SIP bridge. Connect a physical SIM800L module or SIP line to intercept, log, and transcribe real-world phone calls. |
+| 🎨 **Glass HUD** | Transparent, click-through overlay interface that floats above all apps to deliver proactive system alerts. |
+| 🧠 **Proactive Layer** | Background "Bug Watcher" thread that monitors your screen state and logs crashes or errors pre-emptively. |
+| 🎵 **Sonic Interface** | Futuristic media controller featuring a neural frequency visualizer that mathematically syncs to BPM and audio energy. |
+| 🎤 **Ultra-Low Latency Voice** | Streamlined audio pipelines bridging `RealTimeSTT` with `PiperTTS` executable for near-instant conversational responses. |
 
 ---
 
-## 📸 Screenshots
+## 🏛️ Core Architecture
 
-*The application features a sleek Windows 11 Fluent Design aesthetic with dark mode support.*
+Wolf 2.0 transitions from a monolithic script into a segmented, high-performance capability stack:
+
+- **Brain (Python):** Central orchestration handled by `FunctionGemma` and `Ollama` (`llama3.2:3b`).
+- **Hands (OS/Dev Agent):** PyAutoGUI, Subprocess, and custom OS hooks to command the system and scaffold code.
+- **Voice (Audio Bridge):** Advanced hardware routing pushing TTS directly to a GSM Modem's Line-Out while isolating the desktop.
+- **UI (PySide6):** Hardware-accelerated components, blur effects, and borderless HUD overlays.
 
 ---
 
 ## 📋 Prerequisites
-
-Before you begin, make sure you have:
 
 ### Required Software
 
@@ -47,57 +43,28 @@ Before you begin, make sure you have:
 |----------|---------|----------|
 | **Miniconda** | Python environment manager | [miniconda.io](https://docs.anaconda.com/miniconda/) |
 | **Ollama** | Local AI model server | [ollama.com](https://ollama.com/download) |
-| **NVIDIA GPU** (Recommended) | Faster AI inference | GPU with 4GB+ VRAM |
+| **NVIDIA GPU** (Recommended) | Faster AI inference for local models | GPU with 4GB+ VRAM |
 
 ### Hardware Recommendations
 
 - **Minimum**: 8GB RAM, any modern CPU
 - **Recommended**: 16GB RAM, NVIDIA GPU with 6GB+ VRAM
-- **Storage**: ~5GB for models and voice data
+- *(Optional)*: Hardware GSM Modem (e.g., SIM800L) connected via USB UART for Phone Integration.
 
 ---
 
 ## 🚀 Quick Start Guide
 
-Follow these steps to get Wolf AI running on your system.
+### Step 1: Install Ollama & Pull the Model
 
-### Step 1: Install Miniconda
+Ensure Ollama is installed and running in the background.
 
-1. Download from [miniconda.io](https://docs.anaconda.com/miniconda/)
-2. Run the installer (use default options)
-3. Open **Anaconda Prompt** (Windows) or your terminal (macOS/Linux)
-
-### Step 2: Install Ollama
-
-1. Download and install from [ollama.com/download](https://ollama.com/download)
-2. Run the installer (Ollama will start automatically as a background service)
-
-> ✅ **Ollama runs in the background** - no need to start it manually after installation.
-
-### Step 3: Download an AI Model
-
-Open a terminal and pull your preferred model. You can choose from:
-
-**🔹 Option A: Llama 3.2 (Recommended for most users)**
 ```bash
-# Fast and efficient - great balance of speed and quality
+# Recommended Model for routing and chatting
 ollama pull llama3.2:3b
 ```
 
-**🔹 Option B: Qwen3 (Alternative option)**
-```bash
-# Good performance - slightly different model
-ollama pull qwen3:1.7b
-```
-
-> 💡 **Tip**: You can switch models anytime in `config.py` by changing `RESPONDER_MODEL`.
-
-Verify your model is installed:
-```bash
-ollama list
-```
-
-### Step 4: Clone & Set Up the Project
+### Step 2: Set Up the Project
 
 ```bash
 # Clone the repository
@@ -106,345 +73,73 @@ cd wolf-ai
 
 # Create a conda environment
 conda create -n wolfai python=3.11 -y
-
-# Activate the environment
 conda activate wolfai
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-> ⏱️ **Note**: First installation may take 5-10 minutes as PyTorch and other large packages are downloaded.
+*(NVIDIA users should install PyTorch with CUDA support for significantly faster STT/TTS and inference).*
 
-### Step 5: GPU Setup (NVIDIA Users)
-
-For **significantly faster** AI inference, install PyTorch with CUDA support:
-
-```bash
-# Install PyTorch with CUDA 12.4 support
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-```
-
-Verify CUDA is working:
-```bash
-python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
-```
-
-> 💡 **CPU-only users**: Skip this step—PyTorch will use CPU by default. It's slower but works fine.
-
-### Step 6: Run the Application
+### Step 3: Run the Application
 
 ```bash
 python main.py
 ```
 
-🎉 **That's it!** Wolf AI will launch with a beautiful GUI.
+---
+
+## 🎙️ Operating Wolf
+
+Wolf AI is natively listening. Say the wake word **"wolf"** and speak your command naturally.
+
+### Example Commands
+
+- **PC Control:** *"Wolf, lower the volume to 20"* or *"Wolf, take a screenshot"* or *"Wolf, lock the computer"*
+- **Dev Agent:** *"Wolf, build a quick React app for a todo list"*
+- **Media:** *"Wolf, play some lo-fi music"*
+- **Knowledge:** *"Wolf, explain quantum computing"*
 
 ---
 
-## 🎮 GPU Acceleration
+## 📞 Phone Integration (Receptionist Mode) Setup
 
-Wolf AI benefits greatly from GPU acceleration. Here's what runs on your GPU:
+Unlike standard web-based VoIP, Wolf 2.0 connects directly to local Pakistani cellular networks (or any generic GSM) via physical AT commands. 
 
-| Component | GPU Benefit | Without GPU |
-|-----------|-------------|-------------|
-| **Router Model** | ~50ms inference | ~200ms inference |
-| **Ollama LLM** | Fast streaming responses | Slower, but functional |
-| **Whisper STT** | Real-time transcription | Slight delay |
-
-### CUDA Requirements
-
-- **NVIDIA GPU** with CUDA Compute Capability 5.0+ (GTX 900 series or newer)
-- **CUDA Toolkit**: Bundled with PyTorch—no separate install needed
-- **VRAM**: 4GB minimum, 6GB+ recommended
-
-### Check Your GPU
-
-```bash
-# View GPU info and VRAM
-nvidia-smi
-```
+1. Connect your GSM modem (e.g., SIM800L) to a USB Serial adapter and plug it into your PC.
+2. Note the COM Port (e.g., `COM3`).
+3. Ensure the Audio Line-Out of the modem is routed to a PC Line-In, and the PC Line-Out is routed to the Modem Line-In.
+4. Open the **Receptionist Logs** tab in the GUI to view incoming caller IDs and real-time transcripts!
 
 ---
 
-## 🤖 Automatic Model Downloads
+## 🛠️ Configuration
 
-The following models are **downloaded automatically** on first run—no manual setup required:
-
-| Model | Purpose | Size | Downloaded From |
-|-------|---------|------|-----------------|
-| **Router Model** | Intent classification | ~500MB | [Hugging Face](https://huggingface.co/nlouis/wolf-ai-router) |
-| **TTS Voice** | Text-to-speech | ~50MB | [Piper Voices](https://huggingface.co/rhasspy/piper-voices) |
-| **STT Model** | Speech-to-text (Whisper) | ~150MB | OpenAI Whisper |
-
-> 📦 **First launch will take a few minutes** while these models download. Subsequent launches are instant.
-
----
-
-## 🎙️ Voice Assistant Setup
-
-Wolf AI includes Alexa-like voice control with wake word detection.
-
-### How It Works
-
-1. Say **"wolf"** to wake the assistant
-2. Speak your command naturally
-3. Wolf AI processes your request and responds
-
-### Example Voice Commands
-
-| Command | What It Does |
-|---------|--------------|
-| *"wolf, turn on the office lights"* | Controls smart lights |
-| *"wolf, set a timer for 10 minutes"* | Creates a countdown timer |
-| *"wolf, what's on my schedule today?"* | Reads your calendar |
-| *"wolf, search the web for Python tutorials"* | Performs web search |
-| *"wolf, add buy groceries to my to-do list"* | Creates a task |
-
-### Voice Configuration
-
-Edit `config.py` to customize:
+All configuration is centralized in `config.py`.
 
 ```python
-# Change wake word (default: "wolf")
-WAKE_WORD = "wolf"
-
-# Adjust sensitivity (0.0-1.0, lower = less false positives)
-WAKE_WORD_SENSITIVITY = 0.4
+# The main chat model
+RESPONDER_MODEL = "llama3.2:3b"
 
 # Enable/disable voice assistant
 VOICE_ASSISTANT_ENABLED = True
+
+# Change wake word
+WAKE_WORD = "wolf"
 ```
-
----
-
-## ⚙️ Configuration
-
-All configuration is centralized in `config.py`:
-
-### AI Models
-
-Change the chat model in `config.py`:
-
-```python
-# The main chat model (runs on Ollama)
-# Options: "llama3.2:3b" (recommended) or "qwen3:1.7b"
-RESPONDER_MODEL = "llama3.2:3b"
-
-# Ollama server URL (usually no need to change)
-OLLAMA_URL = "http://localhost:11434/api"
-```
-
-**Model Comparison:**
-
-| Model | Speed | Reasoning | Best For |
-|-------|-------|-----------|----------|
-| `llama3.2:3b` | ⚡ Fast | Good | Daily use, quick responses |
-| `qwen3:1.7b` | ⚡ Fast | Good | Alternative option |
-
-### Text-to-Speech
-
-```python
-# Voice model (downloads automatically on first run)
-TTS_VOICE_MODEL = "en_GB-northern_english_male-medium"
-```
-
-### Weather Location
-
-The default location is New York City. To change it:
-
-1. Open the app
-2. Go to **Settings** tab
-3. Enter your latitude and longitude
-
----
-
-## 🏗️ Project Architecture
-
-```
-wolf-ai/
-├── main.py                 # Application entry point
-├── config.py               # Centralized configuration
-├── requirements.txt        # Python dependencies
-│
-├── core/                   # Backend logic
-│   ├── router.py           # FunctionGemma intent classifier
-│   ├── function_executor.py # Executes routed functions
-│   ├── voice_assistant.py  # Voice pipeline orchestrator
-│   ├── stt.py              # Speech-to-text with wake word
-│   ├── tts.py              # Piper text-to-speech
-│   ├── kasa_control.py     # Smart home device control
-│   ├── weather.py          # Open-Meteo weather API
-│   ├── news.py             # DuckDuckGo news + AI curation
-│   ├── tasks.py            # To-do list management
-│   ├── calendar_manager.py # Local calendar/events
-│   ├── history.py          # SQLite chat history
-│   └── llm.py              # Ollama LLM interface
-│
-├── gui/                    # PySide6 GUI
-│   ├── app.py              # Main window setup
-│   ├── handlers.py         # Chat message handling
-│   ├── tabs/               # Individual tab screens
-│   │   ├── dashboard.py    # Weather + status overview
-│   │   ├── chat.py         # AI chat interface
-│   │   ├── planner.py      # Calendar + tasks
-│   │   ├── briefing.py     # AI news curation
-│   │   ├── home_automation.py  # Smart device control
-│   │   └── settings.py     # App configuration
-│   └── components/         # Reusable UI widgets
-│
-├── merged_model/           # Fine-tuned FunctionGemma router
-└── demo.py                 # Standalone voice assistant demo
-```
-
-### How It Works
-
-```
-┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
-│  User Input │────▶│ FunctionGemma   │────▶│  Function   │
-│  (Voice/Text)  │     │   Router         │     │  Executor   │
-└─────────────┘     └──────────────────┘     └──────┬──────┘
-                                                    │
-       ┌────────────────────────────────────────────┼────────────────┐
-       │                                            │                │
-       ▼                                            ▼                ▼
-┌──────────────┐                          ┌──────────────┐   ┌──────────────┐
-│  Kasa Lights │                          │   Calendar   │   │  Web Search  │
-└──────────────┘                          └──────────────┘   └──────────────┘
-                                                    │
-                                                    ▼
-                                          ┌──────────────┐
-                                          │ Llama LLM    │
-                                          │ (via Ollama) │
-                                          └──────────────┘
-                                                    │
-                                                    ▼
-                                          ┌──────────────┐
-                                          │ Piper TTS    │
-                                          │ (Voice Out)  │
-                                          └──────────────┘
-```
-
-1. **User speaks or types** a command
-2. **FunctionGemma Router** (fine-tuned local AI) classifies intent
-3. **Function Executor** runs the appropriate action
-4. **Llama LLM** generates a natural language response
-5. **Piper TTS** speaks the response (if voice enabled)
-
----
-
-## 🏠 Smart Home Integration
-
-Wolf AI supports **TP-Link Kasa** smart devices:
-
-### Supported Devices
-
-- ✅ Smart bulbs (on/off, brightness, color)
-- ✅ Smart plugs (on/off)
-- ✅ Smart light strips
-
-### Setup
-
-1. Ensure your Kasa devices are on the same network as your computer
-2. Open Wolf AI and go to the **Home Automation** tab
-3. Click **Refresh** to scan for devices
-4. Control devices through the GUI or voice commands
-
-### Voice Commands
-
-```
-"Turn on the living room lights"
-"Set the bedroom lights to 50%"
-"Turn off all lights"
-"Change the office light to blue"
-```
-
----
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-<details>
-<summary><strong>❌ Ollama connection refused</strong></summary>
-
-**Problem**: The app can't connect to Ollama.
-
-**Solution**:
-1. Make sure Ollama is running: `ollama serve`
-2. Check if the model is downloaded: `ollama list`
-3. Verify the URL in `config.py` matches your setup
-
-</details>
-
-<details>
-<summary><strong>❌ CUDA/GPU not detected</strong></summary>
-
-**Problem**: PyTorch is running on CPU instead of GPU.
-
-**Solution**:
-1. Install CUDA-compatible PyTorch:
-   ```bash
-   pip install torch --index-url https://download.pytorch.org/whl/cu121
-   ```
-2. Verify CUDA: `python -c "import torch; print(torch.cuda.is_available())"`
-
-</details>
-
-<details>
-<summary><strong>❌ Voice assistant not working</strong></summary>
-
-**Problem**: Wake word isn't being detected.
-
-**Solution**:
-1. Check your microphone permissions
-2. Ensure `realtimestt` is installed: `pip install realtimestt`
-3. Try lowering `WAKE_WORD_SENSITIVITY` in `config.py`
-
-</details>
-
-<details>
-<summary><strong>❌ Smart devices not found</strong></summary>
-
-**Problem**: Kasa devices don't appear in the app.
-
-**Solution**:
-1. Ensure devices are on the same WiFi network
-2. Try the Kasa app first to verify devices work
-3. Check firewall isn't blocking device discovery (UDP port 9999)
-
-</details>
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how to get started:
+We welcome contributions to expand the "God-Mode" capabilities, especially around integrating robust Vision Language Models (VLMs) into the Proactive Bug Watcher layer.
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Run tests: `pytest tests/`
-5. Submit a pull request
-
----
-
-## 📜 License
-
-This project is open source. See [LICENSE](LICENSE) for details.
-
----
-
-## 🙏 Acknowledgments
-
-- [Ollama](https://ollama.com/) - Local LLM inference
-- [QFluentWidgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets) - Beautiful UI components
-- [Piper TTS](https://github.com/rhasspy/piper) - Lightweight text-to-speech
-- [python-kasa](https://github.com/python-kasa/python-kasa) - Kasa device control
-- [RealTimeSTT](https://github.com/KoljaB/RealtimeSTT) - Speech recognition
-
----
+2. Create a feature branch: `git checkout -b feature/advanced-vlm`
+3. Commit your changes
+4. Submit a pull request
 
 <p align="center">
+  <strong>The Wolf is evolving.</strong><br>
   Made with ❤️ for local AI enthusiasts
 </p>
