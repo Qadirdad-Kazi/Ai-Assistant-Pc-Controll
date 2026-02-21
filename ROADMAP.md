@@ -119,9 +119,13 @@
   - *Completed: Created the Receptionist Logs tab UI and imported it into the Main Sidebar replacing older features.*
   - *How to test: Launch `python main.py` and click the Phone icon on the sidebar.*
 
-### Phase 3: The HUD & Proactive Layer
-- [ ] Build the transparent overlay UI.
-- [ ] Implement the screen-watching "Bug Watcher" logic.
+### Phase 3: The HUD & Proactive Layer (Completed)
+- [x] Build the transparent overlay UI.
+  - *Completed: Built `gui/windows/hud_window.py` holding `TransparentHUD`, a frameless, click-through Qt window.*
+  - *How to test: Import `init_hud()` in `main.py` and call `hud_window.show_alert("Test Alert")` to see a ghostly overlay.*
+- [x] Implement the screen-watching "Bug Watcher" logic.
+  - *Completed: Added `core/bug_watcher.py` with the background visual polling thread to catch crashes on screen.*
+  - *How to test: Import `bug_watcher.start()` and view the background thread logs polling the screen state every 10 seconds.*
 
 ---
 
