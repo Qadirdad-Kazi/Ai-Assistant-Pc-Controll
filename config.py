@@ -6,7 +6,7 @@ Centralized configuration for Wolf AI.
 RESPONDER_MODEL = "llama3.2:3b"
 OLLAMA_URL = "http://localhost:11434/api"
 LOCAL_ROUTER_PATH = "./merged_model"
-HF_ROUTER_REPO = "nlouis/wolf-ai-router"  # Hugging Face repo for auto-download
+HF_ROUTER_REPO = None  # Disabled to prevent 401 Auth errors
 MAX_HISTORY = 20
 
 # --- TTS Configuration ---
@@ -17,13 +17,13 @@ TTS_CONFIG_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en
 
 # --- STT Configuration ---
 # Using RealTimeSTT for real-time speech-to-text
-STT_MODEL_PATH = None  # Not used with RealTimeSTT (kept for compatibility)
-STT_USE_WHISPER = False  # Not used with RealTimeSTT (kept for compatibility)
-WHISPER_MODEL_SIZE = "base"  # Not used with RealTimeSTT (kept for compatibility)
-WAKE_WORD_DETECTION_METHOD = "transcription"  # RealTimeSTT uses transcription-based detection
-REALTIMESTT_MODEL = "small"  # Upgraded from 'base' for better wake word detection accuracy
-USE_PORCUPINE_WAKE_WORD = False  # Use Porcupine for wake word detection (more accurate, requires API key)
-PORCUPINE_ACCESS_KEY = None  # Get from https://console.picovoice.ai/ (optional, for better wake word detection)
+STT_MODEL_PATH = None  
+STT_USE_WHISPER = False  
+WHISPER_MODEL_SIZE = "base"  
+WAKE_WORD_DETECTION_METHOD = "transcription"  
+REALTIMESTT_MODEL = "tiny.en"  # Downgrading to tiny.en to fix severe CPU lag and 20s latency on non-CUDA PCs
+USE_PORCUPINE_WAKE_WORD = False  
+PORCUPINE_ACCESS_KEY = None  
 WAKE_WORD = "wolf"
 WAKE_WORD_SENSITIVITY = 0.6  # Increased for better custom word detection
 WAKE_WORD_CONFIRMATION_COUNT = 1  # Require multiple detections before triggering (reduces false positives)

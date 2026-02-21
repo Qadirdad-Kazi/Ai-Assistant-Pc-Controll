@@ -118,7 +118,10 @@ def ensure_model_available(model_path: str = LOCAL_ROUTER_PATH) -> str:
             return model_path
     
     # Download from Hugging Face
-    print(f"[Router] Model not found at {model_path}")
+    if not HF_ROUTER_REPO:
+        print(f"[Router] Model not found locally. Proceeding with Ollama Fallback...")
+        return None
+        
     print(f"[Router] Attempting download from Hugging Face: {HF_ROUTER_REPO}...")
     
     try:
