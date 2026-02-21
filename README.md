@@ -15,11 +15,12 @@
 | Feature | Description |
 |---------|-------------|
 | 🖥️ **PC Commander** | Full OS integration. Control volume, power states, manage windows, and take screenshots via natural language. |
-| 💻 **Dev Agent** | Autonomous scaffolding. Ask Wolf to "Build a React app" and it generates the directory, `package.json`, and source code instantly. |
-| 📞 **Receptionist Mode** | Local GSM/SIP bridge. Connect a physical SIM800L module or SIP line to intercept, log, and transcribe real-world phone calls. |
-| 🎨 **Glass HUD** | Transparent, click-through overlay interface that floats above all apps to deliver proactive system alerts. |
-| 🧠 **Proactive Layer** | Background "Bug Watcher" thread that monitors your screen state and logs crashes or errors pre-emptively. |
+| 💻 **Dev Agent** | Autonomous scaffolding. Ask Wolf to build a React app; it interactively gathers requirements, executes Vite/CLI commands in the background, and uses Ollama to dynamically generate the functional source code (e.g., `App.jsx`). |
+| 📞 **Receptionist Mode** | Local GSM/SIP bridge. Connect a SIM800L module to intercept calls. Features a full **Handover Protocol**: puts callers on hold, announces them through your desktop speakers, and bridges your mic if you accept. |
+| 🎨 **Glass HUD** | Transparent, click-through overlay interface that floats above all apps to deliver proactive system alerts. Switchable via Settings. |
+| 🧠 **Proactive Layer** | Background "Bug Watcher" thread that monitors your screen state via OCR and logs crashes or errors pre-emptively. Switchable via Settings. |
 | 🎵 **Sonic Interface** | Futuristic media controller featuring a neural frequency visualizer that mathematically syncs to BPM and audio energy. |
+| ⚙️ **God-Mode Settings** | Dedicated GUI tab to dynamically configure COM Ports for GSM modems and toggle background automation threads (HUD/Bug Watcher). |
 | 🎤 **Ultra-Low Latency Voice** | Streamlined audio pipelines bridging `RealTimeSTT` with `PiperTTS` executable for near-instant conversational responses. |
 
 ---
@@ -107,9 +108,10 @@ Wolf AI is natively listening. Say the wake word **"wolf"** and speak your comma
 Unlike standard web-based VoIP, Wolf 2.0 connects directly to local Pakistani cellular networks (or any generic GSM) via physical AT commands. 
 
 1. Connect your GSM modem (e.g., SIM800L) to a USB Serial adapter and plug it into your PC.
-2. Note the COM Port (e.g., `COM3`).
-3. Ensure the Audio Line-Out of the modem is routed to a PC Line-In, and the PC Line-Out is routed to the Modem Line-In.
-4. Open the **Receptionist Logs** tab in the GUI to view incoming caller IDs and real-time transcripts!
+2. Open the **Settings** tab in the Wolf UI and navigate to the **God-Mode Integrations** section.
+3. Enter your assigned COM Port (e.g., `COM3`).
+4. Ensure the Audio Line-Out of the modem is routed to a PC Line-In, and the PC Line-Out is routed to the Modem Line-In.
+5. Open the **Receptionist Logs** tab in the GUI. You can now delegate calls, have the AI answer, or utilize the hold-and-announce handover protocol!
 
 ---
 
