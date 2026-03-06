@@ -77,31 +77,21 @@ class PCController:
         if not app_name:
             return {"success": False, "message": "No app specified to open."}
             
+        # Clean the input (LLMs often use underscores)
+        app_name = app_name.replace("_", " ").strip().lower()
         executable = self.app_map.get(app_name, app_name)
         
         try:
-            # First try os.startfile for known Executables/Paths
+            # First try os.startfile for known Executables/Paths. 
+            # This correctly throws FileNotFoundError if it doesn't exist.
             if hasattr(os, 'startfile'):
                 try:
                     os.startfile(executable)
                     return {"success": True, "message": f"I have opened {app_name}."}
-                except FileNotFoundError:
+                except (FileNotFoundError, OSError):
                     pass
             
-            # Second try subprocess start (The empty quotes "" are required by Windows so it doesn't think the path is a Window Title)
-            try:
-                result = subprocess.run(f'start "" "{executable}"', shell=True, capture_output=True, text=True)
-                # start returns 0 even if it fails sometimes, but output will have 'cannot find'
-                if result.returncode == 0 and "cannot find" not in result.stderr.lower():
-                    # Double check if it's a raw .exe that doesn't exist in PATH
-                    if executable.endswith(".exe") and not shutil.which(executable.replace(".exe", "")):
-                        pass
-                    else:
-                        return {"success": True, "message": f"I have opened {app_name}."}
-            except Exception:
-                pass
-            
-            # Third try: "Human-like" Windows Search Fallback (Move mouse, Press Win, type Name, press Enter)
+            # Second try: "Human-like" Windows Search Fallback (Move mouse, Press Win, type Name, press Enter)
             if pyautogui:
                 print(f"[PC Control] Could not find {app_name} executable. Trying Windows Search...")
                 # Visually move the cursor to prove control
