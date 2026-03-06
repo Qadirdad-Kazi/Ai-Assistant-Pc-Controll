@@ -82,10 +82,6 @@ class PiperTTS:
     PIPER_VERSION = "2023.11.14-2"
     PIPER_RELEASE_URL = f"https://github.com/rhasspy/piper/releases/download/{PIPER_VERSION}/piper_windows_amd64.zip"
     
-    # Piper Windows executable
-    PIPER_VERSION = "2023.11.14-2"
-    PIPER_RELEASE_URL = f"https://github.com/rhasspy/piper/releases/download/{PIPER_VERSION}/piper_windows_amd64.zip"
-    
     def __init__(self):
         self.enabled = False
         self.piper_exe = None
@@ -253,7 +249,7 @@ class PiperTTS:
             cmd = [
                 self.piper_exe,
                 "--model", self.model_path,
-                "--output-raw"
+                "--output_raw"
             ]
             
             self.current_process = subprocess.Popen(
@@ -261,12 +257,14 @@ class PiperTTS:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                cwd=str(Path(self.piper_exe).parent),
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             
             # Send text to piper
+            # Adding newline can help Piper recognize the end of the sentence
             stdout, stderr = self.current_process.communicate(
-                input=text.encode('utf-8'),
+                input=(text.strip() + "\n").encode('utf-8'),
                 timeout=30
             )
             
@@ -275,7 +273,8 @@ class PiperTTS:
                 return
             
             if self.current_process.returncode != 0:
-                print(f"{YELLOW}[TTS] Piper error: {stderr.decode('utf-8', errors='ignore')}{RESET}")
+                err_msg = stderr.decode('utf-8', errors='ignore').strip()
+                print(f"{YELLOW}[TTS] Piper error (code {self.current_process.returncode}): {err_msg}{RESET}")
                 self.current_process = None
                 return
             
