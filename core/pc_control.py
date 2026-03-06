@@ -5,6 +5,7 @@ import ctypes
 import os
 import subprocess
 import time
+import shutil
 from typing import Dict, Any
 
 try:
@@ -32,6 +33,8 @@ class PCController:
             "powerpoint": "powerpnt.exe",
             "code": "code.exe",
             "vscode": "code.exe",
+            "vs code": "code.exe",
+            "visual studio code": "code.exe",
             "discord": "Update.exe --processStart Discord.exe"
         }
 
@@ -85,20 +88,34 @@ class PCController:
                 except FileNotFoundError:
                     pass
             
-            # Second try subprocess start
+            # Second try subprocess start (The empty quotes "" are required by Windows so it doesn't think the path is a Window Title)
             try:
-                subprocess.run(f"start {executable}", shell=True, check=True, capture_output=True)
-                return {"success": True, "message": f"I have opened {app_name}."}
-            except subprocess.CalledProcessError:
+                result = subprocess.run(f'start "" "{executable}"', shell=True, capture_output=True, text=True)
+                # start returns 0 even if it fails sometimes, but output will have 'cannot find'
+                if result.returncode == 0 and "cannot find" not in result.stderr.lower():
+                    # Double check if it's a raw .exe that doesn't exist in PATH
+                    if executable.endswith(".exe") and not shutil.which(executable.replace(".exe", "")):
+                        pass
+                    else:
+                        return {"success": True, "message": f"I have opened {app_name}."}
+            except Exception:
                 pass
             
-            # Third try: "Human-like" Windows Search Fallback (Press Win key, type Name, press Enter)
+            # Third try: "Human-like" Windows Search Fallback (Move mouse, Press Win, type Name, press Enter)
             if pyautogui:
                 print(f"[PC Control] Could not find {app_name} executable. Trying Windows Search...")
-                pyautogui.hotkey("win")
-                time.sleep(0.5)
-                pyautogui.write(app_name, interval=0.05)
-                time.sleep(1.0) # Wait for search results
+                # Visually move the cursor to prove control
+                screen_width, screen_height = pyautogui.size()
+                pyautogui.moveTo(screen_width / 2, screen_height / 2, duration=0.5, tween=pyautogui.easeInOutQuad)
+                
+                # Use press instead of hotkey (more reliable on Windows 11)
+                pyautogui.press("win")
+                time.sleep(0.8)
+                
+                # Type out the app name character by character
+                pyautogui.write(app_name, interval=0.1)
+                time.sleep(1.5) # Wait for search results
+                
                 pyautogui.press("enter")
                 return {
                     "success": True, 

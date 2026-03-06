@@ -88,6 +88,15 @@ def set_call_directive(caller_name: str, instructions: str):
     """
     pass
 
+def visual_agent(task: str):
+    """
+    Use the visual AI to look at the screen, find an element, icon, or button on the screen, and click it.
+    
+    Args:
+        task: What to find and click on (e.g., 'the Spotify icon on desktop', 'the submit button').
+    """
+    pass
+
 # Pre-compute tool schemas
 TOOLS = [
     get_json_schema(pc_control),
@@ -95,12 +104,13 @@ TOOLS = [
     get_json_schema(thinking),
     get_json_schema(nonthinking),
     get_json_schema(scaffold_website),
-    get_json_schema(set_call_directive)
+    get_json_schema(set_call_directive),
+    get_json_schema(visual_agent)
 ]
 
 # All valid function names
 VALID_FUNCTIONS = {
-    "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website", "set_call_directive"
+    "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website", "set_call_directive", "visual_agent"
 }
 
 
