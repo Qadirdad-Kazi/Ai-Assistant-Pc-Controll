@@ -240,18 +240,20 @@ class PiperTTS:
                 continue
     
     def _speak_text(self, text):
-        """Synthesize and play text using Piper executable."""
+        """Synthesize and play text using Piper. Sequential sentence processing."""
         if not self.piper_exe or not self.model_path or not text.strip():
             return
         
         try:
-            # Run piper and capture raw audio output
+            # Reverting to list-based Popen to avoid shell instability on Windows (Code 3221226505)
             cmd = [
-                self.piper_exe,
-                "--model", self.model_path,
-                "--output_raw"
+                str(self.piper_exe),
+                "--model", str(self.model_path),
+                "--output_raw",
+                "--quiet"
             ]
             
+            # Use shell=False (default) for maximum stability
             self.current_process = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
@@ -262,13 +264,13 @@ class PiperTTS:
             )
             
             # Send text to piper
-            # Adding newline can help Piper recognize the end of the sentence
             stdout, stderr = self.current_process.communicate(
                 input=(text.strip() + "\n").encode('utf-8'),
                 timeout=30
             )
             
             if self.interrupt_event.is_set():
+                if self.current_process: self.current_process.kill()
                 self.current_process = None
                 return
             
@@ -283,7 +285,8 @@ class PiperTTS:
             # Play the audio (Piper outputs 16-bit PCM at 22050 Hz)
             if stdout and not self.interrupt_event.is_set():
                 audio_data = np.frombuffer(stdout, dtype=np.int16)
-                sd.play(audio_data, samplerate=22050, blocking=True)
+                if len(audio_data) > 0:
+                    sd.play(audio_data, samplerate=22050, blocking=True)
                 
         except subprocess.TimeoutExpired:
             print(f"{YELLOW}[TTS] Synthesis timeout{RESET}")

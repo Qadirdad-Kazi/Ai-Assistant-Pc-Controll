@@ -255,7 +255,7 @@ class VoiceAssistant(QObject):
             full_response = ""
             
             # Stream response
-            with http_session.post(f"{OLLAMA_URL}/chat", json=payload, stream=True) as r:
+            with http_session.post(f"{OLLAMA_URL}/chat", json=payload, stream=True, timeout=60) as r:
                 r.raise_for_status()
                 
                 for line in r.iter_lines():
@@ -323,7 +323,7 @@ class VoiceAssistant(QObject):
             full_response = ""
             
             # Stream response
-            with http_session.post(f"{OLLAMA_URL}/chat", json=payload, stream=True) as r:
+            with http_session.post(f"{OLLAMA_URL}/chat", json=payload, stream=True, timeout=60) as r:
                 r.raise_for_status()
                 
                 for line in r.iter_lines():
