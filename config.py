@@ -24,6 +24,7 @@ WAKE_WORD_DETECTION_METHOD = "transcription"
 REALTIMESTT_MODEL = "tiny.en"  # Downgrading to tiny.en to fix severe CPU lag and 20s latency on non-CUDA PCs
 USE_PORCUPINE_WAKE_WORD = False  
 PORCUPINE_ACCESS_KEY = None  
+CUSTOM_PPN_PATH = "resources/wakewords/hey_wolf.ppn"
 WAKE_WORD = "wolf"
 WAKE_WORD_SENSITIVITY = 0.6  # Increased for better custom word detection
 WAKE_WORD_CONFIRMATION_COUNT = 1  # Require multiple detections before triggering (reduces false positives)

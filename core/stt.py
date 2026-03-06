@@ -5,10 +5,11 @@ Uses RealTimeSTT for real-time transcription with built-in wake word detection.
 
 import threading
 import time
+import os
 from typing import Optional, Callable
 from config import (
     WAKE_WORD, REALTIMESTT_MODEL, WAKE_WORD_SENSITIVITY,
-    GRAY, RESET, CYAN, YELLOW, GREEN
+    CUSTOM_PPN_PATH, GRAY, RESET, CYAN, YELLOW, GREEN
 )
 
 
@@ -74,9 +75,15 @@ class STTListener:
             
             # Optionally get custom PPN file path
             ppn_path = settings.get("picovoice.ppn_path", "")
+            
+            # Auto-detect in resources if not set
+            if not ppn_path or not os.path.exists(ppn_path):
+                if os.path.exists(CUSTOM_PPN_PATH):
+                    ppn_path = CUSTOM_PPN_PATH
+                    print(f"{GREEN}[STT] ✨ Auto-detected high-performance wake word at: {ppn_path}{RESET}")
+
             wakeword_args = {}
             if backend == "pvporcupine" and porcupine_key:
-                import os
                 wakeword_args["picovoice_access_key"] = porcupine_key
                 if ppn_path and os.path.exists(ppn_path):
                     wakeword_args["picovoice_keyword_paths"] = [ppn_path]
