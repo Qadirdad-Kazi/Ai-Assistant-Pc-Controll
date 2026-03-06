@@ -35,9 +35,11 @@ class STTListener:
     
     def initialize(self) -> bool:
         """Initialize RealTimeSTT with wake word detection."""
+        import os  # Explicit local import to prevent NameError
         try:
             from RealtimeSTT import AudioToTextRecorder
             import torch
+            import pvporcupine
             
             print(f"{CYAN}[STT] Loading RealTimeSTT...{RESET}")
             
@@ -50,30 +52,9 @@ class STTListener:
             else:
                 print(f"{YELLOW}[STT] ⚠ CUDA is not available, will use CPU{RESET}")
             
-            print(f"{CYAN}[STT] Initializing AudioToTextRecorder with device='cuda'...{RESET}")
-            
-            # Check if wake word is built-in (jarvis, alexa, etc.)
-            built_in_words = ["jarvis", "alexa", "hey_mycroft", "hey_jarvis", "hey_rhasspy"]
-            is_built_in = WAKE_WORD.lower() in built_in_words
-            
             # Switch backend depending on config
             from core.settings_store import settings
             porcupine_key = settings.get("picovoice.key", "")
-            
-            if porcupine_key:
-                print(f"{GREEN}[STT] 🦔 Access Key found. Switching to high-performance Porcupine engine...{RESET}")
-                backend = "pvporcupine"
-                detect_word = "wolf" # Needs generic placeholder, actual file path is passed in wakeword_model_paths
-            elif is_built_in:
-                print(f"{CYAN}[STT] Using built-in wake word model for '{WAKE_WORD}'{RESET}")
-                backend = "openwakeword"
-                detect_word = WAKE_WORD
-            else:
-                print(f"{YELLOW}[STT] Custom wake word '{WAKE_WORD}' detected. Switching to transcription mode.{RESET}")
-                backend = "none" # No hardware backend, use whisper transcription
-                detect_word = "" # recorder.text() will return everything
-            
-            # Optionally get custom PPN file path
             ppn_path = settings.get("picovoice.ppn_path", "")
             
             # Auto-detect in resources if not set
@@ -82,13 +63,39 @@ class STTListener:
                     ppn_path = CUSTOM_PPN_PATH
                     print(f"{GREEN}[STT] ✨ Auto-detected high-performance wake word at: {ppn_path}{RESET}")
 
-            wakeword_args = {}
-            if backend == "pvporcupine" and porcupine_key:
-                wakeword_args["picovoice_access_key"] = porcupine_key
-                if ppn_path and os.path.exists(ppn_path):
-                    wakeword_args["picovoice_keyword_paths"] = [ppn_path]
-                    detect_word = "" # Override string word
+            # MONKEY-PATCH: RealtimeSTT 0.3.104 doesn't support passing Picovoice Access Key.
+            # We patch pvporcupine.create to inject it automatically.
+            original_pv_create = pvporcupine.create
+            def patched_pv_create(*args, **kwargs):
+                import os  # Scoping safety for threads
+                # Inject access key from settings
+                if porcupine_key:
+                    kwargs['access_key'] = porcupine_key
+                
+                # Inject custom .ppn path if it exists
+                # We prioritize the settings path, then the auto-detected path
+                active_ppn = settings.get("picovoice.ppn_path", ppn_path)
+                if active_ppn and os.path.exists(active_ppn):
+                    kwargs['keyword_paths'] = [active_ppn]
+                    if 'keywords' in kwargs:
+                        del kwargs['keywords']
+                return original_pv_create(*args, **kwargs)
             
+            pvporcupine.create = patched_pv_create
+            
+            if porcupine_key:
+                print(f"{GREEN}[STT] 🦔 High-performance Porcupine engine requested.{RESET}")
+                backend = "pvporcupine"
+                detect_word = "wolf" # Placeholder
+            elif WAKE_WORD.lower() in ["jarvis", "alexa", "hey_mycroft", "hey_jarvis", "hey_rhasspy"]:
+                print(f"{CYAN}[STT] Using built-in wake word model for '{WAKE_WORD}'{RESET}")
+                backend = "openwakeword"
+                detect_word = WAKE_WORD
+            else:
+                print(f"{YELLOW}[STT] Custom wake word '{WAKE_WORD}' detected. Switching to transcription mode.{RESET}")
+                backend = "none"
+                detect_word = ""
+
             self.recorder = AudioToTextRecorder(
                 model=REALTIMESTT_MODEL,
                 language="en",
@@ -97,8 +104,7 @@ class STTListener:
                 wakeword_backend=backend,
                 wake_words=detect_word,
                 wake_words_sensitivity=WAKE_WORD_SENSITIVITY,
-                on_wakeword_detected=self._on_wakeword_detected,
-                **wakeword_args
+                on_wakeword_detected=self._on_wakeword_detected
             )
             
             # Verify device after initialization
@@ -175,47 +181,44 @@ class STTListener:
                 
                 if text and text.strip():
                     text_lower = text.lower()
+                    text_original = text.strip()
+                    text_clean = text_original
                     
                     # Phonetic aliases for 'wolf' to handle mis-transcriptions
                     WOLF_ALIASES = ["wolf", "wolff", "woof", "who", "wall", "well", "holy", "bolly", "wulf", "world", "worth"]
                     
-                    # Check if wake word or any phonetic alias is in the text
-                    detected = False
+                    # 1. Check if ANY wake word alias is in the text
+                    found_alias = None
                     for alias in WOLF_ALIASES:
                         if alias in text_lower:
-                            detected = True
-                            print(f"{GREEN}[STT] ✨ Wake word detected via alias: '{alias}'{RESET}")
+                            found_alias = alias
                             break
                     
-                    if detected:
+                    # 2. If we found an alias in the text, clean it out
+                    if found_alias:
+                        import re
+                        pattern = re.compile(re.escape(found_alias), re.IGNORECASE)
+                        match = pattern.search(text_original)
+                        if match:
+                            text_clean = text_original[match.end():].strip()
+                            print(f"{GREEN}[STT] ✨ Wake word '{found_alias}' stripped from command.{RESET}")
+                        
+                        # Trigger the callback if it wasn't already triggered by hardware
                         if self.wake_word_callback:
                             self.wake_word_callback()
-                    
-                    if detected:
-                        # Clean the text: find the best alias match to remove
-                        best_match = WAKE_WORD
-                        for alias in WOLF_ALIASES:
-                            if alias in text_lower:
-                                best_match = alias
-                                break
 
-                        import re
-                        pattern = re.compile(re.escape(best_match), re.IGNORECASE)
-                        match = pattern.search(text)
-                        if match:
-                            text_clean = text[match.end():].strip()
-                        else:
-                            text_clean = text.strip()
-                            
-                        print(f"{CYAN}[STT] 🧹 Cleaned text: '{text_clean}'{RESET}")
-                    
+                    # 3. Final check: if text_clean is empty but text wasn't, 
+                    # it means the user only said the wake word.
+                    if not text_clean and text_original:
+                        print(f"{GRAY}[STT] ⚠ Only wake word detected, no command. Waiting...{RESET}")
+                        continue
+                        
                     if text_clean:
                         print(f"{CYAN}[STT] 🔊 Speech recognized: '{text_clean}'{RESET}")
-                        
                         # Pass transcribed speech to callback
                         self.speech_callback(text_clean)
                     else:
-                        print(f"{GRAY}[STT] ⚠ Text is empty after cleaning, skipping...{RESET}")
+                        print(f"{GRAY}[STT] ⚠ Text is empty after processing, skipping...{RESET}")
                 else:
                     print(f"{GRAY}[STT] ⚠ No text received or text is empty{RESET}")
                 
