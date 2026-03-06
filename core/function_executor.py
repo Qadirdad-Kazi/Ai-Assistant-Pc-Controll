@@ -6,6 +6,7 @@ from typing import Dict, Any
 from core.pc_control import pc_controller
 from core.dev_agent import dev_agent
 from core.receptionist import receptionist
+from core.vision_agent import vision_agent
 
 class FunctionExecutor:
     """Central executor for simplified core functions."""
@@ -25,6 +26,8 @@ class FunctionExecutor:
                 return self._scaffold_website(params)
             elif func_name == "set_call_directive":
                 return self._set_call_directive(params)
+            elif func_name == "visual_agent":
+                return self._visual_agent(params)
             elif func_name in ("thinking", "nonthinking"):
                 return {"success": True, "message": "Direct LLM response."}
             else:
@@ -63,6 +66,11 @@ class FunctionExecutor:
         caller = params.get("caller_name", "Unknown caller")
         instructions = params.get("instructions", "Say hello")
         return receptionist.add_directive(caller, instructions)
+
+    def _visual_agent(self, params: Dict):
+        """Handle visual UI interactions using VisionAgent."""
+        task = params.get("task", "click on something")
+        return vision_agent.execute_visual_task(task)
 
 # Global instance
 executor = FunctionExecutor()

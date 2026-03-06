@@ -26,9 +26,13 @@ class PCController:
             "notepad": "notepad.exe",
             "explorer": "explorer.exe",
             "settings": "ms-settings:",
-            "browser": "chrome.exe",
-            "terminnal": "wt.exe",
-            "discord": "Update.exe --processStart Discord.exe" # usually needs special path, but let's stick to basics if possible
+            "terminal": "wt.exe",
+            "word": "winword.exe",
+            "excel": "excel.exe",
+            "powerpoint": "powerpnt.exe",
+            "code": "code.exe",
+            "vscode": "code.exe",
+            "discord": "Update.exe --processStart Discord.exe"
         }
 
     def execute(self, action: str, target: str = "") -> Dict[str, Any]:
@@ -73,19 +77,41 @@ class PCController:
         executable = self.app_map.get(app_name, app_name)
         
         try:
-            # First try using os.startfile if it exists on Windows
+            # First try os.startfile for known Executables/Paths
             if hasattr(os, 'startfile'):
                 try:
                     os.startfile(executable)
-                    return {"success": True, "message": f"Opened {app_name}."}
+                    return {"success": True, "message": f"I have opened {app_name}."}
                 except FileNotFoundError:
                     pass
             
-            # Fallback to subprocess, might need to rely on cmd /c start
-            subprocess.Popen(f"cmd /c start {executable}", shell=True)
-            return {"success": True, "message": f"Started {app_name}."}
+            # Second try subprocess start
+            try:
+                subprocess.run(f"start {executable}", shell=True, check=True, capture_output=True)
+                return {"success": True, "message": f"I have opened {app_name}."}
+            except subprocess.CalledProcessError:
+                pass
+            
+            # Third try: "Human-like" Windows Search Fallback (Press Win key, type Name, press Enter)
+            if pyautogui:
+                print(f"[PC Control] Could not find {app_name} executable. Trying Windows Search...")
+                pyautogui.hotkey("win")
+                time.sleep(0.5)
+                pyautogui.write(app_name, interval=0.05)
+                time.sleep(1.0) # Wait for search results
+                pyautogui.press("enter")
+                return {
+                    "success": True, 
+                    "message": f"I couldn't find {app_name} explicitly, so I tried using Windows Search to open it."
+                }
+                
+            return {
+                "success": False, 
+                "message": f"I cannot find the application '{app_name}' installed on your PC. Do you want me to help you download it or look for something else?"
+            }
+            
         except Exception as e:
-            return {"success": False, "message": f"Could not open {app_name}: {e}"}
+            return {"success": False, "message": f"I encountered an error trying to open {app_name}. {e}"}
 
     def _close_app(self, app_name: str) -> Dict[str, Any]:
         if not app_name:

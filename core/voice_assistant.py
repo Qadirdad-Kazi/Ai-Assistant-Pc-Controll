@@ -165,8 +165,15 @@ class VoiceAssistant(QObject):
                 elif func_name == "add_task" and result.get("success"):
                     self.task_added.emit()
                 
-                # Generate Qwen response with context
-                self._generate_response_with_context(func_name, result, user_text)
+                # Enable thinking (more detailed reasoning) if the action failed so it cross-questions the user
+                failed_action = not result.get("success", False)
+                self._generate_response_with_context(func_name, result, user_text, enable_thinking=failed_action)
+                
+            elif func_name == "visual_agent":
+                # Handle visual tasks specifically (so the AI announces what it's doing)
+                tts.speak("Looking at your screen right now...")
+                result = function_executor.execute(func_name, params)
+                self._generate_response_with_context(func_name, result, user_text, enable_thinking=False)
                 
             elif func_name == "get_system_info":
                 # Get system info
@@ -228,8 +235,10 @@ class VoiceAssistant(QObject):
                         news_titles = [item.get('title', '')[:50] for item in news_items[:3]]
                         context_parts.append(f"Top news: {', '.join(news_titles)}")
                 context_msg = "SYSTEM CONTEXT:\n" + "\n".join(context_parts) if context_parts else "No system information available."
+            elif func_name == "visual_agent":
+                context_msg = f"Visual Agent Task executed. Success: {success}. Result/Thought: {message}"
             else:
-                context_msg = f"Function {func_name} executed. Success: {success}. Result: {message}"
+                context_msg = f"Function {func_name} executed. Success: {success}. Result: {message}. If success is False or the app was missing, you must ask the user a follow-up question (e.g. asking if they want help downloading it)."
             
             # Manage context window
             max_hist = MAX_HISTORY

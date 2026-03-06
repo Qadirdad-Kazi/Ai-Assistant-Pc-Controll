@@ -7,6 +7,7 @@ import os
 import subprocess
 import requests
 import re
+import shutil
 from typing import Dict, Any
 from config import OLLAMA_URL, RESPONDER_MODEL
 
@@ -86,14 +87,27 @@ class DevAgent:
 
             if actual_fw == "react":
                 print("[DevAgent] Using Vite to scaffold React app...")
+                
+                # Pre-flight check for npm/Node.js
+                if not shutil.which("npm"):
+                    return {
+                        "success": False,
+                        "message": "It looks like Node.js (npm) is not installed on your computer. You need it to build React apps. Would you like me to open the Node.js website for you to download it?"
+                    }
+
                 # Run Vite (requires npm/npx)
-                # Shell=True is necessary on Windows for npx
-                subprocess.run(
-                    f"npx -y create-vite@latest {self.project_name} --template react", 
-                    cwd=self.workspace_dir, 
-                    shell=True, 
-                    check=False
-                )
+                try:
+                    subprocess.run(
+                        f"npx -y create-vite@latest {self.project_name} --template react", 
+                        cwd=self.workspace_dir, 
+                        shell=True, 
+                        check=True
+                    )
+                except subprocess.CalledProcessError as e:
+                    return {
+                        "success": False,
+                        "message": f"The Vite project scaffolding failed. Would you like me to try a standard HTML/JS format instead?"
+                    }
                 
                 # Further, we could use LLM to write the App.jsx
                 self._generate_and_write_file(
@@ -130,6 +144,12 @@ class DevAgent:
                 )
                 
                 final_status = f"✅ **HTML/JS App Scaffolded!**\\nYour webpage is ready at: `{target_dir}/index.html`"
+
+            # Auto-open the project in VS Code!
+            if shutil.which("code"):
+                print("[DevAgent] Opening project in VS Code...")
+                subprocess.Popen("code .", cwd=target_dir, shell=True)
+                final_status += "\\n*(I have also opened the project in VS Code for you!)*"
 
             return {
                 "success": True,

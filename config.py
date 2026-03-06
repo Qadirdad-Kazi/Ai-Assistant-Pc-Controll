@@ -116,6 +116,20 @@ FUNCTIONS = [
                 "required": ["caller_name", "instructions"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "visual_agent",
+            "description": "Use the visual AI to find an element, icon, or button on the screen and click it.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task": {"type": "string", "description": "What to find and click on (e.g., 'the Spotify icon on desktop', 'the submit button')."}
+                },
+                "required": ["task"]
+            }
+        }
     }
 ]
 
