@@ -60,7 +60,8 @@ class VoiceAssistant(QObject):
             print(f"{CYAN}[VoiceAssistant] Creating STT listener...{RESET}")
             self.stt_listener = STTListener(
                 wake_word_callback=self._on_wake_word,
-                speech_callback=self._on_speech
+                speech_callback=self._on_speech,
+                stop_callback=self._on_stop
             )
             print(f"{CYAN}[VoiceAssistant] ✓ STT listener created{RESET}")
             
@@ -107,34 +108,31 @@ class VoiceAssistant(QObject):
             self.stt_listener.stop()
         print(f"{GRAY}[VoiceAssistant] Voice assistant stopped.{RESET}")
     
+    def _on_stop(self):
+        """Handle 'stop' voice command — interrupt TTS immediately."""
+        print(f"{YELLOW}[VoiceAssistant] 🛑 Stop command received! Interrupting TTS.{RESET}")
+        tts.stop()
+    
     def _on_wake_word(self):
         """Handle wake word detection."""
         print(f"{GREEN}[VoiceAssistant] ✓ Wake word callback received!{RESET}")
         print(f"{GREEN}[VoiceAssistant] Emitting wake_word_detected signal...{RESET}")
         self.wake_word_detected.emit()
         print(f"{GREEN}[VoiceAssistant] ✓ Signal emitted. Listening for speech...{RESET}")
-    
+
     def _on_speech(self, text: str):
-        """Handle recognized speech after wake word."""
+        """Handle recognized speech. STT already stripped the wake word."""
         if not text.strip():
             return
-        
-        # Remove wake word from text if present
-        text = text.lower().replace("Wolf", "").strip()
-        if not text:
-            return
-        
+
         self.speech_recognized.emit(text)
         self.processing_started.emit()
-        
         print(f"{CYAN}[VoiceAssistant] Processing: {text}{RESET}")
-        
-        # Process in background thread to avoid blocking
-        thread = threading.Thread(
-            target=self._process_query,
-            args=(text,),
-            daemon=True
-        )
+
+        # Interrupt any ongoing TTS before processing the new query
+        tts.stop()
+
+        thread = threading.Thread(target=self._process_query, args=(text,), daemon=True)
         thread.start()
     
     def _process_query(self, user_text: str):
@@ -287,6 +285,9 @@ class VoiceAssistant(QObject):
             
             print(f"{GREEN}[VoiceAssistant] Response generated.{RESET}")
             self.processing_finished.emit()
+            # Keep mic open for follow-up without re-saying the wake word
+            if self.stt_listener:
+                self.stt_listener.enter_conversation_mode()
             
         except Exception as e:
             print(f"{GRAY}[VoiceAssistant] Error generating response: {e}{RESET}")
@@ -355,6 +356,9 @@ class VoiceAssistant(QObject):
             
             print(f"{GREEN}[VoiceAssistant] Response generated.{RESET}")
             self.processing_finished.emit()
+            # Keep mic open for follow-up without re-saying the wake word
+            if self.stt_listener:
+                self.stt_listener.enter_conversation_mode()
             
         except Exception as e:
             print(f"{GRAY}[VoiceAssistant] Error streaming response: {e}{RESET}")

@@ -240,31 +240,37 @@ class PiperTTS:
                 continue
     
     def _speak_text(self, text):
-        """Synthesize and play text using Piper. Sequential sentence processing."""
+        """Synthesize text to WAV file then play. Avoids audio device conflicts with STT."""
         if not self.piper_exe or not self.model_path or not text.strip():
             return
         
+        import tempfile
+        import soundfile as sf
+        
+        tmp_wav = None
         try:
-            # Reverting to list-based Popen to avoid shell instability on Windows (Code 3221226505)
+            # Write output to a temp WAV file — Piper never touches the audio device this way,
+            # preventing the 0xC0000409 crash caused by audio driver conflicts with open STT streams.
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                tmp_wav = f.name
+            
             cmd = [
                 str(self.piper_exe),
                 "--model", str(self.model_path),
-                "--output_raw",
+                "--output_file", tmp_wav,
                 "--quiet"
             ]
             
-            # Use shell=False (default) for maximum stability
             self.current_process = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 cwd=str(Path(self.piper_exe).parent),
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             )
             
-            # Send text to piper
-            stdout, stderr = self.current_process.communicate(
+            _, stderr = self.current_process.communicate(
                 input=(text.strip() + "\n").encode('utf-8'),
                 timeout=30
             )
@@ -282,11 +288,11 @@ class PiperTTS:
             
             self.current_process = None
             
-            # Play the audio (Piper outputs 16-bit PCM at 22050 Hz)
-            if stdout and not self.interrupt_event.is_set():
-                audio_data = np.frombuffer(stdout, dtype=np.int16)
-                if len(audio_data) > 0:
-                    sd.play(audio_data, samplerate=22050, blocking=True)
+            # Play the WAV file
+            if tmp_wav and os.path.exists(tmp_wav) and not self.interrupt_event.is_set():
+                data, samplerate = sf.read(tmp_wav, dtype='int16')
+                if len(data) > 0:
+                    sd.play(data, samplerate=samplerate, blocking=True)
                 
         except subprocess.TimeoutExpired:
             print(f"{YELLOW}[TTS] Synthesis timeout{RESET}")
@@ -297,6 +303,13 @@ class PiperTTS:
             print(f"{YELLOW}[TTS Error]: {e}{RESET}")
             import traceback
             traceback.print_exc()
+        finally:
+            # Clean up temp file
+            if tmp_wav and os.path.exists(tmp_wav):
+                try:
+                    os.remove(tmp_wav)
+                except:
+                    pass
     
     def queue_sentence(self, sentence):
         """Add a sentence to the speech queue."""
