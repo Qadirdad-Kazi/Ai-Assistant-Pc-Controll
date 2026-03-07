@@ -49,9 +49,16 @@ class FunctionExecutor:
         action = params.get("action", "unknown")
         target = params.get("target", "")
         
-        result = pc_controller.execute(action, target)
-        result["data"] = {"action": action, "target": target}
-        return result
+        print(f"[FunctionExecutor] PC Control: action='{action}', target='{target}'")
+        
+        try:
+            result = pc_controller.execute(action, target)
+            result["data"] = {"action": action, "target": target}
+            print(f"[FunctionExecutor] PC Control result: {result}")
+            return result
+        except Exception as e:
+            print(f"[FunctionExecutor] PC Control error: {e}")
+            return {"success": False, "message": f"PC Control error: {str(e)}"}
 
     def _play_music(self, params: Dict):
         """Handle music commands."""

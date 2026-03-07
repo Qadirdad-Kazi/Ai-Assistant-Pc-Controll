@@ -229,10 +229,9 @@ class FunctionGemmaRouter:
             self.tokenizer = None
             print("[Router] Initialized in Ollama Fallback mode.")
     
-    def _ollama_route(self, user_prompt: str) -> str:
-        """Use the main LLM (Ollama) to perform routing via prompting."""
-        from config import OLLAMA_URL, RESPONDER_MODEL
-        import requests
+    def _ollama_route(self, user_prompt: str) -> tuple[str, Dict[str, Any]]:
+        """Fallback routing using Ollama."""
+        print(f"[Router] Using Ollama fallback for: '{user_prompt}'")
         
         fallback_prompt = f"""
         You are the neural mission router for Wolf AI.
@@ -250,11 +249,21 @@ class FunctionGemmaRouter:
         - thinking(prompt): Multi-step reasoning, math, code, or complexity.
         - nonthinking(prompt): Simple greetings, chitchat, or direct facts.
 
+        IMPORTANT ROUTING RULES:
+        1. ANY request to open/close applications, control volume, shutdown, restart, or system control -> use pc_control
+        2. App names like "visual studio", "chrome", "spotify", "notepad" -> use pc_control with action: 'open_app'
+        3. System commands like "volume up", "mute", "lock screen" -> use pc_control
+        4. Questions about capabilities, "tell me about yourself", "what can you do", "who are you" -> use nonthinking with capability overview
+        5. Only use nonthinking for greetings, goodbyes, simple questions, and casual chat
+        6. Only use thinking for complex problems, math, coding, or multi-step reasoning
+
         Output ONLY the function call in this syntax: call:function_name{{arg1:value1,arg2:value2}}
-        Example 1: Tasking to turn on kitchen lights -> call:control_light{{action:on,room:kitchen}}
-        Example 2: User says hello -> call:nonthinking{{prompt:hello}}
-        Example 3: Complex math -> call:thinking{{prompt:calculate 2+2}}
-        Example 4: Rafay will call, ask about the meeting -> call:set_call_directive{{caller_name:Rafay,instructions:ask about the meeting}}
+        Example 1: "open visual studio" -> call:pc_control{{action:open_app,target:visual studio}}
+        Example 2: "volume up" -> call:pc_control{{action:volume,target:up}}
+        Example 3: "hello" -> call:nonthinking{{prompt:hello}}
+        Example 4: "calculate 2+2" -> call:thinking{{prompt:calculate 2+2}}
+        Example 5: "play music on spotify" -> call:play_music{{query:music,service:spotify}}
+        Example 6: "open chrome" -> call:pc_control{{action:open_app,target:chrome}}
 
         User Prompt: {user_prompt}
         Decision:"""
@@ -267,7 +276,9 @@ class FunctionGemmaRouter:
                 "options": {"num_predict": 50, "temperature": 0.1}
             }, timeout=10).json()
             
-            return response.get("response", "").strip()
+            raw_response = response.get("response", "").strip()
+            print(f"[Router] Ollama raw response: '{raw_response}'")
+            return raw_response
         except Exception as e:
             print(f"[Router Fallback Error] {e}")
             return f"call:nonthinking{{prompt:<escape>{user_prompt}<escape>}}"
@@ -326,16 +337,21 @@ class FunctionGemmaRouter:
         return self._parse_function_call(response, user_prompt)
     
     def _parse_function_call(self, response: str, user_prompt: str) -> Tuple[str, Dict[str, Any]]:
-        """Parse the model's response to extract function name and arguments."""
+        """Parse model's response to extract function name and arguments."""
+        
+        print(f"[Router] Parsing response: '{response}'")
         
         # Try to find function call pattern: call:function_name
         for func_name in VALID_FUNCTIONS:
             if f"call:{func_name}" in response:
+                print(f"[Router] Found function: {func_name}")
                 # Try to extract arguments
                 args = self._extract_arguments(response, func_name, user_prompt)
+                print(f"[Router] Extracted args: {args}")
                 return func_name, args
         
         # Fallback to nonthinking if no function found
+        print(f"[Router] No function found, falling back to nonthinking")
         return "nonthinking", {"prompt": user_prompt}
     
     def _extract_arguments(self, response: str, func_name: str, user_prompt: str) -> Dict[str, Any]:

@@ -8,7 +8,8 @@ import threading
 from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFrame, QLabel, 
-    QListWidgetItem, QSizePolicy, QMenu, QMessageBox, QTextEdit
+    QListWidgetItem, QSizePolicy, QMenu, QMessageBox, QTextEdit,
+    QDialog
 )
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import QFont, QIcon, QColor
@@ -47,14 +48,17 @@ class TaskItem(CardWidget):
     
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 12, 16, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(6)
         
         # Header with title and status
         header_layout = QHBoxLayout()
+        header_layout.setSpacing(8)
         
         self.title_label = SubtitleLabel(self.task_data.get('title', 'Untitled Task'))
-        self.title_label.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        self.title_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        self.title_label.setWordWrap(True)
+        self.title_label.setMaximumHeight(40)
         
         self.status_badge = QLabel(self.task_data.get('status', 'pending'))
         self.status_badge.setStyleSheet("""
@@ -62,41 +66,57 @@ class TaskItem(CardWidget):
                 background-color: rgba(76, 201, 240, 0.2);
                 color: #4cc9f0;
                 border: 1px solid rgba(76, 201, 240, 0.3);
-                border-radius: 12px;
-                padding: 4px 12px;
-                font-size: 11px;
+                border-radius: 8px;
+                padding: 2px 8px;
+                font-size: 10px;
                 font-weight: bold;
+                min-width: 60px;
+                max-width: 80px;
             }
         """)
+        self.status_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        header_layout.addWidget(self.title_label)
-        header_layout.addStretch()
-        header_layout.addWidget(self.status_badge)
+        header_layout.addWidget(self.title_label, 1)  # Take available space
+        header_layout.addWidget(self.status_badge, 0)  # Fixed size
         
         # Description
         self.description_label = BodyLabel(self.task_data.get('description', ''))
         self.description_label.setWordWrap(True)
-        self.description_label.setMaximumHeight(60)
+        self.description_label.setMaximumHeight(50)
+        self.description_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         
-        # Action buttons
+        # Action buttons - make them more compact
         actions_layout = QHBoxLayout()
+        actions_layout.setSpacing(4)
+        actions_layout.setContentsMargins(0, 4, 0, 0)
         
         self.execute_btn = PrimaryPushButton("Execute")
         self.execute_btn.setIcon(FIF.PLAY)
+        self.execute_btn.setFixedHeight(28)
+        self.execute_btn.setMinimumWidth(70)
         self.execute_btn.clicked.connect(lambda: self.execute_requested.emit(self.task_data['id']))
         
         self.edit_btn = PushButton("Edit")
         self.edit_btn.setIcon(FIF.EDIT)
+        self.edit_btn.setFixedHeight(28)
+        self.edit_btn.setMinimumWidth(60)
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.task_data['id']))
         
         self.delete_btn = PushButton("Delete")
         self.delete_btn.setIcon(FIF.DELETE)
+        self.delete_btn.setFixedHeight(28)
+        self.delete_btn.setMinimumWidth(60)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.task_data['id']))
         
         actions_layout.addWidget(self.execute_btn)
         actions_layout.addWidget(self.edit_btn)
         actions_layout.addWidget(self.delete_btn)
         actions_layout.addStretch()
+        
+        # Add all to main layout
+        layout.addLayout(header_layout)
+        layout.addWidget(self.description_label)
+        layout.addLayout(actions_layout)
         
         # Add all to main layout
         layout.addLayout(header_layout)
@@ -154,7 +174,7 @@ class TaskItem(CardWidget):
         self.task_data['status'] = status
         self._update_status_appearance()
 
-class TaskDialog(QWidget):
+class TaskDialog(QDialog):
     """Dialog for creating/editing tasks."""
     
     task_saved = Signal(dict)  # task_data
@@ -162,6 +182,10 @@ class TaskDialog(QWidget):
     def __init__(self, parent=None, task_data=None):
         super().__init__(parent)
         self.task_data = task_data or {}
+        self.setModal(True)
+        self.setWindowTitle("Create New Task" if not self.task_data else "Edit Task")
+        self.setMinimumSize(500, 400)
+        self.resize(500, 400)
         self._setup_ui()
         self._apply_styles()
         self._load_data()
@@ -286,27 +310,44 @@ class TasksTab(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # Sidebar (task list)
+        # Sidebar (task list) - make it responsive
         sidebar = QFrame()
-        sidebar.setMaximumWidth(400)
+        sidebar.setMinimumWidth(300)
+        sidebar.setMaximumWidth(500)
+        sidebar.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(16, 16, 16, 16)
+        sidebar_layout.setContentsMargins(12, 12, 12, 12)
+        sidebar_layout.setSpacing(8)
         
         # Sidebar header
         header_layout = QHBoxLayout()
+        header_layout.setSpacing(8)
+        header_layout.setContentsMargins(0, 0, 0, 8)  # Add bottom margin
+        
         self.title_label = SubtitleLabel("Tasks")
-        self.title_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
+        self.title_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+        self.title_label.setWordWrap(True)
+        self.title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         
         self.add_task_btn = PrimaryPushButton("Add Task")
         self.add_task_btn.setIcon(FIF.ADD)
+        self.add_task_btn.setFixedHeight(32)
+        self.add_task_btn.setMinimumWidth(80)
+        self.add_task_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.add_task_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.add_task_btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        
+        # Connect button with multiple methods for debugging
         self.add_task_btn.clicked.connect(self._create_task)
+        self.add_task_btn.pressed.connect(lambda: print("[TasksTab] Button pressed!"))
+        self.add_task_btn.released.connect(lambda: print("[TasksTab] Button released!"))
         
-        header_layout.addWidget(self.title_label)
-        header_layout.addStretch()
-        header_layout.addWidget(self.add_task_btn)
+        header_layout.addWidget(self.title_label, 1)  # Take available space
+        header_layout.addWidget(self.add_task_btn, 0)  # Fixed size
         
-        # Task list
+        # Task list with better scrolling
         self.task_list = ListWidget()
+        self.task_list.setSpacing(4)
         self.task_list.setStyleSheet("""
             ListWidget {
                 background-color: transparent;
@@ -316,7 +357,8 @@ class TasksTab(QWidget):
             ListWidget::item {
                 background-color: transparent;
                 border: none;
-                padding: 4px;
+                padding: 2px;
+                margin: 1px;
             }
             ListWidget::item:selected {
                 background-color: rgba(76, 201, 240, 0.1);
@@ -328,26 +370,37 @@ class TasksTab(QWidget):
         sidebar_layout.addLayout(header_layout)
         sidebar_layout.addWidget(self.task_list)
         
-        # Main content area
+        # Main content area - make it responsive
         content_area = QFrame()
+        content_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         content_layout = QVBoxLayout(content_area)
-        content_layout.setContentsMargins(24, 24, 24, 24)
+        content_layout.setContentsMargins(16, 16, 16, 16)
+        content_layout.setSpacing(12)
         
         # Content header
         self.content_title = SubtitleLabel("Select a task to view details")
+        self.content_title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        self.content_title.setWordWrap(True)
+        
         self.content_description = BodyLabel("Choose a task from the list to execute, edit, or view details.")
+        self.content_description.setWordWrap(True)
         
         # Task details area
         self.task_details = ScrollArea()
         self.task_details.setWidgetResizable(True)
+        self.task_details.setWidgetResizable(True)
+        self.task_details.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.task_details.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.task_details_widget = QWidget()
         self.task_details_layout = QVBoxLayout(self.task_details_widget)
+        self.task_details_layout.setContentsMargins(8, 8, 8, 8)
         self.task_details.setWidget(self.task_details_widget)
         
         # Execution log
         self.execution_log = QTextEdit()
         self.execution_log.setPlaceholderText("Task execution results will appear here...")
-        self.execution_log.setMaximumHeight(200)
+        self.execution_log.setMaximumHeight(180)
+        self.execution_log.setMinimumHeight(120)
         self.execution_log.setReadOnly(True)
         
         content_layout.addWidget(self.content_title)
@@ -356,13 +409,9 @@ class TasksTab(QWidget):
         content_layout.addWidget(QLabel("Execution Log:"))
         content_layout.addWidget(self.execution_log)
         
-        # Add to main layout
-        main_layout.addWidget(sidebar)
-        main_layout.addWidget(content_area)
-        
-        # Set stretch factors
-        main_layout.setStretchFactor(sidebar, 0)
-        main_layout.setStretchFactor(content_area, 1)
+        # Add to main layout with responsive sizing
+        main_layout.addWidget(sidebar, 0)  # Sidebar takes minimal space
+        main_layout.addWidget(content_area, 1)  # Content takes remaining space
     
     def _apply_styles(self):
         self.setStyleSheet(f"""
@@ -388,29 +437,15 @@ class TasksTab(QWidget):
     def _load_tasks(self):
         """Load tasks from database."""
         try:
-            # For now, create some example tasks
-            # In a real implementation, this would load from a database
-            self.tasks = [
-                {
-                    'id': 'task_001',
-                    'title': 'Open Development Environment',
-                    'description': 'Open Visual Studio Code and create a new Python project',
-                    'status': 'pending',
-                    'created_at': datetime.now().isoformat(),
-                    'updated_at': datetime.now().isoformat()
-                },
-                {
-                    'id': 'task_002', 
-                    'title': 'Music Setup',
-                    'description': 'Open Spotify and play my workout playlist',
-                    'status': 'pending',
-                    'created_at': datetime.now().isoformat(),
-                    'updated_at': datetime.now().isoformat()
-                }
-            ]
+            # Load tasks from the function executor's tasks file
+            from core.function_executor import executor as function_executor
+            self.tasks = function_executor.tasks.copy()
             self._refresh_task_list()
+            print(f"[TasksTab] Loaded {len(self.tasks)} tasks from database")
         except Exception as e:
             print(f"[TasksTab] Error loading tasks: {e}")
+            self.tasks = []
+            self._refresh_task_list()
     
     def _refresh_task_list(self):
         """Refresh the task list display."""
@@ -423,14 +458,29 @@ class TasksTab(QWidget):
             task_widget.delete_requested.connect(self._delete_task)
             task_widget.edit_requested.connect(self._edit_task)
             
-            item.setSizeHint(task_widget.sizeHint())
+            # Calculate proper size hint based on content
+            task_widget.adjustSize()
+            size_hint = task_widget.sizeHint()
+            # Ensure minimum height but allow expansion for long content
+            size_hint.setHeight(max(size_hint.height(), 120))
+            # Limit maximum width to prevent overflow
+            size_hint.setWidth(min(size_hint.width(), self.task_list.width() - 20))
+            
+            item.setSizeHint(size_hint)
             self.task_list.setItemWidget(item, task_widget)
     
     def _create_task(self):
         """Create a new task."""
-        dialog = TaskDialog(self)
-        dialog.task_saved.connect(self._save_task)
-        dialog.show()
+        print("[TasksTab] Add Task button clicked!")  # Debug print
+        try:
+            dialog = TaskDialog(self)
+            dialog.task_saved.connect(self._save_task)
+            result = dialog.exec()  # Use exec() for modal dialog
+            print(f"[TasksTab] Dialog closed with result: {result}")
+        except Exception as e:
+            print(f"[TasksTab] Error creating task dialog: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _edit_task(self, task_id):
         """Edit an existing task."""
@@ -438,28 +488,48 @@ class TasksTab(QWidget):
         if task:
             dialog = TaskDialog(self, task)
             dialog.task_saved.connect(self._save_task)
-            dialog.show()
+            dialog.exec()  # Use exec() for modal dialog
     
     def _save_task(self, task_data):
         """Save a task (create or update)."""
-        existing_index = next((i for i, t in enumerate(self.tasks) if t['id'] == task_data['id']), None)
-        
-        if existing_index is not None:
-            self.tasks[existing_index] = task_data
-        else:
-            self.tasks.append(task_data)
-        
-        self._refresh_task_list()
-        
-        InfoBar.success(
-            title="Task Saved",
-            content=f"Task '{task_data['title']}' has been saved successfully.",
-            orient=Qt.Orientation.Horizontal,
-            isClosable=True,
-            position=InfoBarPosition.TOP,
-            duration=3000,
-            parent=self
-        )
+        try:
+            # Save to function executor's tasks
+            from core.function_executor import executor as function_executor
+            
+            existing_index = next((i for i, t in enumerate(function_executor.tasks) if t['id'] == task_data['id']), None)
+            
+            if existing_index is not None:
+                function_executor.tasks[existing_index] = task_data
+            else:
+                function_executor.tasks.append(task_data)
+            
+            # Save to file
+            function_executor._save_tasks()
+            
+            # Update local copy and refresh
+            self.tasks = function_executor.tasks.copy()
+            self._refresh_task_list()
+            
+            InfoBar.success(
+                title="Task Saved",
+                content=f"Task '{task_data['title']}' has been saved successfully.",
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
+        except Exception as e:
+            print(f"[TasksTab] Error saving task: {e}")
+            InfoBar.error(
+                title="Save Failed",
+                content=f"Failed to save task: {str(e)}",
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=5000,
+                parent=self
+            )
     
     def _delete_task(self, task_id):
         """Delete a task."""
@@ -470,18 +540,37 @@ class TasksTab(QWidget):
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            self.tasks = [t for t in self.tasks if t['id'] != task_id]
-            self._refresh_task_list()
-            
-            InfoBar.success(
-                title="Task Deleted",
-                content="The task has been deleted successfully.",
-                orient=Qt.Orientation.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
+            try:
+                # Delete from function executor's tasks
+                from core.function_executor import executor as function_executor
+                
+                function_executor.tasks = [t for t in function_executor.tasks if t['id'] != task_id]
+                function_executor._save_tasks()
+                
+                # Update local copy and refresh
+                self.tasks = function_executor.tasks.copy()
+                self._refresh_task_list()
+                
+                InfoBar.success(
+                    title="Task Deleted",
+                    content="The task has been deleted successfully.",
+                    orient=Qt.Orientation.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self
+                )
+            except Exception as e:
+                print(f"[TasksTab] Error deleting task: {e}")
+                InfoBar.error(
+                    title="Delete Failed",
+                    content=f"Failed to delete task: {str(e)}",
+                    orient=Qt.Orientation.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=5000,
+                    parent=self
+                )
     
     def _execute_task(self, task_id):
         """Execute a task."""
