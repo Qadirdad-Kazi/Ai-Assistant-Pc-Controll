@@ -97,6 +97,35 @@ def visual_agent(task: str):
     """
     pass
 
+def create_task(title: str, description: str):
+    """
+    Create a new task with a title and plain English description.
+    
+    Args:
+        title: Brief title for the task
+        description: Detailed description of what to do in plain English
+    """
+    pass
+
+def list_tasks(status: str = None):
+    """
+    List all tasks, optionally filtered by status.
+    
+    Args:
+        status: Filter by status ('pending', 'completed', 'failed'). If None, shows all tasks.
+    """
+    pass
+
+def execute_task(task_id: str = None, description: str = None):
+    """
+    Execute a task either by ID or by providing a description.
+    
+    Args:
+        task_id: ID of an existing task to execute
+        description: Plain English description of what to execute (used if task_id not provided)
+    """
+    pass
+
 # Pre-compute tool schemas
 TOOLS = [
     get_json_schema(pc_control),
@@ -105,12 +134,16 @@ TOOLS = [
     get_json_schema(nonthinking),
     get_json_schema(scaffold_website),
     get_json_schema(set_call_directive),
-    get_json_schema(visual_agent)
+    get_json_schema(visual_agent),
+    get_json_schema(create_task),
+    get_json_schema(list_tasks),
+    get_json_schema(execute_task)
 ]
 
 # All valid function names
 VALID_FUNCTIONS = {
-    "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website", "set_call_directive", "visual_agent"
+    "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website", 
+    "set_call_directive", "visual_agent", "create_task", "list_tasks", "execute_task"
 }
 
 
@@ -210,6 +243,10 @@ class FunctionGemmaRouter:
         - play_music(query, service): Search and play music. [service: 'youtube', 'spotify']
         - scaffold_website(prompt, framework): Build an entire website/app. [framework: 'react', 'nextjs', 'html', 'python']
         - set_call_directive(caller_name, instructions): Delegate an upcoming phone call.
+        - visual_agent(task): Use visual AI to find and click elements on screen.
+        - create_task(title, description): Create a new task with plain English description.
+        - list_tasks(status): List tasks, optionally filtered by status.
+        - execute_task(task_id, description): Execute a task by ID or description.
         - thinking(prompt): Multi-step reasoning, math, code, or complexity.
         - nonthinking(prompt): Simple greetings, chitchat, or direct facts.
 
