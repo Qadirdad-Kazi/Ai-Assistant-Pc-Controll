@@ -238,7 +238,18 @@ class PCController:
         if app_path:
             try:
                 print(f"[PC Control] Found app via dynamic discovery: {app_path}")
+                print(f"[PC Control] Launching: {app_path}")
+                
+                # Show visual feedback that we're working
+                if pyautogui:
+                    screen_width, screen_height = pyautogui.size()
+                    pyautogui.moveTo(screen_width // 2, screen_height // 2, duration=0.5)
+                    time.sleep(0.5)
+                
                 os.startfile(app_path)
+                print(f"[PC Control] ✓ App launched successfully!")
+                time.sleep(2)  # Wait for app to actually open
+                
                 return {"success": True, "message": f"I have opened {app_name} using dynamic discovery."}
             except Exception as e:
                 print(f"[PC Control] Dynamic discovery found app but failed to launch: {e}")
@@ -265,26 +276,36 @@ class PCController:
     def _windows_search_launch(self, app_name: str) -> Dict[str, Any]:
         """Launch app using Windows Search - works like a human would."""
         try:
+            print(f"[PC Control] Starting Windows Search for: '{app_name}'")
+            
             # Visually move the cursor to prove control
             screen_width, screen_height = pyautogui.size()
             pyautogui.moveTo(screen_width / 2, screen_height / 2, duration=0.5, tween=pyautogui.easeInOutQuad)
+            print(f"[PC Control] ✓ Mouse moved to center")
             
             # Use press instead of hotkey (more reliable on Windows 11)
             pyautogui.press("win")
-            time.sleep(0.8)
+            print(f"[PC Control] ✓ Pressed Windows key")
+            time.sleep(1.0)  # Wait for search to appear
             
             # Type out the app name character by character
             pyautogui.write(app_name, interval=0.1)
-            time.sleep(1.5) # Wait for search results
+            print(f"[PC Control] ✓ Typed: '{app_name}'")
+            time.sleep(2.0) # Wait for search results to load
             
+            # Press Enter to launch
             pyautogui.press("enter")
-            time.sleep(2)
+            print(f"[PC Control] ✓ Pressed Enter to launch")
+            time.sleep(3.0)  # Wait for app to fully open
+            
+            print(f"[PC Control] ✓ App should now be open!")
             
             return {
                 "success": True, 
                 "message": f"I used Windows Search to find and open '{app_name}'."
             }
         except Exception as e:
+            print(f"[PC Control] ✗ Windows Search failed: {str(e)}")
             return {"success": False, "message": f"Windows Search launch failed: {str(e)}"}
 
     def _close_app(self, app_name: str) -> Dict[str, Any]:
