@@ -67,7 +67,7 @@ class VisionAgent:
               * Click on the Gmail profile
               * If successful, report completion
             
-            - If you can't find something, say: "I can see the screen but I'm having trouble finding [element]. Could you describe where it is or help me locate it?"
+            - If you can't find something, say: "I can see the screen but I'm having trouble finding the element."
             
             Output format:
             Always return a JSON object with these keys:
@@ -115,6 +115,10 @@ class VisionAgent:
                 elif "describe" in result.lower():
                     action = "describe"
                     thought = "I can see the screen and will describe what I observe."
+                    message = self._describe_screen()
+                else:
+                    thought = "I analyzed the screen but I'm not sure how to complete this task. I can see: " + self._describe_screen()
+                    followup = True
                 
                 # Execute the action if identified
                 if action == "click":
@@ -123,7 +127,7 @@ class VisionAgent:
                         thought = "I found the element and clicked on it."
                         message = f"Successfully clicked {element_desc}."
                     else:
-                        thought = "I can see the screen but couldn't find the {element_desc}."
+                        thought = "I can see the screen but couldn't find the " + element_desc + "."
                         message = f"Couldn't find {element_desc} on screen. Could you help me locate it?"
                         followup = True
                 elif action == "type":
