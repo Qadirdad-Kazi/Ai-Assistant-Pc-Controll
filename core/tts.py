@@ -1,22 +1,23 @@
 """
 TTS (Text-to-Speech) module using Piper TTS executable.
 Provides streaming sentence-based synthesis with interrupt support.
-Uses pre-built Piper Windows executable for full Windows compatibility.
 """
 
 import io
 import os
-import re
+import os
 import queue
-import shutil
-import subprocess
 import threading
+import time
+import json
+import re
+import io
+import base64
 import zipfile
-import requests
 from pathlib import Path
-
-import numpy as np
-import sounddevice as sd
+from typing import Dict, Any, Optional
+from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
+import requests
 
 # ANSI colors for console output
 GRAY = "\033[90m"
@@ -109,31 +110,21 @@ class PiperTTS:
             self.model_path = None
         """Download and extract Piper Windows executable."""
         piper_exe_dir = self.piper_dir / "piper_windows"
-        piper_exe = piper_exe_dir / "piper.exe"
-        
-        if piper_exe.exists():
-            print(f"{GREEN}[TTS] [OK] Piper executable found{RESET}")
-            return str(piper_exe)
-        
-        print(f"{CYAN}[TTS] Downloading Piper executable...{RESET}")
-        self.piper_dir.mkdir(parents=True, exist_ok=True)
-        
         try:
-            r = http_session.get(self.PIPER_RELEASE_URL, stream=True)
-            r.raise_for_status()
+            # Create piper directory if it doesn't exist
+            self.piper_dir.mkdir(parents=True, exist_ok=True)
+            print(f"{CYAN}[TTS] Downloading Piper executable...{RESET}")
             
-            # Download to memory and extract
-            zip_data = io.BytesIO()
-            total_size = int(r.headers.get('content-length', 0))
-            downloaded = 0
+            # Download URL for Windows
+            piper_url = f"https://github.com/rhasspy/piper/releases/download/{PIPER_VERSION}/piper_windows_amd64.zip"
             
-            for chunk in r.iter_content(chunk_size=8192):
-                zip_data.write(chunk)
-                downloaded += len(chunk)
-                if total_size > 0:
-                    pct = (downloaded / total_size) * 100
+            # Download to memory
+            response = requests.get(piper_url, timeout=30)
+            response.raise_for_status()
             
             if response.status_code == 200:
+                # Extract to memory
+                import zipfile
                 with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
                     zip_ref.extractall(self.piper_dir)
                     print(f"{GREEN}[TTS] ✓ Piper executable downloaded and extracted{RESET}")
@@ -143,7 +134,36 @@ class PiperTTS:
                 return None
                 
         except Exception as e:
-            print(f"{GRAY}[TTS] Failed to download Piper: {e}{RESET}")
+            print(f"{YELLOW}[TTS] Failed to download Piper: {e}{RESET}")
+            return None
+    
+    def _download_piper_executable(self):
+        """Download and extract Piper Windows executable."""
+        try:
+            # Create piper directory if it doesn't exist
+            self.piper_dir.mkdir(parents=True, exist_ok=True)
+            print(f"{CYAN}[TTS] Downloading Piper executable...{RESET}")
+            
+            # Download URL for Windows
+            piper_url = f"https://github.com/rhasspy/piper/releases/download/{PIPER_VERSION}/piper_windows_amd64.zip"
+            
+            # Download to memory
+            response = requests.get(piper_url, timeout=30)
+            response.raise_for_status()
+            
+            if response.status_code == 200:
+                # Extract to memory
+                import zipfile
+                with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
+                    zip_ref.extractall(self.piper_dir)
+                    print(f"{GREEN}[TTS] ✓ Piper executable downloaded and extracted{RESET}")
+                    return str(self.piper_dir / "piper_windows" / "piper.exe")
+            else:
+                print(f"{GRAY}[TTS] Failed to download Piper. Status: {response.status_code}{RESET}")
+                return None
+                
+        except Exception as e:
+            print(f"{YELLOW}[TTS] Failed to download Piper: {e}{RESET}")
             return None
     
     def _download_model(self, voice_key: str):

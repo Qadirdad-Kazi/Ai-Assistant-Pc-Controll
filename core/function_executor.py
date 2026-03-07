@@ -2,13 +2,13 @@
 Simplified Function Executor for Wolf AI.
 """
 
-from typing import Dict, Any
+from core.llm import route_query, should_bypass_router, http_session
 from core.pc_control import pc_controller
-from core.dev_agent import dev_agent
 from core.vision_agent import vision_agent
 import json
 import re
 from datetime import datetime
+from typing import Dict, Any
 
 class FunctionExecutor:
     """Central executor for simplified core functions."""

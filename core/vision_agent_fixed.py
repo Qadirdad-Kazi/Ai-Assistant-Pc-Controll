@@ -33,9 +33,10 @@ class VisionAgent:
             screenshot = pyautogui.screenshot()
             
             # Convert to base64
-            buffered = io.BytesIO()
-            screenshot.save(buffered, format="PNG")
-            img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            img_byte_arr = io.BytesIO()
+            screenshot.save(img_byte_arr, format='PNG')
+            img_byte_arr.seek(0)
+            img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode()
             
             return img_base64
         except Exception as e:
@@ -77,7 +78,7 @@ class VisionAgent:
               * Click on the Gmail profile
               * If successful, report completion
             
-            - If you can't find something, say: "I can see the screen but I'm having trouble finding the element. Could you describe where it is or help me locate it?"
+            - If you can't find something, say: "I can see the screen but I'm having trouble finding [element]. Could you describe where it is or help me locate it?"
             
             Output format:
             Always return a JSON object with these keys:
@@ -159,7 +160,7 @@ class VisionAgent:
                 "Identify the coordinates (in percentages from 0.0 to 1.0 where 0,0 is top-left and 1,1 is bottom-right) "
                 "of the exact center of this element.\n"
                 "Output ONLY a valid JSON object in this format, and absolutely nothing else: "
-                "{\"action\": \"click\", \"x_percent\": 0.5, \"y_percent\": 0.5, \"thought\": \"I see the element here.\"}"
+                "{\"action\": \"click\", \"x_percent\": 0.5, \"y_percent\": 0.5, \"thought\": \"I see: element here.\"}"
             )
             
             payload = {
@@ -170,19 +171,12 @@ class VisionAgent:
                 "format": "json"
             }
             
-            response = requests.post(self.api_url, json=payload, timeout=60)
+            response = requests.post(self.api_url, json=payload, timeout=30).json()
             response.raise_for_status()
             ai_time = time.time() - start_time
             
             result_json = response.json().get("response", "{}")
-            print(f"{GRAY}[VisionAgent] ⏳ Analyzing screen with {self.model_name}...{RESET}")
-            start_time = time.time()
-            response = requests.post(self.api_url, json=payload, timeout=60)
-            response.raise_for_status()
-            ai_time = time.time() - start_time
-            
-            result_json = response.json().get("response", "{}")
-            print(f"{GREEN}[VisionAgent] ✓ AI analysis completed in {ai_time:.2f}s.{RESET}")
+            print(f"[VisionAgent] ✓ AI analysis completed in {ai_time:.2f}s.{RESET}")
             
             # Step 3: Parse response and execute
             try:
@@ -201,8 +195,6 @@ class VisionAgent:
                 target_x = max(0, min(screen_width - 1, target_x))
                 target_y = max(0, min(screen_height - 1, target_y))
                 
-                print(f"{GREEN}[VisionAgent] 🖱️ Moving mouse to coordinates: ({target_x}, {target_y}){RESET}")
-                
                 # Smooth move and click
                 pyautogui.moveTo(target_x, target_y, duration=0.8, tween=pyautogui.easeInOutQuad)
                 pyautogui.click()
@@ -213,10 +205,10 @@ class VisionAgent:
                     "message": f"I used my vision to locate the target and clicked on it. Thought: {thought}",
                     "data": {"x": target_x, "y": target_y, "screen_size": [screen_width, screen_height]}
                     }
-                
+                }
             except (json.JSONDecodeError, ValueError) as e:
                 print(f"{YELLOW}[VisionAgent] AI failed to output valid JSON coordinates: {result_json}{RESET}")
-                return {"success": False, "message": "Failed to visually locate the target on the screen."}
+                return {"success": False, "message": "Failed to visually locate the target on screen."}
                 
         except Exception as e:
             return {"success": False, "message": f"Error clicking element: {str(e)}"}
@@ -232,6 +224,3 @@ class VisionAgent:
     def _describe_screen(self) -> str:
         # TO DO: Implement screen description functionality
         pass
-
-# Global instance
-vision_agent = VisionAgent()
