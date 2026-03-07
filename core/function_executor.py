@@ -5,7 +5,6 @@ Simplified Function Executor for Wolf AI.
 from typing import Dict, Any
 from core.pc_control import pc_controller
 from core.dev_agent import dev_agent
-from core.receptionist import receptionist
 from core.vision_agent import vision_agent
 import json
 import re
@@ -83,6 +82,14 @@ class FunctionExecutor:
             if re.search(pattern, prompt_lower):
                 print(f"[FunctionExecutor] Found app opening pattern: {pattern}")
                 return True
+        
+        # Check for UI-related terms that indicate complex commands
+        ui_terms = ["select", "choose", "profile", "search", "find", "click", "type", "navigate", "scroll", "wait"]
+        
+        # If any UI term is found, it's likely a complex command
+        if any(term in prompt_lower for term in ui_terms):
+            print(f"[FunctionExecutor] Detected UI-related command: '{prompt}'")
+            return True
         
         # Check for app names in the prompt
         app_keywords = [

@@ -75,7 +75,140 @@ class PCController:
         except Exception as e:
             return {"success": False, "message": f"Failed to execute {action}: {e}"}
 
-    def _open_app(self, app_name: str) -> Dict[str, Any]:
+    def _open_app_intelligent(self, target: str) -> Dict[str, Any]:
+        """Intelligently open an app with complex commands like 'select profile' or 'search for gmail'."""
+        print(f"[PC Control] Intelligent app opening: '{target}'")
+        
+        # Parse the command to understand what the user wants
+        target_lower = target.lower()
+        
+        # Check for complex patterns
+        if "select any profile" in target_lower and "gmail" in target_lower:
+            # Open Chrome and select Gmail profile
+            return self._open_chrome_with_profile("gmail")
+        elif "search for" in target_lower and ("gmail" in target_lower or "email" in target_lower):
+            # Open Chrome and search for Gmail
+            return self._open_chrome_and_search("gmail")
+        elif "profile" in target_lower:
+            # Open Chrome with profile selection
+            return self._open_chrome_with_profile_selection()
+        else:
+            # Simple app opening - use existing logic
+            return self._open_app(target)
+    
+    def _open_chrome_with_profile(self, profile_type: str) -> Dict[str, Any]:
+        """Open Chrome and navigate to a specific profile."""
+        try:
+            # Open Chrome first
+            result = self._open_app("chrome")
+            if result.get("success"):
+                # Wait for Chrome to load
+                time.sleep(2)
+                
+                # Try to find and click the profile
+                if pyautogui:
+                    # Look for profile element
+                    profile_element = None
+                    for i in range(10):  # Search for 10 seconds max
+                        try:
+                            profile_element = pyautogui.locateOnScreen(f"*{profile_type}* profile", confidence=0.8)
+                            if profile_element:
+                                print(f"[PC Control] Found {profile_type} profile element")
+                                pyautogui.moveTo(profile_element[0], profile_element[1])
+                                pyautogui.click()
+                                time.sleep(1)
+                                break
+                        except:
+                            continue
+                    
+                    if profile_element:
+                        return {"success": True, "message": f"Opened Chrome and selected {profile_type} profile."}
+                    else:
+                        return {"success": True, "message": "Opened Chrome but couldn't find profile element."}
+                else:
+                    return {"success": True, "message": "Opened Chrome but pyautogui not available."}
+            else:
+                return result
+                
+        except Exception as e:
+            return {"success": False, "message": f"Error opening Chrome with profile: {str(e)}"}
+    
+    def _open_chrome_and_search(self, search_type: str) -> Dict[str, Any]:
+        """Open Chrome and search for Gmail or email."""
+        try:
+            # Open Chrome first
+            result = self._open_app("chrome")
+            if result.get("success"):
+                # Wait for Chrome to load
+                time.sleep(2)
+                
+                # Navigate to search and execute search
+                if pyautogui:
+                    # Click on address bar
+                    try:
+                        address_bar = pyautogui.locateOnScreen("address bar", confidence=0.8)
+                        if address_bar:
+                            pyautogui.click(address_bar[0], address_bar[1])
+                            time.sleep(0.5)
+                            pyautogui.write(f"{search_type} for gmail")
+                            time.sleep(1)
+                            pyautogui.press("enter")
+                            time.sleep(2)
+                            return {"success": True, "message": f"Opened Chrome and searched for {search_type}."}
+                    except Exception as e:
+                        return {"success": True, "message": f"Opened Chrome but search failed: {str(e)}"}
+                else:
+                    return {"success": True, "message": "Opened Chrome but pyautogui not available for search."}
+            else:
+                return result
+                
+        except Exception as e:
+            return {"success": False, "message": f"Error opening Chrome for search: {str(e)}"}
+    
+    def _open_chrome_with_profile_selection(self) -> Dict[str, Any]:
+        """Open Chrome and show profile selection dialog."""
+        try:
+            # Open Chrome first
+            result = self._open_app("chrome")
+            if result.get("success"):
+                # Wait for Chrome to load
+                time.sleep(2)
+                
+                if pyautogui:
+                    # Look for profile icon
+                    try:
+                        profile_button = pyautogui.locateOnScreen("profile", confidence=0.8)
+                        if profile_button:
+                            pyautogui.moveTo(profile_button[0], profile_button[1])
+                            pyautogui.click()
+                            time.sleep(1)
+                            
+                            # Look for profile options
+                            time.sleep(1)
+                            profile_options = pyautogui.locateAllOnScreen()
+                            
+                            # Find Gmail profile option
+                            gmail_profile = None
+                            for option in profile_options:
+                                if "gmail" in option.text.lower():
+                                    gmail_profile = option
+                                    break
+                            
+                            if gmail_profile:
+                                pyautogui.moveTo(gmail_profile[0], gmail_profile[1])
+                                pyautogui.click()
+                                return {"success": True, "message": "Opened Chrome and selected Gmail profile."}
+                            else:
+                                return {"success": True, "message": "Opened Chrome but couldn't find Gmail profile option."}
+                    except Exception as e:
+                        return {"success": True, "message": f"Opened Chrome but profile selection failed: {str(e)}"}
+                else:
+                    return {"success": True, "message": "Opened Chrome but pyautogui not available for profile selection."}
+            else:
+                return result
+                
+        except Exception as e:
+            return {"success": False, "message": f"Error opening Chrome with profile selection: {str(e)}"}
         if not app_name:
             return {"success": False, "message": "No app specified to open."}
             

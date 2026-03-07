@@ -132,31 +132,18 @@ class PiperTTS:
                 downloaded += len(chunk)
                 if total_size > 0:
                     pct = (downloaded / total_size) * 100
-                    print(f"\r{CYAN}[TTS] Downloading... {pct:.1f}%{RESET}", end="", flush=True)
             
-            print()  # New line after download
-            
-            # Extract zip
-            zip_data.seek(0)
-            with zipfile.ZipFile(zip_data, 'r') as zf:
-                # Extract to piper_windows directory
-                piper_exe_dir.mkdir(parents=True, exist_ok=True)
-                for member in zf.namelist():
-                    # Extract files, stripping the top-level piper directory
-                    if member.startswith("piper/"):
-                        target_path = piper_exe_dir / member[6:]  # Remove "piper/" prefix
-                        if member.endswith('/'):
-                            target_path.mkdir(parents=True, exist_ok=True)
-                        else:
-                            target_path.parent.mkdir(parents=True, exist_ok=True)
-                            with zf.open(member) as src, open(target_path, 'wb') as dst:
-                                dst.write(src.read())
-            
-            print(f"{GREEN}[TTS] ✓ Piper executable extracted!{RESET}")
-            return str(piper_exe)
-            
+            if response.status_code == 200:
+                with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
+                    zip_ref.extractall(self.piper_dir)
+                    print(f"{GREEN}[TTS] ✓ Piper executable downloaded and extracted{RESET}")
+                    return str(self.piper_dir / "piper_windows" / "piper.exe")
+            else:
+                print(f"{GRAY}[TTS] Failed to download Piper. Status: {response.status_code}{RESET}")
+                return None
+                
         except Exception as e:
-            print(f"{YELLOW}[TTS] Failed to download Piper executable: {e}{RESET}")
+            print(f"{GRAY}[TTS] Failed to download Piper: {e}{RESET}")
             return None
     
     def _download_model(self, voice_key: str):
