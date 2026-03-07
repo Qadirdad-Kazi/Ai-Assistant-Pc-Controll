@@ -5,6 +5,7 @@ Supports 9 functions: 6 actions, 1 context, 2 passthrough.
 
 import os
 import warnings
+import requests
 
 # Suppress transformers warnings before importing
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
