@@ -352,6 +352,15 @@ class VoiceAssistant(QObject):
             sentence_buffer = SentenceBuffer()
             full_response = ""
             
+            # Define completion callback for TTS
+            def on_tts_complete():
+                print(f"{CYAN}[VoiceAssistant] TTS finished, activating conversation mode.{RESET}")
+                if self.stt_listener:
+                    self.stt_listener.enter_conversation_mode()
+            
+            # Set completion callback
+            tts.set_completion_callback(on_tts_complete)
+            
             # Stream response
             with http_session.post(f"{OLLAMA_URL}/chat", json=payload, stream=True, timeout=60) as r:
                 r.raise_for_status()
@@ -389,9 +398,9 @@ class VoiceAssistant(QObject):
             
             print(f"{GREEN}[VoiceAssistant] Response generated.{RESET}")
             self.processing_finished.emit()
-            # Keep mic open for follow-up without re-saying the wake word
-            if self.stt_listener:
-                self.stt_listener.enter_conversation_mode()
+            
+            # Wait for TTS to complete before enabling conversation mode
+            tts.wait_for_completion()
             
         except Exception as e:
             print(f"{GRAY}[VoiceAssistant] Error streaming response: {e}{RESET}")

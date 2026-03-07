@@ -8,6 +8,7 @@ from core.dev_agent import dev_agent
 from core.receptionist import receptionist
 from core.vision_agent import vision_agent
 import json
+import re
 from datetime import datetime
 
 class FunctionExecutor:
@@ -38,11 +39,88 @@ class FunctionExecutor:
             elif func_name == "execute_task":
                 return self._execute_task(params)
             elif func_name in ("thinking", "nonthinking"):
-                return {"success": True, "message": "Direct LLM response."}
+                prompt = params.get("prompt", "")
+                # Check if this is a capability question
+                if self._is_capability_question(prompt):
+                    return self._capability_overview()
+                # Check if this is an app opening command that was misrouted
+                elif self._is_app_opening_command(prompt):
+                    print(f"[FunctionExecutor] Detected misrouted app command: '{prompt}'")
+                    return self._pc_control({"action": "open_app", "target": prompt})
+                else:
+                    return {"success": True, "message": "Direct LLM response."}
             else:
                 return {"success": False, "message": f"Unknown function: {func_name}"}
         except Exception as e:
             return {"success": False, "message": f"Execution error: {str(e)}"}
+    
+    def _is_capability_question(self, prompt: str) -> bool:
+        """Check if the prompt is asking about capabilities."""
+        capability_keywords = [
+            "tell me about yourself", "what can you do", "who are you", "what are you",
+            "your capabilities", "what do you do", "help", "abilities", "features",
+            "what are your features", "introduction", "introduce yourself"
+        ]
+        
+        prompt_lower = prompt.lower()
+        return any(keyword in prompt_lower for keyword in capability_keywords)
+    
+    def _is_app_opening_command(self, prompt: str) -> bool:
+        """Check if prompt is trying to open an app but was misrouted."""
+        # More aggressive detection for app opening commands
+        prompt_lower = prompt.lower()
+        
+        # Direct app opening patterns
+        open_patterns = [
+            r"open\s+(\w+)",
+            r"launch\s+(\w+)", 
+            r"start\s+(\w+)",
+            r"run\s+(\w+)"
+        ]
+        
+        # Check for direct patterns first
+        for pattern in open_patterns:
+            if re.search(pattern, prompt_lower):
+                print(f"[FunctionExecutor] Found app opening pattern: {pattern}")
+                return True
+        
+        # Check for app names in the prompt
+        app_keywords = [
+            "chrome", "firefox", "edge", "safari", "visual studio", "vs code", 
+            "visualstudio", "notepad", "word", "excel", "powerpoint", 
+            "spotify", "vlc", "telegram", "discord", "slack"
+        ]
+        
+        # If any app name is mentioned, treat as app command
+        if any(app in prompt_lower for app in app_keywords):
+            print(f"[FunctionExecutor] Found app keyword in: '{prompt}'")
+            return True
+            
+        return False
+    
+    def _capability_overview(self) -> Dict[str, Any]:
+        """Return an overview of Wolf AI's capabilities."""
+        capabilities = """I'm Wolf AI, your voice assistant! I can control your computer, manage tasks, play music, and help with complex problems.
+
+Here's what I can do:
+• Open apps like Visual Studio, Chrome, or Spotify
+• Control volume, take screenshots, lock your screen
+• Create and manage tasks with plain English descriptions
+• Play music on YouTube or Spotify
+• Find and click elements on your screen using visual AI
+• Solve complex problems through reasoning
+• Build websites and applications
+• Have natural conversations
+
+Just say "Hey Wolf" followed by any command. For example: "Hey Wolf, open Visual Studio" or "Hey Wolf, what can you do?"
+
+Say "stop" or "quit" at any time to interrupt me."""
+        
+        return {
+            "success": True,
+            "message": capabilities.strip(),
+            "data": {"type": "capability_overview"}
+        }
 
     def _pc_control(self, params: Dict):
         """Handle system level commands."""
@@ -146,7 +224,7 @@ class FunctionExecutor:
         }
 
     def _execute_task(self, params: Dict):
-        """Execute a task by ID or description."""
+        """Execute a task using AI intelligence to understand and complete it."""
         from core.llm import route_query
         
         task_id = params.get("task_id")
@@ -154,17 +232,21 @@ class FunctionExecutor:
         
         if task_id:
             # Find task by ID
-            task = next((t for t in self.tasks if t.get("id") == task_id), None)
+            task = next((t for t in self.tasks if t.get('id') == task_id), None)
             if not task:
                 return {"success": False, "message": f"Task with ID '{task_id}' not found."}
-            description = task.get("description", "")
+            description = task.get('description', '')
         
         if not description:
             return {"success": False, "message": "No task description provided."}
         
         try:
-            # Route the task description through the existing system
+            print(f"[FunctionExecutor] Executing task with AI: '{description}'")
+            
+            # Use AI to understand the task and break it down into steps
             func_name, route_params = route_query(description)
+            
+            print(f"[FunctionExecutor] AI routed task to: {func_name} with params: {route_params}")
             
             # Execute the routed function
             result = self.execute(func_name, route_params)
@@ -172,26 +254,38 @@ class FunctionExecutor:
             # Update task status if we have a task_id
             if task_id:
                 for task in self.tasks:
-                    if task.get("id") == task_id:
+                    if task.get('id') == task_id:
                         task["status"] = "completed" if result.get("success") else "failed"
                         task["updated_at"] = datetime.now().isoformat()
                         break
                 self._save_tasks()
             
+            # Add AI reasoning to the result
             if result.get("success"):
                 return {
                     "success": True,
-                    "message": f"Task executed successfully. {result.get('message', '')}",
-                    "data": {"executed_function": func_name, "result": result}
+                    "message": f"Task completed successfully! I understood: '{description}' and executed: {func_name}. {result.get('message', '')}",
+                    "data": {
+                        "original_task": description,
+                        "ai_reasoning": f"Analyzed task and determined to use {func_name}",
+                        "executed_function": func_name,
+                        "result": result
+                    }
                 }
             else:
                 return {
                     "success": False,
-                    "message": f"Task execution failed: {result.get('message', 'Unknown error')}",
-                    "data": {"executed_function": func_name, "result": result}
+                    "message": f"Task execution failed. I tried: {func_name} but: {result.get('message', 'Unknown error')}",
+                    "data": {
+                        "original_task": description,
+                        "ai_reasoning": f"Analyzed task and attempted to use {func_name}",
+                        "executed_function": func_name,
+                        "result": result
+                    }
                 }
                 
         except Exception as e:
+            print(f"[FunctionExecutor] Error executing task: {e}")
             return {"success": False, "message": f"Error executing task: {str(e)}"}
 
 # Global instance

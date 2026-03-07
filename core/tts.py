@@ -82,14 +82,17 @@ class PiperTTS:
     PIPER_VERSION = "2023.11.14-2"
     PIPER_RELEASE_URL = f"https://github.com/rhasspy/piper/releases/download/{PIPER_VERSION}/piper_windows_amd64.zip"
     
-    def __init__(self):
-        self.enabled = False
-        self.piper_exe = None
+    def __init__(self, voice_key: str = "alba"):
+        """Initialize TTS with female voice by default."""
+        self.voice_key = voice_key
         self.model_path = None
+        self.enabled = True
+        self.current_process = None
         self.speech_queue = queue.Queue()
-        self.worker_thread = None
-        self.running = False
         self.interrupt_event = threading.Event()
+        self.completion_callback = None  # Callback for when speech finishes
+        self._load_voice_model()
+        self._start_worker()
         self.piper_dir = Path.home() / ".local" / "share" / "piper"
         self.models_dir = self.piper_dir / "voices"
         self.current_process = None
@@ -335,10 +338,17 @@ class PiperTTS:
             except:
                 pass
             
+    def set_completion_callback(self, callback):
+        """Set callback to be called when speech finishes."""
+        self.completion_callback = callback
+    
     def wait_for_completion(self):
         """Wait for all queued speech to finish."""
         if self.enabled:
             self.speech_queue.join()
+            # Call completion callback if set
+            if self.completion_callback:
+                self.completion_callback()
     
     def update_voice(self, voice_key: str):
         """Switch to a different voice model."""

@@ -251,19 +251,30 @@ class FunctionGemmaRouter:
 
         IMPORTANT ROUTING RULES:
         1. ANY request to open/close applications, control volume, shutdown, restart, or system control -> use pc_control
-        2. App names like "visual studio", "chrome", "spotify", "notepad" -> use pc_control with action: 'open_app'
+        2. App names like "visual studio", "chrome", "spotify", "notepad", "vs code", "visualstudio" -> use pc_control with action: 'open_app'
         3. System commands like "volume up", "mute", "lock screen" -> use pc_control
-        4. Questions about capabilities, "tell me about yourself", "what can you do", "who are you" -> use nonthinking with capability overview
-        5. Only use nonthinking for greetings, goodbyes, simple questions, and casual chat
-        6. Only use thinking for complex problems, math, coding, or multi-step reasoning
+        4. Keywords "open", "launch", "start", "run" followed by app name -> use pc_control
+        5. ANY mention of browsers (chrome, firefox, edge, safari) + additional instructions -> use pc_control
+        6. Complex multi-step tasks, project work, or detailed instructions -> use thinking for analysis
+        7. Task execution commands like "create a presentation", "organize my files", "research topic" -> use thinking
+        8. Questions about capabilities, "tell me about yourself", "what can you do", "who are you" -> use nonthinking with capability overview
+        9. Only use nonthinking for greetings, goodbyes, simple questions, and casual chat
+        10. Only use thinking for complex problems, math, coding, or multi-step reasoning
 
-        Output ONLY the function call in this syntax: call:function_name{{arg1:value1,arg2:value2}}
+        Output ONLY a function call in this syntax: call:function_name{{arg1:value1,arg2:value2}}
         Example 1: "open visual studio" -> call:pc_control{{action:open_app,target:visual studio}}
-        Example 2: "volume up" -> call:pc_control{{action:volume,target:up}}
-        Example 3: "hello" -> call:nonthinking{{prompt:hello}}
-        Example 4: "calculate 2+2" -> call:thinking{{prompt:calculate 2+2}}
-        Example 5: "play music on spotify" -> call:play_music{{query:music,service:spotify}}
-        Example 6: "open chrome" -> call:pc_control{{action:open_app,target:chrome}}
+        Example 2: "open visualstudio code" -> call:pc_control{{action:open_app,target:visual studio code}}
+        Example 3: "open chrome select any profile search for gmail" -> call:pc_control{{action:open_app,target:chrome select any profile search for gmail}}
+        Example 4: "volume up" -> call:pc_control{{action:volume,target:up}}
+        Example 5: "hello" -> call:nonthinking{{prompt:hello}}
+        Example 6: "calculate 2+2" -> call:thinking{{prompt:calculate 2+2}}
+        Example 7: "play music on spotify" -> call:play_music{{query:music,service:spotify}}
+        Example 8: "open chrome" -> call:pc_control{{action:open_app,target:chrome}}
+        Example 9: "launch vs code" -> call:pc_control{{action:open_app,target:vs code}}
+        Example 10: "create a presentation about marketing" -> call:thinking{{prompt:create a presentation about marketing}}
+        Example 11: "organize my desktop files" -> call:thinking{{prompt:organize my desktop files}}
+        Example 12: "research renewable energy sources" -> call:thinking{{prompt:research renewable energy sources}}
+        Example 13: "set up development environment for python" -> call:thinking{{prompt:set up development environment for python}}
 
         User Prompt: {user_prompt}
         Decision:"""

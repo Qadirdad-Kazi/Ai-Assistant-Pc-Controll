@@ -21,7 +21,7 @@ from config import (
 
 # ── Constants ────────────────────────────────────────────────────────────────
 CONVERSATION_TIMEOUT = 60          # Seconds of silence before leaving convo mode
-STOP_PHRASES  = {"stop", "please stop", "shut up", "be quiet", "quit", "please quit", "cancel", "abort", "halt"}
+STOP_PHRASES  = {"stop", "please stop", "shut up", "be quiet", "quit", "please quit", "cancel", "abort", "halt", "stop talking", "quiet"}
 WOLF_ALIASES  = ["wolf", "wolff", "woof", "wall", "well", "holy", "bolly", "wulf", "worth"]
 
 
@@ -244,8 +244,9 @@ class STTListener:
                 is_stop = check_text in STOP_PHRASES
                 
                 if is_stop:
-                    print(f"{YELLOW}[STT] 🛑 Stop command detected!{RESET}")
+                    print(f"{YELLOW}[STT] 🛑 Stop command detected! Text: '{check_text}'{RESET}")
                     if self.stop_callback:
+                        print(f"{YELLOW}[STT] 📞 Calling stop callback...{RESET}")
                         self.stop_callback()
                     self.exit_conversation_mode()
                     continue
