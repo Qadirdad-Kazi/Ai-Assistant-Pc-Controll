@@ -106,7 +106,8 @@ class PiperTTS:
         if self.enabled:
             self._load_voice_model()
             self.running = True
-            self._speech_worker()
+            self.speech_worker = threading.Thread(target=self._speech_worker, daemon=True)
+            self.speech_worker.start()
     
     def _initialize_piper(self) -> bool:
         """Initialize Piper TTS executable."""

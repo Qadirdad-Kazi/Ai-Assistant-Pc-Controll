@@ -23,7 +23,7 @@ from huggingface_hub import snapshot_download
 # Suppress transformers logging
 transformers_logging.set_verbosity_error()
 
-from config import LOCAL_ROUTER_PATH, HF_ROUTER_REPO, OLLAMA_URL
+from config import LOCAL_ROUTER_PATH, HF_ROUTER_REPO, OLLAMA_URL, RESPONDER_MODEL
 
 # Debug flag - set to True to see Gemma's raw response
 DEBUG_ROUTER = False
