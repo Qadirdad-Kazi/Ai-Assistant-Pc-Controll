@@ -39,13 +39,15 @@ class PCController:
         }
 
     def execute(self, action: str, target: str = "") -> Dict[str, Any]:
-        """Execute a PC control action."""
-        action = action.lower().strip().strip("'").strip('"')
-        target = target.lower().strip().strip("'").strip('"')
+        """Execute a PC control action with intelligent command parsing."""
+        action = action.lower().strip()
+        target = target.lower().strip()
+        
+        print(f"[PC Control] Executing: action='{action}', target='{target}'")
         
         try:
             if action in ("open_app", "open"):
-                return self._open_app(target)
+                return self._open_app_intelligent(target)
             elif action in ("close_app", "close"):
                 return self._close_app(target)
             elif action == "volume":

@@ -86,19 +86,27 @@ class PiperTTS:
         """Initialize TTS with female voice by default."""
         self.voice_key = voice_key
         self.model_path = None
-        self.enabled = True
         self.current_process = None
         self.speech_queue = queue.Queue()
         self.interrupt_event = threading.Event()
         self.completion_callback = None  # Callback for when speech finishes
-        self._load_voice_model()
-        self._start_worker()
+        self.running = False
         self.piper_dir = Path.home() / ".local" / "share" / "piper"
         self.models_dir = self.piper_dir / "voices"
         self.current_process = None
         self.available = True  # We'll check during initialize
+        self._load_voice_model()
+        self._speech_worker()
     
-    def _download_piper_executable(self):
+    def _load_voice_model(self):
+        """Load the voice model for the current voice key."""
+        try:
+            model_path = self._download_model(self.voice_key)
+            self.model_path = model_path
+            print(f"{GREEN}[TTS] ✓ Voice model loaded: {self.voice_key}{RESET}")
+        except Exception as e:
+            print(f"{GRAY}[TTS] Failed to load voice model: {e}{RESET}")
+            self.model_path = None
         """Download and extract Piper Windows executable."""
         piper_exe_dir = self.piper_dir / "piper_windows"
         piper_exe = piper_exe_dir / "piper.exe"
