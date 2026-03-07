@@ -98,12 +98,14 @@ class PiperTTS:
         self.stop_speech = threading.Event()
         self.interrupt_event = threading.Event()
         self.current_process = None
+        self.running = False
         
         # Try to initialize Piper
         self.enabled = self._initialize_piper()
         
         if self.enabled:
             self._load_voice_model()
+            self.running = True
             self._speech_worker()
     
     def _initialize_piper(self) -> bool:
