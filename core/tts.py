@@ -14,6 +14,7 @@ import re
 import io
 import base64
 import zipfile
+import subprocess
 from pathlib import Path
 from typing import Dict, Any, Optional
 from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
