@@ -22,7 +22,8 @@ from core.function_executor import executor as function_executor
 ACTION_FUNCTIONS = {
     "control_light", "set_timer", "set_alarm", 
     "create_calendar_event", "add_task", "web_search", "pc_control",
-    "play_music", "scaffold_website", "set_call_directive", "visual_agent"
+    "play_music", "scaffold_website", "set_call_directive", "visual_agent",
+    "create_task", "list_tasks", "execute_task"
 }
 
 
