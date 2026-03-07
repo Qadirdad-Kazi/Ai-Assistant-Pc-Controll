@@ -331,6 +331,7 @@ class FunctionGemmaRouter:
                 value = val_escaped if val_escaped is not None else val_unescaped
                 
                 # Try to convert to appropriate type
+                value = value.strip().strip("'").strip('"')
                 if value.isdigit():
                     args[key] = int(value)
                 elif value.lower() in ('true', 'false'):

@@ -21,7 +21,7 @@ from config import (
 
 # ── Constants ────────────────────────────────────────────────────────────────
 CONVERSATION_TIMEOUT = 60          # Seconds of silence before leaving convo mode
-STOP_PHRASES  = {"stop", "please stop", "wolf stop", "hey wolf stop", "shut up", "be quiet"}
+STOP_PHRASES  = {"stop", "please stop", "shut up", "be quiet", "quit", "please quit", "cancel", "abort", "halt"}
 WOLF_ALIASES  = ["wolf", "wolff", "woof", "wall", "well", "holy", "bolly", "wulf", "worth"]
 
 
@@ -233,7 +233,16 @@ class STTListener:
                 text_clean    = text_original
 
                 # ── Stop / interrupt detection ────────────────────────────────
-                is_stop = any(phrase in text_lower for phrase in STOP_PHRASES)
+                # Check for exact stop commands (optionally prefixed by wake word)
+                # This prevents accidentally dropping commands like "stop the music" or "quit vim"
+                check_text = text_lower
+                for alias in WOLF_ALIASES + ["hey wolf", "hey wolff"]:
+                    if check_text.startswith(alias):
+                        check_text = check_text[len(alias):].strip()
+                        break
+                
+                is_stop = check_text in STOP_PHRASES
+                
                 if is_stop:
                     print(f"{YELLOW}[STT] 🛑 Stop command detected!{RESET}")
                     if self.stop_callback:

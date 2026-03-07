@@ -10,9 +10,9 @@ from typing import Dict, Any
 
 try:
     import pyautogui
-except ImportError:
+except Exception as e:
     pyautogui = None
-    print("[PC Control] pyautogui not found. Volume/Media controls will be limited.")
+    print(f"[PC Control] pyautogui failed to load. Volume/Media controls will be limited. ERROR: {e}")
 
 class PCController:
     """Handles system level commands like controlling volume, opening apps, or locking the PC."""
@@ -40,13 +40,13 @@ class PCController:
 
     def execute(self, action: str, target: str = "") -> Dict[str, Any]:
         """Execute a PC control action."""
-        action = action.lower().strip()
-        target = target.lower().strip()
+        action = action.lower().strip().strip("'").strip('"')
+        target = target.lower().strip().strip("'").strip('"')
         
         try:
-            if action == "open_app":
+            if action in ("open_app", "open"):
                 return self._open_app(target)
-            elif action == "close_app":
+            elif action in ("close_app", "close"):
                 return self._close_app(target)
             elif action == "volume":
                 return self._set_volume(target)
@@ -79,6 +79,20 @@ class PCController:
             
         # Clean the input (LLMs often use underscores)
         app_name = app_name.replace("_", " ").strip().lower()
+        
+        # Strip common conversational prefixes/suffixes the STT might inject
+        import re
+        app_name = re.sub(r'^(please\s+)?(could you\s+)?(can you\s+)?(open\s+)?(the\s+)?(app\s+)?(application\s+)?', '', app_name).strip()
+        app_name = re.sub(r'\s+(for me|please)\b', '', app_name).strip()
+        
+        # Fuzzy match to correct STT typos (e.g. "visul studio" -> "visual studio code")
+        import difflib
+        matches = difflib.get_close_matches(app_name, self.app_map.keys(), n=1, cutoff=0.6)
+        if matches:
+            corrected = matches[0]
+            print(f"[PC Control] Autocorrected typo: '{app_name}' -> '{corrected}'")
+            app_name = corrected
+            
         executable = self.app_map.get(app_name, app_name)
         
         try:
@@ -123,6 +137,13 @@ class PCController:
     def _close_app(self, app_name: str) -> Dict[str, Any]:
         if not app_name:
             return {"success": False, "message": "No app specified to close."}
+            
+        app_name = app_name.replace("_", " ").strip().lower()
+        
+        import difflib
+        matches = difflib.get_close_matches(app_name, self.app_map.keys(), n=1, cutoff=0.65)
+        if matches:
+            app_name = matches[0]
             
         executable = self.app_map.get(app_name, app_name)
         if not executable.endswith(".exe"):

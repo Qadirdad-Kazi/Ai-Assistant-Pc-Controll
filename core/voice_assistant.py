@@ -21,7 +21,8 @@ from core.function_executor import executor as function_executor
 # Functions that are actions (not passthrough)
 ACTION_FUNCTIONS = {
     "control_light", "set_timer", "set_alarm", 
-    "create_calendar_event", "add_task", "web_search"
+    "create_calendar_event", "add_task", "web_search", "pc_control",
+    "play_music", "scaffold_website", "set_call_directive", "visual_agent"
 }
 
 
@@ -51,6 +52,7 @@ class VoiceAssistant(QObject):
             }
         ]
         self.current_session_id = None
+        self.current_stop_event = None
         
     def initialize(self) -> bool:
         """Initialize voice assistant components."""
@@ -110,7 +112,9 @@ class VoiceAssistant(QObject):
     
     def _on_stop(self):
         """Handle 'stop' voice command — interrupt TTS immediately."""
-        print(f"{YELLOW}[VoiceAssistant] 🛑 Stop command received! Interrupting TTS.{RESET}")
+        print(f"{YELLOW}[VoiceAssistant] 🛑 Stop command received! Interrupting TTS and LLM.{RESET}")
+        if self.current_stop_event:
+            self.current_stop_event.set()
         tts.stop()
     
     def _on_wake_word(self):
@@ -130,12 +134,17 @@ class VoiceAssistant(QObject):
         print(f"{CYAN}[VoiceAssistant] Processing: {text}{RESET}")
 
         # Interrupt any ongoing TTS before processing the new query
+        if self.current_stop_event:
+            self.current_stop_event.set()
         tts.stop()
 
-        thread = threading.Thread(target=self._process_query, args=(text,), daemon=True)
+        local_stop = threading.Event()
+        self.current_stop_event = local_stop
+
+        thread = threading.Thread(target=self._process_query, args=(text, local_stop), daemon=True)
         thread.start()
     
-    def _process_query(self, user_text: str):
+    def _process_query(self, user_text: str, stop_event: threading.Event):
         """Process user query through the pipeline."""
         try:
             # Step 1: Route through Function Gemma
@@ -152,6 +161,7 @@ class VoiceAssistant(QObject):
                 # Execute action function
                 result = function_executor.execute(func_name, params)
                 response_text = result.get("message", "Done.")
+                print(f"[Function Result] {response_text}")
                 
                 # Emit GUI update signals for specific actions
                 if func_name == "set_timer" and result.get("success"):
@@ -167,27 +177,27 @@ class VoiceAssistant(QObject):
                 
                 # Enable thinking (more detailed reasoning) if the action failed so it cross-questions the user
                 failed_action = not result.get("success", False)
-                self._generate_response_with_context(func_name, result, user_text, enable_thinking=failed_action)
+                self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=failed_action)
                 
             elif func_name == "visual_agent":
                 # Handle visual tasks specifically (so the AI announces what it's doing)
                 tts.speak("Looking at your screen right now...")
                 result = function_executor.execute(func_name, params)
-                self._generate_response_with_context(func_name, result, user_text, enable_thinking=False)
+                self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=False)
                 
             elif func_name == "get_system_info":
                 # Get system info
                 result = function_executor.execute(func_name, params)
-                self._generate_response_with_context(func_name, result, user_text, enable_thinking=True)
+                self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=True)
                 
             elif func_name in ("thinking", "nonthinking"):
                 # Direct Qwen passthrough
                 enable_thinking = (func_name == "thinking")
-                self._stream_qwen_response(user_text, enable_thinking)
+                self._stream_qwen_response(user_text, stop_event, enable_thinking)
             
             else:
                 # Fallback to nonthinking
-                self._stream_qwen_response(user_text, False)
+                self._stream_qwen_response(user_text, stop_event, False)
                 
         except Exception as e:
             error_msg = f"Error processing query: {e}"
@@ -195,7 +205,7 @@ class VoiceAssistant(QObject):
             self.error_occurred.emit(error_msg)
             self.processing_finished.emit()
     
-    def _generate_response_with_context(self, func_name: str, result: dict, user_text: str, enable_thinking: bool = False):
+    def _generate_response_with_context(self, func_name: str, result: dict, user_text: str, stop_event: threading.Event, enable_thinking: bool = False):
         """Generate Llama response with function execution context."""
         try:
             # Ensure Llama is loaded
@@ -266,6 +276,9 @@ class VoiceAssistant(QObject):
                 r.raise_for_status()
                 
                 for line in r.iter_lines():
+                    if stop_event.is_set():
+                        break
+                    
                     if line:
                         try:
                             chunk = json.loads(line.decode('utf-8'))
@@ -283,9 +296,10 @@ class VoiceAssistant(QObject):
                             continue
             
             # Flush remaining
-            rem = sentence_buffer.flush()
-            if rem:
-                tts.queue_sentence(rem)
+            if not stop_event.is_set():
+                rem = sentence_buffer.flush()
+                if rem:
+                    tts.queue_sentence(rem)
             
             # Update messages
             self.messages.append({'role': 'assistant', 'content': full_response})
@@ -302,7 +316,7 @@ class VoiceAssistant(QObject):
             print(f"{GRAY}[VoiceAssistant] Error generating response: {e}{RESET}")
             self.processing_finished.emit()
     
-    def _stream_qwen_response(self, user_text: str, enable_thinking: bool):
+    def _stream_qwen_response(self, user_text: str, stop_event: threading.Event, enable_thinking: bool):
         """Stream direct Llama response."""
         try:
             # Ensure Llama is loaded
@@ -337,6 +351,9 @@ class VoiceAssistant(QObject):
                 r.raise_for_status()
                 
                 for line in r.iter_lines():
+                    if stop_event.is_set():
+                        break
+                    
                     if line:
                         try:
                             chunk = json.loads(line.decode('utf-8'))
@@ -354,9 +371,10 @@ class VoiceAssistant(QObject):
                             continue
             
             # Flush remaining
-            rem = sentence_buffer.flush()
-            if rem:
-                tts.queue_sentence(rem)
+            if not stop_event.is_set():
+                rem = sentence_buffer.flush()
+                if rem:
+                    tts.queue_sentence(rem)
             
             # Update messages
             self.messages.append({'role': 'assistant', 'content': full_response})
