@@ -94,6 +94,7 @@ class PiperTTS:
         self.speech_worker = None
         self.speech_queue = queue.Queue()
         self.stop_speech = threading.Event()
+        self.interrupt_event = threading.Event()
         
         # Try to initialize Piper
         self.enabled = self._initialize_piper()
