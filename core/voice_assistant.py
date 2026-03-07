@@ -179,6 +179,11 @@ class VoiceAssistant(QObject):
                 failed_action = not result.get("success", False)
                 self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=failed_action)
                 
+                # For successful PC control actions, also ensure conversation mode is activated
+                if func_name == "pc_control" and result.get("success", False):
+                    if self.stt_listener:
+                        self.stt_listener.enter_conversation_mode()
+                
             elif func_name == "visual_agent":
                 # Handle visual tasks specifically (so the AI announces what it's doing)
                 tts.speak("Looking at your screen right now...")

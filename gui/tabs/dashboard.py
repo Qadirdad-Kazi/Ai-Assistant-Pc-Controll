@@ -155,16 +155,31 @@ class DashboardView(QWidget):
         self.mission_lbl.setAlignment(Qt.AlignCenter)
         
         self.listening_lbl = QLabel("🎙️ LISTENING...")
-        self.listening_lbl.setStyleSheet(f"font-family: 'Segoe UI'; font-size: 42px; font-weight: 900; color: {THEME_LISTENING}; letter-spacing: 12px;")
+        self.listening_lbl.setStyleSheet(f"""
+            QLabel {{
+                font-family: 'Segoe UI'; 
+                font-size: 32px; 
+                font-weight: 900; 
+                color: {THEME_LISTENING}; 
+                letter-spacing: 8px;
+                background-color: rgba(16, 24, 40, 0.4);
+                border-top: 1px solid rgba(255, 255, 255, 30);
+                border-bottom: 1px solid rgba(0, 0, 0, 80);
+                border-left: 1px solid rgba(255, 255, 255, 10);
+                border-right: 1px solid rgba(255, 255, 255, 10);
+                border-radius: 35px;
+                padding: 15px 50px;
+            }}
+        """)
         self.listening_lbl.setAlignment(Qt.AlignCenter)
         self.listening_lbl.hide()
         
-        # Audio Pulse Glow Effect
-        self.listening_glow = GlowEffect(THEME_LISTENING, 40)
+        # Audio Pulse Glow Effect (subdued for glass look)
+        self.listening_glow = GlowEffect(THEME_LISTENING, 20)
         self.listening_lbl.setGraphicsEffect(self.listening_glow)
         
         self.center_layout.addWidget(self.mission_lbl)
-        self.center_layout.addWidget(self.listening_lbl)
+        self.center_layout.addWidget(self.listening_lbl, 0, Qt.AlignCenter)
         
         main_layout.addStretch()
         main_layout.addWidget(self.center_container)
