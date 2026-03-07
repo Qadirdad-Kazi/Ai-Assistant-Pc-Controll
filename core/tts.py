@@ -95,6 +95,7 @@ class PiperTTS:
         self.speech_queue = queue.Queue()
         self.stop_speech = threading.Event()
         self.interrupt_event = threading.Event()
+        self.current_process = None
         
         # Try to initialize Piper
         self.enabled = self._initialize_piper()
@@ -147,7 +148,7 @@ class PiperTTS:
             print(f"{CYAN}[TTS] Downloading Piper executable...{RESET}")
             
             # Download URL for Windows
-            piper_url = f"https://github.com/rhasspy/piper/releases/download/{PIPER_VERSION}/piper_windows_amd64.zip"
+            piper_url = f"https://github.com/rhasspy/piper/releases/download/{self.PIPER_VERSION}/piper_windows_amd64.zip"
             
             # Download to memory
             response = requests.get(piper_url, timeout=30)
@@ -176,7 +177,7 @@ class PiperTTS:
             print(f"{CYAN}[TTS] Downloading Piper executable...{RESET}")
             
             # Download URL for Windows
-            piper_url = f"https://github.com/rhasspy/piper/releases/download/{PIPER_VERSION}/piper_windows_amd64.zip"
+            piper_url = f"https://github.com/rhasspy/piper/releases/download/{self.PIPER_VERSION}/piper_windows_amd64.zip"
             
             # Download to memory
             response = requests.get(piper_url, timeout=30)

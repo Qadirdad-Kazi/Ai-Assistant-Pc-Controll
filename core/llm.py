@@ -8,7 +8,7 @@ import re
 import threading
 from typing import Dict, Any, Optional
 from config import (
-    OLLAMA_URL, LOCAL_ROUTER_PATH, GREEN, CYAN, YELLOW, GRAY, RESET
+    OLLAMA_URL, LOCAL_ROUTER_PATH, GREEN, CYAN, YELLOW, GRAY, RESET, RESPONDER_MODEL
 )
 
 # Persistent Session for faster HTTP
