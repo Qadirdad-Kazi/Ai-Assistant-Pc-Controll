@@ -87,6 +87,7 @@ class PiperTTS:
         self.model_name = model_name
         self.voice_key = voice_key
         self.piper_dir = Path("models/piper")
+        self.models_dir = Path("models/voices")
         self.piper_exe = None
         self.model_path = None
         self.enabled = False  # Initialize enabled state
@@ -188,7 +189,7 @@ class PiperTTS:
                 import zipfile
                 with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
                     zip_ref.extractall(self.piper_dir)
-                    print(f"{GREEN}[TTS] ✓ Piper executable downloaded and extracted{RESET}")
+                    print(f"{GREEN}[TTS] Piper executable downloaded and extracted{RESET}")
                     return str(self.piper_dir / "piper_windows" / "piper.exe")
             else:
                 print(f"{GRAY}[TTS] Failed to download Piper. Status: {response.status_code}{RESET}")
@@ -198,7 +199,7 @@ class PiperTTS:
             print(f"{YELLOW}[TTS] Failed to download Piper: {e}{RESET}")
             return None
     
-    def _download_model(self, voice_key: str):
+    def _download_model(self, voice_key: str) -> Optional[str]:
         """Download voice model if not present."""
         voice_data = PIPER_VOICES.get(voice_key, PIPER_VOICES["Male (Northern)"])
         model_name = voice_data["model"]
@@ -232,10 +233,16 @@ class PiperTTS:
             
             print(f"{CYAN}[TTS] Initializing Piper TTS (executable mode)...{RESET}")
             
-            # Download/find piper executable
-            self.piper_exe = self._download_piper_executable()
-            if not self.piper_exe:
-                print(f"{YELLOW}[TTS] Could not set up Piper executable{RESET}")
+            # Check if piper executable already exists
+            piper_exe_path = self.piper_dir / "piper_windows" / "piper.exe"
+            if piper_exe_path.exists():
+                self.piper_exe = str(piper_exe_path)
+                print(f"{GREEN}[TTS] ✓ Piper executable found: {self.piper_exe}{RESET}")
+            else:
+                print(f"{CYAN}[TTS] Piper executable not found. Downloading...{RESET}")
+                self.piper_exe = self._download_piper_executable()
+                if not self.piper_exe:
+                    print(f"{YELLOW}[TTS] Could not set up Piper executable{RESET}")
                 self.available = False
                 return False
             
