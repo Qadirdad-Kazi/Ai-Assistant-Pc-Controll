@@ -1,18 +1,10 @@
 [
   {
     "created_at": "2026-03-07T10:10:45.366597",
-    "description": "Open visualstudio code",
+    "description": "Open visualstudio code open desktop create new folder  create simple html file in that folder",
     "id": "task_20260307_101045",
     "status": "pending",
     "title": "Open visualstudio code",
-    "updated_at": "2026-03-07T10:10:45.366597"
-  },
-  {
-    "created_at": "2026-03-07T10:11:47.246370",
-    "description": "Open Chrome select any profile search for gmail",
-    "id": "task_20260307_101147",
-    "status": "pending",
-    "title": "Open Chrome",
-    "updated_at": "2026-03-07T10:11:47.246370"
+    "updated_at": "2026-03-07T11:51:35.361788"
   }
 ]

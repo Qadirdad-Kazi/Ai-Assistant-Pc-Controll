@@ -14,11 +14,17 @@ except Exception as e:
     pyautogui = None
     print(f"[PC Control] pyautogui failed to load. Volume/Media controls will be limited. ERROR: {e}")
 
+# Import dynamic app discovery
+from core.dynamic_app_discovery import dynamic_discovery
+
 class PCController:
     """Handles system level commands like controlling volume, opening apps, or locking the PC."""
     
     def __init__(self):
-        # We can map standard app names to their executables
+        # Initialize dynamic app discovery
+        self.discovered_apps = dynamic_discovery.discover_installed_apps()
+        
+        # Keep some common mappings as fallback
         self.app_map = {
             "spotify": "spotify.exe",
             "chrome": "chrome.exe",
@@ -37,6 +43,8 @@ class PCController:
             "visual studio code": "code.exe",
             "discord": "Update.exe --processStart Discord.exe"
         }
+        
+        print(f"[PC Control] Initialized with {len(self.discovered_apps)} discovered apps")
 
     def execute(self, action: str, target: str = "") -> Dict[str, Any]:
         """Execute a PC control action with intelligent command parsing."""
@@ -209,10 +217,13 @@ class PCController:
                 
         except Exception as e:
             return {"success": False, "message": f"Error opening Chrome with profile selection: {str(e)}"}
+        
+    def _open_app(self, app_name: str) -> Dict[str, Any]:
+        """Open an application using dynamic discovery - works with ANY installed app!"""
         if not app_name:
             return {"success": False, "message": "No app specified to open."}
             
-        # Clean the input (LLMs often use underscores)
+        # Clean up input (LLMs often use underscores)
         app_name = app_name.replace("_", " ").strip().lower()
         
         # Strip common conversational prefixes/suffixes the STT might inject
@@ -220,54 +231,61 @@ class PCController:
         app_name = re.sub(r'^(please\s+)?(could you\s+)?(can you\s+)?(open\s+)?(the\s+)?(app\s+)?(application\s+)?', '', app_name).strip()
         app_name = re.sub(r'\s+(for me|please)\b', '', app_name).strip()
         
-        # Fuzzy match to correct STT typos (e.g. "visul studio" -> "visual studio code")
-        import difflib
-        matches = difflib.get_close_matches(app_name, self.app_map.keys(), n=1, cutoff=0.6)
-        if matches:
-            corrected = matches[0]
-            print(f"[PC Control] Autocorrected typo: '{app_name}' -> '{corrected}'")
-            app_name = corrected
-            
-        executable = self.app_map.get(app_name, app_name)
+        print(f"[PC Control] Searching for app: '{app_name}'")
         
-        try:
-            # First try os.startfile for known Executables/Paths. 
-            # This correctly throws FileNotFoundError if it doesn't exist.
-            if hasattr(os, 'startfile'):
-                try:
-                    os.startfile(executable)
-                    return {"success": True, "message": f"I have opened {app_name}."}
-                except (FileNotFoundError, OSError):
-                    pass
-            
-            # Second try: "Human-like" Windows Search Fallback (Move mouse, Press Win, type Name, press Enter)
-            if pyautogui:
-                print(f"[PC Control] Could not find {app_name} executable. Trying Windows Search...")
-                # Visually move the cursor to prove control
-                screen_width, screen_height = pyautogui.size()
-                pyautogui.moveTo(screen_width / 2, screen_height / 2, duration=0.5, tween=pyautogui.easeInOutQuad)
-                
-                # Use press instead of hotkey (more reliable on Windows 11)
-                pyautogui.press("win")
-                time.sleep(0.8)
-                
-                # Type out the app name character by character
-                pyautogui.write(app_name, interval=0.1)
-                time.sleep(1.5) # Wait for search results
-                
-                pyautogui.press("enter")
-                return {
-                    "success": True, 
-                    "message": f"I couldn't find {app_name} explicitly, so I tried using Windows Search to open it."
-                }
-                
+        # Method 1: Try dynamic discovery first (works with ANY app)
+        app_path = dynamic_discovery.find_app_by_name(app_name)
+        if app_path:
+            try:
+                print(f"[PC Control] Found app via dynamic discovery: {app_path}")
+                os.startfile(app_path)
+                return {"success": True, "message": f"I have opened {app_name} using dynamic discovery."}
+            except Exception as e:
+                print(f"[PC Control] Dynamic discovery found app but failed to launch: {e}")
+        
+        # Method 2: Try Windows Search (human-like fallback)
+        if pyautogui:
+            print(f"[PC Control] Using Windows Search to find: '{app_name}'")
+            return self._windows_search_launch(app_name)
+        
+        # Method 3: Get suggestions if app not found
+        suggestions = dynamic_discovery.get_app_suggestions(app_name)
+        if suggestions:
+            suggestion_list = ", ".join(suggestions[:5])
             return {
                 "success": False, 
-                "message": f"I cannot find the application '{app_name}' installed on your PC. Do you want me to help you download it or look for something else?"
+                "message": f"I couldn't find '{app_name}'. Did you mean: {suggestion_list}?"
             }
+        
+        return {
+            "success": False, 
+            "message": f"I cannot find the application '{app_name}' installed on your PC. It might not be installed or have a different name."
+        }
+    
+    def _windows_search_launch(self, app_name: str) -> Dict[str, Any]:
+        """Launch app using Windows Search - works like a human would."""
+        try:
+            # Visually move the cursor to prove control
+            screen_width, screen_height = pyautogui.size()
+            pyautogui.moveTo(screen_width / 2, screen_height / 2, duration=0.5, tween=pyautogui.easeInOutQuad)
             
+            # Use press instead of hotkey (more reliable on Windows 11)
+            pyautogui.press("win")
+            time.sleep(0.8)
+            
+            # Type out the app name character by character
+            pyautogui.write(app_name, interval=0.1)
+            time.sleep(1.5) # Wait for search results
+            
+            pyautogui.press("enter")
+            time.sleep(2)
+            
+            return {
+                "success": True, 
+                "message": f"I used Windows Search to find and open '{app_name}'."
+            }
         except Exception as e:
-            return {"success": False, "message": f"I encountered an error trying to open {app_name}. {e}"}
+            return {"success": False, "message": f"Windows Search launch failed: {str(e)}"}
 
     def _close_app(self, app_name: str) -> Dict[str, Any]:
         if not app_name:

@@ -17,7 +17,23 @@ class FunctionExecutor:
         # Placeholder for managers if needed later
         self.tasks_file = "tasks.json"
         self.tasks = self._load_tasks()
-
+        self.app_map = {
+            "visual studio code": "C:\\Users\\User\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
+            "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+            "firefox": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
+            "edge": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+            "safari": "C:\\Program Files\\Safari\\Application\\safari.exe",
+            "notepad": "C:\\Windows\\notepad.exe",
+            "word": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+            "excel": "C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE",
+            "powerpoint": "C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE",
+            "spotify": "C:\\Users\\User\\AppData\\Roaming\\Spotify\\spotify.exe",
+            "vlc": "C:\\Program Files\\VideoLAN\\VLC\\vlc.exe",
+            "telegram": "C:\\Users\\User\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe",
+            "discord": "C:\\Users\\User\\AppData\\Local\\Discord\\app-1.0.9003\\Discord.exe",
+            "slack": "C:\\Users\\User\\AppData\\Local\\slack\\app-4.23.0\\slack.exe"
+        }
+    
     def execute(self, func_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a function and return result."""
         try:
@@ -37,6 +53,8 @@ class FunctionExecutor:
                 return self._list_tasks(params)
             elif func_name == "execute_task":
                 return self._execute_task(params)
+            elif func_name == "open_app":
+                return self._open_app(params.get("app_name", ""))
             elif func_name in ("thinking", "nonthinking"):
                 prompt = params.get("prompt", "")
                 # Check if this is a capability question

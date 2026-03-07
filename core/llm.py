@@ -3,11 +3,11 @@ LLM interaction and function execution.
 """
 
 import requests
-import threading
-
+import json
+import re
+from typing import Dict, Any, Optional
 from config import (
-    RESPONDER_MODEL, OLLAMA_URL, LOCAL_ROUTER_PATH,
-    GRAY, RESET
+    OLLAMA_URL, LOCAL_ROUTER_PATH, GREEN, CYAN, YELLOW, GRAY, RESET
 )
 
 # Persistent Session for faster HTTP

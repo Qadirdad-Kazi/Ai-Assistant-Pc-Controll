@@ -83,21 +83,50 @@ class PiperTTS:
     PIPER_VERSION = "2023.11.14-2"
     PIPER_RELEASE_URL = f"https://github.com/rhasspy/piper/releases/download/{PIPER_VERSION}/piper_windows_amd64.zip"
     
-    def __init__(self, voice_key: str = "alba"):
-        """Initialize TTS with female voice by default."""
+    def __init__(self, model_name="lessac", voice_key="lessac"):
+        self.model_name = model_name
         self.voice_key = voice_key
+        self.piper_dir = Path("models/piper")
+        self.piper_exe = None
         self.model_path = None
-        self.current_process = None
+        self.enabled = False  # Initialize enabled state
+        self.sentence_buffer = SentenceBuffer()
+        self.speech_worker = None
         self.speech_queue = queue.Queue()
-        self.interrupt_event = threading.Event()
-        self.completion_callback = None  # Callback for when speech finishes
-        self.running = False
-        self.piper_dir = Path.home() / ".local" / "share" / "piper"
-        self.models_dir = self.piper_dir / "voices"
-        self.current_process = None
-        self.available = True  # We'll check during initialize
-        self._load_voice_model()
-        self._speech_worker()
+        self.stop_speech = threading.Event()
+        
+        # Try to initialize Piper
+        self.enabled = self._initialize_piper()
+        
+        if self.enabled:
+            self._load_voice_model()
+            self._speech_worker()
+    
+    def _initialize_piper(self) -> bool:
+        """Initialize Piper TTS executable."""
+        try:
+            # Check if piper executable exists
+            piper_exe_path = self.piper_dir / "piper_windows" / "piper.exe"
+            
+            if piper_exe_path.exists():
+                self.piper_exe = str(piper_exe_path)
+                print(f"{GREEN}[TTS] ✓ Piper executable found: {self.piper_exe}{RESET}")
+                return True
+            else:
+                # Try to download Piper executable
+                print(f"{CYAN}[TTS] Piper executable not found. Downloading...{RESET}")
+                downloaded_exe = self._download_piper_executable()
+                if downloaded_exe:
+                    self.piper_exe = downloaded_exe
+                    print(f"{GREEN}[TTS] ✓ Piper executable ready: {self.piper_exe}{RESET}")
+                    return True
+                else:
+                    print(f"{YELLOW}[TTS] ⚠️ Could not download Piper executable{RESET}")
+                    return False
+                    
+        except Exception as e:
+            print(f"{YELLOW}[TTS] Failed to initialize Piper: {e}{RESET}")
+            return False
     
     def _load_voice_model(self):
         """Load the voice model for the current voice key."""
@@ -108,7 +137,8 @@ class PiperTTS:
         except Exception as e:
             print(f"{GRAY}[TTS] Failed to load voice model: {e}{RESET}")
             self.model_path = None
-        """Download and extract Piper Windows executable."""
+    
+    def _download_piper_executable(self) -> Optional[str]:
         piper_exe_dir = self.piper_dir / "piper_windows"
         try:
             # Create piper directory if it doesn't exist
