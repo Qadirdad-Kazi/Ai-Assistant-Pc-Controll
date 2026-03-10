@@ -17,22 +17,42 @@ export default function Chat() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8000/ws/chat');
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.messages && data.messages.length > 0) {
+        // Map backend format to frontend format
+        const formatted = data.messages.map((m, i) => ({
+          id: i,
+          sender: m.role === 'user' ? 'user' : 'bot',
+          text: m.content
+        }));
+        setMessages(formatted);
+      }
+    };
+
+    return () => {
+      if (ws.readyState === 1) ws.close();
+    };
+  }, []);
+
+  const handleSend = async () => {
     if (!inputText.trim()) return;
     
-    // Add user message
-    const newMsg = { id: Date.now(), sender: 'user', text: inputText };
-    setMessages(prev => [...prev, newMsg]);
+    const textToSend = inputText;
     setInputText('');
     
-    // Simulate AI response
-    setTimeout(() => {
-      setMessages(prev => [...prev, { 
-        id: Date.now(), 
-        sender: 'bot', 
-        text: 'Processing request through neural pathways... (API connection pending)' 
-      }]);
-    }, 1000);
+    try {
+      await fetch('http://localhost:8000/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToSend })
+      });
+    } catch (e) {
+      console.error("Failed to send message:", e);
+    }
   };
 
   return (

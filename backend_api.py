@@ -2,6 +2,7 @@ import asyncio
 import psutil
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from core.voice_assistant import voice_assistant
 from config import VOICE_ASSISTANT_ENABLED
 
@@ -76,8 +77,8 @@ async def websocket_system_monitor(websocket: WebSocket):
             data = {
                 "cpu": int(cpu_percent),
                 "ram": int(ram_percent),
-                "netUp": round(net_up, 1),
-                "netDown": round(net_down, 1)
+                "netUp": float(f"{net_up:.1f}"),
+                "netDown": float(f"{net_down:.1f}")
             }
             await websocket.send_json(data)
             await asyncio.sleep(1)
@@ -95,5 +96,44 @@ async def websocket_system_status(websocket: WebSocket):
                 
             await websocket.send_json(system_status)
             await asyncio.sleep(0.5) # Send updates twice a second
+    except WebSocketDisconnect:
+        pass
+
+class ChatMessage(BaseModel):
+    text: str
+
+@app.post("/api/chat")
+async def send_chat(message: ChatMessage):
+    if VOICE_ASSISTANT_ENABLED:
+        # Simulate voice input with text
+        voice_assistant._on_speech(message.text)
+    return {"status": "processing"}
+
+@app.websocket("/ws/chat")
+async def websocket_chat(websocket: WebSocket):
+    await websocket.accept()
+    
+    def get_clean_messages():
+        if not VOICE_ASSISTANT_ENABLED:
+            return []
+        cleaned = []
+        for m in voice_assistant.messages:
+            if m["role"] == "system": 
+                continue
+            content = m["content"]
+            if m["role"] == "user" and "User asked: " in content:
+                content = content.split("User asked: ")[-1].split("\n\nRespond naturally")[0].strip()
+            cleaned.append({"role": m["role"], "content": content})
+        return cleaned
+
+    try:
+        last_len = 0
+        while True:
+            if VOICE_ASSISTANT_ENABLED:
+                current_len = len(voice_assistant.messages)
+                if current_len != last_len:
+                    await websocket.send_json({"messages": get_clean_messages()})
+                    last_len = current_len
+            await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         pass

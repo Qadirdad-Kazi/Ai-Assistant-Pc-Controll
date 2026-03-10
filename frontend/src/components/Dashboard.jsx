@@ -1,7 +1,7 @@
 import './Dashboard.css'
 import GreetingsHeader from './GreetingsHeader'
 import StatusCard from './StatusCard'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Mic, Monitor, Music, Code } from 'lucide-react'
 
 export default function Dashboard() {
