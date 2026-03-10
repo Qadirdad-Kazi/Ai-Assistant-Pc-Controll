@@ -1,0 +1,46 @@
+.sys-monitor-container {
+  position: absolute;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(10, 15, 30, 0.6);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  border-radius: 20px;
+  padding: 8px 20px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 242, 254, 0.05);
+  z-index: 1000;
+}
+
+.sys-metric {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sys-icon.cyan { color: var(--accent-cyan); text-shadow: 0 0 8px var(--accent-cyan); }
+.sys-icon.pink { color: var(--accent-pink); text-shadow: 0 0 8px var(--accent-pink); }
+.sys-icon.purple { color: var(--accent-purple); text-shadow: 0 0 8px var(--accent-purple); }
+
+.sys-label {
+  color: var(--text-sub);
+  letter-spacing: 1px;
+}
+
+.sys-value {
+  color: #fff;
+  min-width: 30px;
+  text-shadow: 0 0 5px rgba(255,255,255,0.3);
+}
+
+.sys-separator {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.1);
+}

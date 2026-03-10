@@ -1,53 +1,85 @@
 """
-Wolf AI - Main Entry Point
+Wolf AI - Backend Entry Point
 """
 
 import warnings
 import sys
 import os
+import time
+import threading
 
 # Suppress ALL warnings globally before any other imports
 warnings.simplefilter("ignore")
+os.environ["QT_API"] = "" # Disable any qt bindings
 
-# Suppress qfluentwidgets advertisement
-class SuppressOutput:
-    def __enter__(self):
-        self._original_stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.stdout.close()
-        sys.stdout = self._original_stdout
+from core.llm import preload_models
+from core.voice_assistant import voice_assistant
+from core.tts import tts
+from core.settings_store import settings
+from config import VOICE_ASSISTANT_ENABLED, GREEN, RESET
+from core.model_manager import unload_all_models
 
-with SuppressOutput():
-    from qfluentwidgets import qconfig, Theme, SplashScreen
-    from gui.app import MainWindow
+class BackendServer:
+    def __init__(self):
+        print("\n" + bytes.fromhex("4d6164652042792051616469726461642d4b617a6920506f7274666f6c696f206c696e6b2071616469726461646b617a692e636f6d").decode() + "\n")
+        print(f"{GREEN}[System] Initializing Wolf AI Backend Engine...{RESET}")
 
-from PySide6.QtCore import QSize
-from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QFont, QColor, QIcon
+    def _preload_models(self):
+        threading.Thread(target=preload_models, daemon=True).start()
+
+    def _init_god_mode(self):
+        # Start bug watcher if enabled
+        if settings.get("bug_watcher.enabled", False):
+            try:
+                from core.bug_watcher import bug_watcher
+                bug_watcher.start()
+                print("[System] Bug watcher started")
+            except ImportError:
+                print("[System] Bug watcher not available.")
+        
+        # We removed HUD rendering to decouple the backend from PySide
+        if settings.get("hud.enabled", False):
+            print("[System] Note: HUD is disabled in headless backend mode.")
+    
+    def _init_voice_assistant(self):
+        print(f"[App] Initializing voice assistant (enabled={VOICE_ASSISTANT_ENABLED})...")
+        if VOICE_ASSISTANT_ENABLED:
+            def init_va():
+                print(f"[App] Background thread: Initializing voice assistant components...")
+                if voice_assistant.initialize():
+                    print(f"[App] ✓ Voice assistant initialized")
+                    tts.toggle(True)
+                    print(f"[App] Starting voice assistant engine...")
+                    voice_assistant.start()
+                    print(f"[App] ✓ Voice assistant is fully active and listening.")
+                else:
+                    print(f"[App] ✗ Failed to initialize voice assistant")
+            
+            # Start background thread to load AI models and STT
+            threading.Thread(target=init_va, daemon=True).start()
+        else:
+            print(f"[App] Voice assistant disabled in config")
+            
+    def run_forever(self):
+        try:
+            # Setup and initialize all core engines
+            self._preload_models()
+            self._init_god_mode()
+            self._init_voice_assistant()
+            
+            # Start FastAPI backend server using Uvicorn
+            import uvicorn
+            print(f"{GREEN}[System] Booting FastAPI WebSocket Server on ws://localhost:8000{RESET}")
+            uvicorn.run("backend_api:app", host="0.0.0.0", port=8000, log_level="warning")
+            
+        except KeyboardInterrupt:
+            print("\n[System] Interrupted! Shutting down gracefully...")
+            if VOICE_ASSISTANT_ENABLED:
+                voice_assistant.stop()
+            unload_all_models(sync=True)
+            print("[System] Backend stopped.")
+            sys.exit(0)
 
 if __name__ == "__main__":
-    # Internal System Identifier - Do Not Modify
-    print("\n" + bytes.fromhex("4d6164652042792051616469726461642d4b617a6920506f7274666f6c696f206c696e6b2071616469726461646b617a692e636f6d").decode() + "\n")
-    
-    app = QApplication(sys.argv)
-    
-    # Configure Aura Theme
-    qconfig.theme = Theme.DARK
-    
-    # Set default font
-    app.setFont(QFont("Segoe UI", 10))
-    
-    # Create SplashScreen
-    splash = SplashScreen(QIcon("wolf_avatar.png"), None)
-    splash.setIconSize(QSize(100, 100))
-    splash.show()
-    
-    # Create main window
-    window = MainWindow()
-    
-    # Show window and finish splash
-    window.show()
-    splash.finish()
-    
-    sys.exit(app.exec())
+    server = BackendServer()
+    server.run_forever()

@@ -9,16 +9,14 @@ export default function GreetingsHeader() {
     return () => clearInterval(interval);
   }, []);
 
-  const getGreeting = () => {
-    const hour = time.getHours();
-    if (hour >= 5 && hour < 12) return "MORNING ADVISOR";
-    if (hour >= 12 && hour < 18) return "AFTERNOON PROTOCOL";
-    return "EVENING SECURITY";
-  };
 
   const formatDate = () => {
-    const options = { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'long' };
-    return time.toLocaleDateString('en-US', options).toUpperCase().replace(/,/g, ' |').replace(/\//g, '.');
+    const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const weekday = days[time.getDay()];
+    const month = String(time.getMonth() + 1).padStart(2, '0');
+    const day = String(time.getDate()).padStart(2, '0');
+    const year = time.getFullYear();
+    return `${weekday} | ${month}.${day}.${year}`;
   };
 
   const formatTime = () => time.toTimeString().split(' ')[0];
@@ -26,11 +24,11 @@ export default function GreetingsHeader() {
   return (
     <div className="header-container">
       <div className="header-text">
-        <div className="status-text">// {getGreeting()} ACTIVE</div>
-        <div className="main-title">COMMANDER</div>
+      </div>
+      <div className="clock-container">
+        <div className="clock-text">{formatTime()}</div>
         <div className="date-text">{formatDate()}</div>
       </div>
-      <div className="clock-text">{formatTime()}</div>
     </div>
   )
 }

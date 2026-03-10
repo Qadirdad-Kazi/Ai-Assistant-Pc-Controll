@@ -1,3 +1,7 @@
+* {
+  box-sizing: border-box;
+}
+
 :root {
   --bg-color: #080c14;
   --glass-bg: rgba(20, 30, 48, 0.4);
