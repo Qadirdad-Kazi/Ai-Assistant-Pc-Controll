@@ -140,36 +140,23 @@ class DynamicAppDiscovery:
         """Find app using intelligent matching."""
         app_name = app_name.lower().strip()
         
-        # Direct match
+        # 1. Direct match
         if app_name in self.installed_apps:
             return self.installed_apps[app_name]
+            
+        # 2. Substring exact match (prioritized over fuzzy)
+        # E.g. "spotify" matching "spotify desktop" or "spotify" exactly in the key
+        for installed_name in self.installed_apps.keys():
+            if app_name in installed_name:
+                print(f"[Dynamic Discovery] Substring match: '{app_name}' -> '{installed_name}'")
+                return self.installed_apps[installed_name]
         
-        # Fuzzy matching (higher priority than partial)
+        # 3. Fuzzy matching (fallback) with stricter cutoff
         import difflib
-        matches = difflib.get_close_matches(app_name, self.installed_apps.keys(), n=3, cutoff=0.6)
+        matches = difflib.get_close_matches(app_name, self.installed_apps.keys(), n=3, cutoff=0.75)
         if matches:
             print(f"[Dynamic Discovery] Fuzzy match: '{app_name}' -> '{matches[0]}'")
             return self.installed_apps[matches[0]]
-        
-        # Partial matching (lower priority - only if no fuzzy match)
-        best_match = None
-        best_score = 0
-        for installed_name in self.installed_apps:
-            # Calculate match score based on exact and partial matches
-            score = 0
-            if app_name in installed_name:
-                score += len(app_name) / len(installed_name)
-            if installed_name in app_name:
-                score += len(installed_name) / len(app_name)
-            
-            # Only consider if it's a meaningful match
-            if score > 0.3 and score > best_score:
-                best_score = score
-                best_match = installed_name
-        
-        if best_match:
-            print(f"[Dynamic Discovery] Partial match: '{app_name}' -> '{best_match}' (score: {best_score:.2f})")
-            return self.installed_apps[best_match]
         
         return None
     

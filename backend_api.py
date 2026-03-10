@@ -3,7 +3,9 @@ import psutil
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 from core.voice_assistant import voice_assistant
+from core.function_executor import executor as function_executor
 from config import VOICE_ASSISTANT_ENABLED
 
 app = FastAPI(title="Wolf AI Backend API")
@@ -149,3 +151,32 @@ async def websocket_chat(websocket: WebSocket):
             await asyncio.sleep(0.1)
     except WebSocketDisconnect:
         pass
+
+# --- Tasks API ---
+class TaskData(BaseModel):
+    title: str
+    description: str
+
+@app.get("/api/tasks")
+async def get_tasks():
+    return {"tasks": function_executor.tasks}
+
+@app.post("/api/tasks")
+async def create_task(task: TaskData):
+    result = function_executor.execute("create_task", {"title": task.title, "description": task.description})
+    return result
+
+@app.post("/api/tasks/{task_id}/execute")
+async def execute_task(task_id: str):
+    result = function_executor.execute("execute_task", {"task_id": task_id})
+    return result
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: str):
+    tasks = function_executor.tasks
+    original_len = len(tasks)
+    function_executor.tasks = [t for t in tasks if t.get("id") != task_id]
+    if len(function_executor.tasks) < original_len:
+        function_executor._save_tasks()
+        return {"success": True, "message": "Task deleted."}
+    return {"success": False, "message": "Task not found."}
