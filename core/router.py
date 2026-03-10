@@ -5,32 +5,32 @@ Supports 9 functions: 6 actions, 1 context, 2 passthrough.
 
 import os
 import warnings
-import requests
+import requests  # type: ignore
 
 # Suppress transformers warnings before importing
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 warnings.filterwarnings("ignore", message=".*generation flags are not valid.*")
 
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, logging as transformers_logging
-from transformers.utils import get_json_schema
-from typing import Literal, Tuple, Dict, Any
+import torch  # type: ignore
+from transformers import AutoTokenizer, AutoModelForCausalLM, logging as transformers_logging  # type: ignore
+from transformers.utils import get_json_schema  # type: ignore
+from typing import Literal, Tuple, Dict, Any, Optional
 import time
 import re
 import json
-from huggingface_hub import snapshot_download
+from huggingface_hub import snapshot_download  # type: ignore
 
 # Suppress transformers logging
 transformers_logging.set_verbosity_error()
 
-from config import LOCAL_ROUTER_PATH, HF_ROUTER_REPO, OLLAMA_URL, RESPONDER_MODEL
+from config import LOCAL_ROUTER_PATH, HF_ROUTER_REPO, OLLAMA_URL, RESPONDER_MODEL  # type: ignore
 
 # Debug flag - set to True to see Gemma's raw response
 DEBUG_ROUTER = False
 
 
 # --- Tool Definitions (God-Mode essentials) ---
-def pc_control(action: str, target: str = None):
+def pc_control(action: str, target: Optional[str] = None):
     """
     Execute system-level commands like controlling volume, opening apps, or locking the PC.
     
@@ -108,7 +108,7 @@ def create_task(title: str, description: str):
     """
     pass
 
-def list_tasks(status: str = None):
+def list_tasks(status: Optional[str] = None):
     """
     List all tasks, optionally filtered by status.
     
@@ -117,7 +117,7 @@ def list_tasks(status: str = None):
     """
     pass
 
-def execute_task(task_id: str = None, description: str = None):
+def execute_task(task_id: Optional[str] = None, description: Optional[str] = None):
     """
     Execute a task either by ID or by providing a description.
     
@@ -144,11 +144,11 @@ TOOLS = [
 # All valid function names
 VALID_FUNCTIONS = {
     "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website", 
-    "set_call_directive", "visual_agent", "create_task", "list_tasks", "execute_task"
+    "set_call_directive", "visual_agent", "create_task", "list_tasks", "execute_task", "task_complete"
 }
 
 
-def ensure_model_available(model_path: str = LOCAL_ROUTER_PATH) -> str:
+def ensure_model_available(model_path: str = LOCAL_ROUTER_PATH) -> Optional[str]:
     """
     Ensure the router model is available locally.
     Downloads from Hugging Face if not found.
@@ -239,7 +239,7 @@ class FunctionGemmaRouter:
         Determine which holographic action to trigger for the user's prompt.
         
         Available functions:
-        - pc_control(action, target): Execute system commands. [action: 'open_app', 'close_app', 'volume', 'lock', 'shutdown', 'restart', 'sleep', 'empty_trash', 'minimize_all', 'screenshot', 'mute', 'media']
+        - pc_control(action, target): Execute system commands. [action: 'open_app', 'close_app', 'volume', 'lock', 'shutdown', 'restart', 'sleep', 'empty_trash', 'minimize_all', 'screenshot', 'mute', 'media', 'command'] -> for 'command', set target to the exact terminal/powershell command to run.
         - play_music(query, service): Search and play music. [service: 'youtube', 'spotify']
         - scaffold_website(prompt, framework): Build an entire website/app. [framework: 'react', 'nextjs', 'html', 'python']
         - set_call_directive(caller_name, instructions): Delegate an upcoming phone call.
@@ -252,30 +252,35 @@ class FunctionGemmaRouter:
 
         IMPORTANT ROUTING RULES:
         1. ANY request to open/close applications, control volume, shutdown, restart, or system control -> use pc_control
-        2. App names like "visual studio", "chrome", "spotify", "notepad", "vs code", "visualstudio" -> use pc_control with action: 'open_app'
+        2. App names like "visual studio", "chrome", "spotify", "notepad", "vs code", "visualstudio" -> use pc_control with action: 'open_app'. NEVER include the rest of the sentence in the target!
         3. System commands like "volume up", "mute", "lock screen" -> use pc_control
         4. Keywords "open", "launch", "start", "run" followed by app name -> use pc_control
-        5. ANY mention of browsers (chrome, firefox, edge, safari) + additional instructions -> use pc_control
-        6. Complex multi-step tasks, project work, or detailed instructions -> use thinking for analysis
-        7. Task execution commands like "create a presentation", "organize my files", "research topic" -> use thinking
-        8. Questions about capabilities, "tell me about yourself", "what can you do", "who are you" -> use nonthinking with capability overview
-        9. Only use nonthinking for greetings, goodbyes, simple questions, and casual chat
-        10. Only use thinking for complex problems, math, coding, or multi-step reasoning
+        5. Complex multi-step tasks -> OUTPUT MULTIPLE FUNCTION CALLS, one per line!
+        6. Task execution commands like "create a presentation", "organize my files", "research topic" -> use thinking
+        7. Questions about capabilities, "tell me about yourself", "what can you do", "who are you" -> use nonthinking with capability overview
+        8. Only use nonthinking for greetings, goodbyes, simple questions, and casual chat
+        9. Only use thinking for complex problems, math, coding, or multi-step reasoning
+        10. If the user asks you to create files, folders, or run system scripts, use pc_control with action: 'command' and target as the exact Powershell command to run!
 
-        Output ONLY a function call in this syntax: call:function_name{{arg1:value1,arg2:value2}}
+        Output function calls in this syntax: call:function_name{{arg1:value1,arg2:value2}}
+        If the user asks multiple things, output MULTIPLE lines:
+        call:function1{{...}}
+        call:function2{{...}}
+        
         Example 1: "open visual studio" -> call:pc_control{{action:open_app,target:visual studio}}
         Example 2: "open visualstudio code" -> call:pc_control{{action:open_app,target:visual studio code}}
-        Example 3: "open chrome select any profile search for gmail" -> call:pc_control{{action:open_app,target:chrome select any profile search for gmail}}
-        Example 4: "volume up" -> call:pc_control{{action:volume,target:up}}
+        Example 3: "open chrome then create a react app" -> 
+        call:pc_control{{action:open_app,target:chrome}}
+        call:scaffold_website{{prompt:create a react app,framework:react}}
+        Example 4: "turn off pc" -> call:pc_control{{action:shutdown,target:}}
         Example 5: "hello" -> call:nonthinking{{prompt:hello}}
         Example 6: "calculate 2+2" -> call:thinking{{prompt:calculate 2+2}}
         Example 7: "play music on spotify" -> call:play_music{{query:music,service:spotify}}
         Example 8: "open chrome" -> call:pc_control{{action:open_app,target:chrome}}
-        Example 9: "launch vs code" -> call:pc_control{{action:open_app,target:vs code}}
+        Example 9: "open vs code then open desktop in it and make an html file" -> 
+        call:pc_control{{action:open_app,target:vs code}}
+        call:thinking{{prompt:open desktop in vs code and make an html file}}
         Example 10: "create a presentation about marketing" -> call:thinking{{prompt:create a presentation about marketing}}
-        Example 11: "organize my desktop files" -> call:thinking{{prompt:organize my desktop files}}
-        Example 12: "research renewable energy sources" -> call:thinking{{prompt:research renewable energy sources}}
-        Example 13: "set up development environment for python" -> call:thinking{{prompt:set up development environment for python}}
 
         User Prompt: {user_prompt}
         Decision:"""
@@ -285,7 +290,7 @@ class FunctionGemmaRouter:
                 "model": RESPONDER_MODEL,
                 "prompt": fallback_prompt,
                 "stream": False,
-                "options": {"num_predict": 50, "temperature": 0.1}
+                "options": {"num_predict": 150, "temperature": 0.1}
             }, timeout=10).json()
             
             raw_response = response.get("response", "").strip()
@@ -296,12 +301,12 @@ class FunctionGemmaRouter:
             return f"call:nonthinking{{prompt:<escape>{user_prompt}<escape>}}"
 
     @torch.inference_mode()
-    def route(self, user_prompt: str) -> Tuple[str, Dict[str, Any]]:
+    def route(self, user_prompt: str) -> list[Tuple[str, Dict[str, Any]]]:
         """
         Route a user prompt to the appropriate function.
         
         Returns:
-            Tuple of (function_name, arguments_dict)
+            List of Tuples of (function_name, arguments_dict)
         """
         if self.use_ollama_fallback:
             response = self._ollama_route(user_prompt)
@@ -348,23 +353,41 @@ class FunctionGemmaRouter:
         # Parse function call
         return self._parse_function_call(response, user_prompt)
     
-    def _parse_function_call(self, response: str, user_prompt: str) -> Tuple[str, Dict[str, Any]]:
+    def _parse_function_call(self, response: str, user_prompt: str) -> list[Tuple[str, Dict[str, Any]]]:
         """Parse model's response to extract function name and arguments."""
         
         print(f"[Router] Parsing response: '{response}'")
+        calls = []
         
-        # Try to find function call pattern: call:function_name
+        # Check for both formats: call:func{...} and func(...)
         for func_name in VALID_FUNCTIONS:
-            if f"call:{func_name}" in response:
-                print(f"[Router] Found function: {func_name}")
-                # Try to extract arguments
-                args = self._extract_arguments(response, func_name, user_prompt)
+            # Pattern 1: call:func_name{...} (allow newlines inside)
+            pattern1 = rf"call:{func_name}\{{([^}}]*)\}}"
+            for match in re.finditer(pattern1, response, re.DOTALL):
+                args_str = match.group(1)
+                full_match = match.group(0)
+                print(f"[Router] Found function: {func_name} (Format 1)")
+                args = self._extract_arguments(full_match, func_name, user_prompt)
                 print(f"[Router] Extracted args: {args}")
-                return func_name, args
+                calls.append((func_name, args))
+                
+            # Pattern 2: func_name(...) (allow newlines inside)
+            pattern2 = rf"{func_name}\((.*?)\)"
+            for match in re.finditer(pattern2, response, re.DOTALL):
+                # Ensure it's not preceded by 'def ' or similar python keywords 
+                args_str = match.group(1)
+                full_match = match.group(0)
+                print(f"[Router] Found function: {func_name} (Format 2)")
+                args = self._extract_arguments(full_match, func_name, user_prompt)
+                print(f"[Router] Extracted args: {args}")
+                calls.append((func_name, args))
         
         # Fallback to nonthinking if no function found
-        print(f"[Router] No function found, falling back to nonthinking")
-        return "nonthinking", {"prompt": user_prompt}
+        if not calls:
+            print(f"[Router] No function found, falling back to nonthinking")
+            return [("nonthinking", {"prompt": user_prompt})]
+            
+        return calls
     
     def _extract_arguments(self, response: str, func_name: str, user_prompt: str) -> Dict[str, Any]:
         """Extract arguments from the response."""
@@ -374,42 +397,55 @@ class FunctionGemmaRouter:
             return {"prompt": user_prompt}
         
         
-        # Parse the model's custom format: {key:<escape>value<escape>,key2:<escape>value2<escape>}
-        # Find the arguments block after the function name
+        # New robust parsing logic
+        
+        # 1) Try standard call:func{...} regex
         pattern = rf"call:{func_name}\{{([^}}]+)\}}"
         match = re.search(pattern, response)
         
+        args = {}
         if match:
             args_str = match.group(1)
-            args = {}
             
-            # Split by comma, but handle values with commas inside <escape> tags
-            # Pattern: key:<escape>value<escape> OR key:value (for ints/bools)
-            # We look for key followed by either <escape>...<escape> OR anything until comma/end
-            arg_pattern = r'(\w+):(?:<escape>([^<]*)<escape>|([^,]+))'
-            for arg_match in re.finditer(arg_pattern, args_str):
-                key = arg_match.group(1)
-                # group(2) is escaped value, group(3) is unescaped value
-                val_escaped = arg_match.group(2)
-                val_unescaped = arg_match.group(3)
+            # Simple key-value parser recognizing both standard and <escape> formats
+            # Key can be wrapped in quotes
+            key_val_pairs = re.findall(r'[\'"]?(\w+)[\'"]?\s*:\s*(?:<escape>(.*?)<escape>|[\'"](.*?)[\'"]|([^,]+))', args_str)
+            for k_v_match in key_val_pairs:
+                key = k_v_match[0]
+                # Coalesce the matched value groups
+                value = next((v for v in k_v_match[1:] if v), "").strip()
                 
-                value = val_escaped if val_escaped is not None else val_unescaped
-                
-                # Try to convert to appropriate type
-                value = value.strip().strip("'").strip('"')
                 if value.isdigit():
                     args[key] = int(value)
                 elif value.lower() in ('true', 'false'):
                     args[key] = value.lower() == 'true'
                 else:
                     args[key] = value
-            
+                    
+            if args:
+                return args
+                
+        # 2) Try functional syntax func(kwarg=val)
+        pattern_func = rf"{func_name}\((.*?)\)"
+        match_func = re.search(pattern_func, response)
+        if match_func:
+            args_str = match_func.group(1)
+            # Find kwargs: key='value' or key="value" or key=value
+            kwarg_pairs = re.findall(r'(\w+)\s*=\s*(?:[\'"](.*?)[\'"]|([^,]+))', args_str)
+            for k_v_match in kwarg_pairs:
+                key = k_v_match[0]
+                value = k_v_match[1] if k_v_match[1] else k_v_match[2]
+                args[key] = value.strip()
+                
             if args:
                 return args
         
+        # If we reach here and couldn't parse the dictionary, return a default safe empty dict
+        # DO NOT fallback to opening the whole user_prompt as an app, because if the AI writes a bad syntax, it will bug out.
         if func_name == "pc_control":
-            return {"action": "open_app", "target": user_prompt}
-        elif func_name == "play_music": # Added play_music fallback
+            # Just do nothing safely
+            return {"action": "unknown", "target": ""}
+        elif func_name == "play_music":
             return {"query": user_prompt}
         elif func_name == "scaffold_website":
             return {"prompt": user_prompt, "framework": "html"}
@@ -418,7 +454,7 @@ class FunctionGemmaRouter:
         
         return {}
     
-    def route_with_timing(self, user_prompt: str) -> Tuple[Tuple[str, Dict], float]:
+    def route_with_timing(self, user_prompt: str) -> Tuple[list[Tuple[str, Dict[str, Any]]], float]:
         """Route with timing info."""
         start = time.time()
         result = self.route(user_prompt)

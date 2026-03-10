@@ -1,12 +1,12 @@
 import asyncio
-import psutil
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import psutil  # type: ignore
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect  # type: ignore
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+from pydantic import BaseModel  # type: ignore
 from typing import Optional
-from core.voice_assistant import voice_assistant
-from core.function_executor import executor as function_executor
-from config import VOICE_ASSISTANT_ENABLED
+from core.voice_assistant import voice_assistant  # type: ignore
+from core.function_executor import executor as function_executor  # type: ignore
+from config import VOICE_ASSISTANT_ENABLED  # type: ignore
 
 app = FastAPI(title="Wolf AI Backend API")
 
@@ -164,6 +164,11 @@ async def get_tasks():
 @app.post("/api/tasks")
 async def create_task(task: TaskData):
     result = function_executor.execute("create_task", {"title": task.title, "description": task.description})
+    return result
+
+@app.put("/api/tasks/{task_id}")
+async def edit_task(task_id: str, task: TaskData):
+    result = function_executor.execute("edit_task", {"task_id": task_id, "title": task.title, "description": task.description})
     return result
 
 @app.post("/api/tasks/{task_id}/execute")

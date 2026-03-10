@@ -155,60 +155,75 @@ class VoiceAssistant(QObject):
         try:
             # Step 1: Route through Function Gemma
             if should_bypass_router(user_text):
-                func_name = "nonthinking"
-                params = {"prompt": user_text}
+                calls = [("nonthinking", {"prompt": user_text})]
             else:
-                func_name, params = route_query(user_text)
+                calls = route_query(user_text)
             
-            print(f"{GRAY}[VoiceAssistant] Routed to: {func_name}{RESET}")
+            print(f"{GRAY}[VoiceAssistant] Routed to: {[c[0] for c in calls]}{RESET}")
             
-            # Step 2: Handle based on function type
-            if func_name in ACTION_FUNCTIONS:
-                # Execute action function
-                result = function_executor.execute(func_name, params)
-                response_text = result.get("message", "Done.")
-                print(f"[Function Result] {response_text}")
+            # Step 2: Handle based on function type. 
+            # Iterate through all detected functions.
+            for i, (func_name, params) in enumerate(calls):
+                if stop_event.is_set(): break
                 
-                # Emit GUI update signals for specific actions
-                if func_name == "set_timer" and result.get("success"):
-                    seconds = result.get("data", {}).get("seconds", 0)
-                    label = result.get("data", {}).get("label", "Timer")
-                    self.timer_set.emit(seconds, label)
-                elif func_name == "set_alarm" and result.get("success"):
-                    self.alarm_added.emit()
-                elif func_name == "create_calendar_event" and result.get("success"):
-                    self.calendar_updated.emit()
-                elif func_name == "add_task" and result.get("success"):
-                    self.task_added.emit()
+                # If there are multiple actions, only the LAST action generates a verbal response,
+                # unless a prior action failed.
+                is_last_action = i == len(calls) - 1
                 
-                # Enable thinking (more detailed reasoning) if the action failed so it cross-questions the user
-                failed_action = not result.get("success", False)
-                self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=failed_action)
+                if func_name in ACTION_FUNCTIONS:
+                    # Execute action function
+                    result = function_executor.execute(func_name, params)
+                    response_text = result.get("message", "Done.")
+                    print(f"[Function Result] {response_text}")
+                    
+                    # Emit GUI update signals for specific actions
+                    if func_name == "set_timer" and result.get("success"):
+                        seconds = result.get("data", {}).get("seconds", 0)
+                        label = result.get("data", {}).get("label", "Timer")
+                        self.timer_set.emit(seconds, label)
+                    elif func_name == "set_alarm" and result.get("success"):
+                        self.alarm_added.emit()
+                    elif func_name == "create_calendar_event" and result.get("success"):
+                        self.calendar_updated.emit()
+                    elif func_name == "add_task" and result.get("success"):
+                        self.task_added.emit()
+                    
+                    failed_action = not result.get("success", False)
+                    
+                    if is_last_action or failed_action:
+                        self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=failed_action)
+                    
+                    # For successful PC control actions, also ensure conversation mode is activated
+                    if func_name == "pc_control" and not failed_action:
+                        if self.stt_listener:
+                            self.stt_listener.enter_conversation_mode()
+                    
+                    if failed_action:
+                        break # Stop pipeline if an action fails
+                        
+                elif func_name == "visual_agent":
+                    # Handle visual tasks specifically (so the AI announces what it's doing)
+                    tts.speak("Looking at your screen right now...")
+                    result = function_executor.execute(func_name, params)
+                    if is_last_action or not result.get("success", False):
+                        self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=False)
+                    
+                elif func_name == "get_system_info":
+                    # Get system info
+                    result = function_executor.execute(func_name, params)
+                    if is_last_action:
+                        self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=True)
+                    
+                elif func_name in ("thinking", "nonthinking"):
+                    # Direct Qwen passthrough
+                    if is_last_action:
+                        enable_thinking = (func_name == "thinking")
+                        self._stream_qwen_response(user_text, stop_event, enable_thinking)
                 
-                # For successful PC control actions, also ensure conversation mode is activated
-                if func_name == "pc_control" and result.get("success", False):
-                    if self.stt_listener:
-                        self.stt_listener.enter_conversation_mode()
-                
-            elif func_name == "visual_agent":
-                # Handle visual tasks specifically (so the AI announces what it's doing)
-                tts.speak("Looking at your screen right now...")
-                result = function_executor.execute(func_name, params)
-                self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=False)
-                
-            elif func_name == "get_system_info":
-                # Get system info
-                result = function_executor.execute(func_name, params)
-                self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=True)
-                
-            elif func_name in ("thinking", "nonthinking"):
-                # Direct Qwen passthrough
-                enable_thinking = (func_name == "thinking")
-                self._stream_qwen_response(user_text, stop_event, enable_thinking)
-            
-            else:
-                # Fallback to nonthinking
-                self._stream_qwen_response(user_text, stop_event, False)
+                else:
+                    # Fallback to nonthinking
+                    if is_last_action:
+                        self._stream_qwen_response(user_text, stop_event, False)
                 
         except Exception as e:
             error_msg = f"Error processing query: {e}"

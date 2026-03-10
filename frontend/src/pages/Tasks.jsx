@@ -12,6 +12,7 @@ export default function Tasks() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDesc, setNewTaskDesc] = useState("");
+  const [editTaskId, setEditTaskId] = useState(null);
 
   const fetchTasks = async () => {
     try {
@@ -27,23 +28,49 @@ export default function Tasks() {
     fetchTasks();
   }, []);
 
-  const handleCreateTask = async (e) => {
+  const handleSaveTask = async (e) => {
     e.preventDefault();
     if (!newTaskTitle.trim() || !newTaskDesc.trim()) return;
 
     try {
-      await fetch('http://localhost:8000/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTaskTitle, description: newTaskDesc })
-      });
+      if (editTaskId) {
+        // Edit existing task
+        await fetch(`http://localhost:8000/api/tasks/${editTaskId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTaskTitle, description: newTaskDesc })
+        });
+      } else {
+        // Create new task
+        await fetch('http://localhost:8000/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTaskTitle, description: newTaskDesc })
+        });
+      }
       setIsModalOpen(false);
       setNewTaskTitle("");
       setNewTaskDesc("");
+      setEditTaskId(null);
       fetchTasks();
     } catch (e) {
-      console.error("Failed to create task", e);
+      console.error("Failed to save task", e);
     }
+  };
+
+  const openEditModal = (task, e) => {
+    e.stopPropagation();
+    setEditTaskId(task.id);
+    setNewTaskTitle(task.title);
+    setNewTaskDesc(task.description);
+    setIsModalOpen(true);
+  };
+
+  const openCreateModal = () => {
+    setEditTaskId(null);
+    setNewTaskTitle("");
+    setNewTaskDesc("");
+    setIsModalOpen(true);
   };
 
   const handleDeleteTask = async (taskId, e) => {
@@ -94,7 +121,7 @@ export default function Tasks() {
         <div className="tasks-sidebar">
           <div className="tasks-sidebar-header">
             <h2>TASKS</h2>
-            <button className="add-task-btn" onClick={() => setIsModalOpen(true)}><Plus size={16}/> ADD TASK</button>
+            <button className="add-task-btn" onClick={openCreateModal}><Plus size={16}/> ADD TASK</button>
           </div>
           <div className="task-list">
             {tasks.length === 0 ? (
@@ -116,6 +143,7 @@ export default function Tasks() {
                   >
                     <Play size={12}/> Execute
                   </button>
+                  <button className="act-btn edit" onClick={(e) => openEditModal(task, e)}><Edit size={12}/> Edit</button>
                   <button className="act-btn delete" onClick={(e) => handleDeleteTask(task.id, e)}><Trash2 size={12}/> Delete</button>
                 </div>
               </div>
@@ -161,8 +189,8 @@ export default function Tasks() {
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">Create New Task</h3>
-            <form onSubmit={handleCreateTask}>
+            <h3 className="modal-title">{editTaskId ? 'Edit Task' : 'Create New Task'}</h3>
+            <form onSubmit={handleSaveTask}>
               <div className="modal-group">
                 <label>Task Title</label>
                 <input 

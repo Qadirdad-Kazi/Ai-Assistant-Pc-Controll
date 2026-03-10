@@ -78,6 +78,8 @@ class PCController:
                 return self._mute_volume()
             elif action == "media":
                 return self._media_control(target)
+            elif action == "command":
+                return self._run_command(target)
             else:
                 return {"success": False, "message": f"Unknown action: {action}"}
         except Exception as e:
@@ -140,6 +142,30 @@ class PCController:
                 
         except Exception as e:
             return {"success": False, "message": f"Error opening Chrome with profile: {str(e)}"}
+            
+    def _run_command(self, target: str) -> Dict[str, Any]:
+        """Execute a terminal or shell command."""
+        print(f"[PC Control] Running terminal command: '{target}'")
+        try:
+            # We use powershell to execute terminal commands on Windows
+            process = subprocess.run(
+                ["powershell", "-Command", target], 
+                capture_output=True, 
+                text=True, 
+                timeout=30
+            )
+            
+            output = process.stdout.strip()
+            error = process.stderr.strip()
+            
+            if process.returncode == 0:
+                msg = f"Command executed successfully.\nOutput: {output}" if output else "Command executed successfully with no output."
+                return {"success": True, "message": msg}
+            else:
+                return {"success": False, "message": f"Command failed (Code {process.returncode}).\nError: {error}\nOutput: {output}"}
+                
+        except Exception as e:
+            return {"success": False, "message": f"Failed to run command: {e}"}
     
     def _open_chrome_and_search(self, search_type: str) -> Dict[str, Any]:
         """Open Chrome and search for Gmail or email."""
