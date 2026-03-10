@@ -1,0 +1,128 @@
+.diagnostics-container {
+  padding: 40px;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.diagnostics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 20px;
+}
+
+.diagnostics-header h2 {
+  font-size: 32px;
+  margin: 0;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.subtitle {
+  color: var(--accent-cyan);
+  font-size: 14px;
+  margin: 5px 0 0 0;
+  letter-spacing: 1px;
+}
+
+.run-all-btn {
+  background: var(--accent-cyan);
+  color: #000;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+}
+
+.run-all-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.6);
+  background: #fff;
+}
+
+.diagnostics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.diag-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.diag-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3), 0 0 15px rgba(0,242,254,0.1);
+  border-color: rgba(0,242,254,0.3);
+}
+
+.diag-icon {
+  background: rgba(255,255,255,0.05);
+  padding: 15px;
+  border-radius: 10px;
+  margin-right: 20px;
+  color: var(--accent-cyan);
+}
+
+.diag-info {
+  flex-grow: 1;
+}
+
+.diag-info h3 {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+}
+
+.diag-info p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+
+.diag-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.diag-status {
+  background: rgba(0,0,0,0.4);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #a0a0a0;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.test-btn {
+  background: rgba(0,242,254,0.1);
+  color: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.test-btn:hover {
+  background: var(--accent-cyan);
+  color: #000;
+}
