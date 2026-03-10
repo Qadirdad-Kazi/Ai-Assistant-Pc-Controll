@@ -54,6 +54,8 @@ class VoiceAssistant(QObject):
         ]
         self.current_session_id = None
         self.current_stop_event = None
+        self.current_user_prompt = ""
+        self.current_stream = ""
         
     def initialize(self) -> bool:
         """Initialize voice assistant components."""
@@ -138,6 +140,9 @@ class VoiceAssistant(QObject):
         if self.current_stop_event:
             self.current_stop_event.set()
         tts.stop()
+
+        self.current_user_prompt = text
+        self.current_stream = ""
 
         local_stop = threading.Event()
         self.current_stop_event = local_stop
@@ -293,6 +298,7 @@ class VoiceAssistant(QObject):
                             if 'content' in msg and msg['content']:
                                 content = msg['content']
                                 full_response += content
+                                self.current_stream = full_response
                                 
                                 # Queue for TTS
                                 sentences = sentence_buffer.add(content)
@@ -309,6 +315,8 @@ class VoiceAssistant(QObject):
             
             # Update messages
             self.messages.append({'role': 'assistant', 'content': full_response})
+            self.current_user_prompt = ""
+            self.current_stream = ""
             
             mark_llama_used()  # Update usage time
             
@@ -393,6 +401,8 @@ class VoiceAssistant(QObject):
             
             # Update messages
             self.messages.append({'role': 'assistant', 'content': full_response})
+            self.current_user_prompt = ""
+            self.current_stream = ""
             
             mark_llama_used()  # Update usage time
             

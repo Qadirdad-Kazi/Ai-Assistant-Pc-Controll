@@ -124,16 +124,28 @@ async def websocket_chat(websocket: WebSocket):
             if m["role"] == "user" and "User asked: " in content:
                 content = content.split("User asked: ")[-1].split("\n\nRespond naturally")[0].strip()
             cleaned.append({"role": m["role"], "content": content})
+            
+        # Append active ongoing stream
+        if getattr(voice_assistant, 'current_user_prompt', ""):
+            cleaned.append({"role": "user", "content": voice_assistant.current_user_prompt})
+            
+            stream_text = getattr(voice_assistant, 'current_stream', "")
+            if stream_text:
+                cleaned.append({"role": "bot", "content": stream_text})
+            else:
+                cleaned.append({"role": "bot", "content": "Processing..."})
+                
         return cleaned
 
     try:
-        last_len = 0
+        last_hash = ""
         while True:
             if VOICE_ASSISTANT_ENABLED:
-                current_len = len(voice_assistant.messages)
-                if current_len != last_len:
-                    await websocket.send_json({"messages": get_clean_messages()})
-                    last_len = current_len
-            await asyncio.sleep(0.5)
+                messages = get_clean_messages()
+                messages_hash = str(messages)
+                if messages_hash != last_hash:
+                    await websocket.send_json({"messages": messages})
+                    last_hash = messages_hash
+            await asyncio.sleep(0.1)
     except WebSocketDisconnect:
         pass

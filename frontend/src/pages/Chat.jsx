@@ -44,6 +44,13 @@ export default function Chat() {
     const textToSend = inputText;
     setInputText('');
     
+    // Optimistically update the UI instantly so there's no lag
+    setMessages(prev => [
+      ...prev, 
+      { id: Date.now(), sender: 'user', text: textToSend },
+      { id: Date.now() + 1, sender: 'bot', text: 'Processing...' }
+    ]);
+    
     try {
       await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
