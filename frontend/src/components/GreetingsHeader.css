@@ -1,0 +1,63 @@
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  position: relative;
+  z-index: 5;
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: var(--accent-cyan);
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+  background: rgba(0, 242, 254, 0.1);
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  display: inline-block;
+  align-self: flex-start;
+  margin-bottom: 15px;
+}
+
+.main-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 64px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.2), 0 0 100px rgba(0, 242, 254, 0.4);
+  margin: 0 0 5px -2px;
+  letter-spacing: -1px;
+}
+
+.date-text {
+  color: var(--text-sub);
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  letter-spacing: 2px;
+  opacity: 0.8;
+}
+
+.clock-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 42px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  letter-spacing: 2px;
+  background: var(--glass-bg);
+  padding: 15px 25px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(20px);
+}

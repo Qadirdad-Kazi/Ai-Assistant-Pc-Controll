@@ -1,0 +1,124 @@
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  background: var(--glass-bg);
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 10;
+  box-shadow: var(--glass-shadow);
+  position: relative;
+}
+
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -1px;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,242,254,0.3) 50%, transparent 100%);
+}
+
+.logo-section {
+  padding: 40px 25px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid transparent;
+}
+
+.logo-icon {
+  font-size: 34px;
+  margin-right: 15px;
+  filter: drop-shadow(0 0 10px var(--accent-cyan));
+}
+
+.logo-text {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 24px;
+  color: var(--text-main);
+  letter-spacing: 4px;
+  background: linear-gradient(90deg, #fff, var(--text-sub));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  padding: 30px 15px;
+  gap: 10px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  color: var(--text-sub);
+  text-decoration: none;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  font-weight: 500;
+  font-size: 15px;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-item span {
+  margin-left: 15px;
+  z-index: 2;
+}
+
+.nav-item svg {
+  z-index: 2;
+  transition: transform 0.3s ease;
+}
+
+.nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(0,242,254,0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1;
+}
+
+.nav-item:hover {
+  color: var(--text-main);
+  transform: translateX(5px);
+}
+
+.nav-item:hover::before {
+  opacity: 1;
+}
+
+.nav-item.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.nav-item.active svg {
+  color: var(--accent-cyan);
+  filter: drop-shadow(0 0 8px rgba(0,242,254,0.6));
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 60%;
+  width: 4px;
+  background-color: var(--accent-cyan);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px var(--accent-cyan);
+}
