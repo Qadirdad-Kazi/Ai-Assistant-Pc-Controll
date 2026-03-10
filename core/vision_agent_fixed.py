@@ -3,12 +3,12 @@ import json
 import io
 import time
 from typing import Dict, Any
-import requests
-from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
+import requests  # type: ignore
+from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET  # type: ignore
 
 try:
-    import pyautogui
-    from PIL import Image
+    import pyautogui  # type: ignore
+    from PIL import Image  # type: ignore
     # PyAutoGUI safety setting
     pyautogui.FAILSAFE = True
     pyautogui.PAUSE = 1.0
@@ -30,7 +30,7 @@ class VisionAgent:
             
         try:
             # Capture screenshot
-            screenshot = pyautogui.screenshot()
+            screenshot = pyautogui.screenshot()  # type: ignore
             
             # Convert to base64
             img_byte_arr = io.BytesIO()
@@ -137,7 +137,7 @@ class VisionAgent:
                     "thought": thought,
                     "message": message,
                     "followup": followup if action in ["click", "type", "scroll", "wait"] else False,
-                    "success": action in ["click", "type", "scroll"].index(action) != -1
+                    "success": action in ["click", "type", "scroll"]
                 }
             else:
                 return {"success": False, "message": "Failed to analyze screen."}
@@ -150,7 +150,7 @@ class VisionAgent:
         try:
             # Step 1: Capture screenshot
             b64_image = self._capture_screen_base64()
-            screen_width, screen_height = pyautogui.size()
+            screen_width, screen_height = pyautogui.size()  # type: ignore
             
             # Step 2: Formulate prompt for LLaVA
             prompt = (
@@ -171,7 +171,8 @@ class VisionAgent:
                 "format": "json"
             }
             
-            response = requests.post(self.api_url, json=payload, timeout=30).json()
+            start_time = time.time()
+            response = requests.post(self.api_url, json=payload, timeout=30)
             response.raise_for_status()
             ai_time = time.time() - start_time
             
@@ -196,15 +197,14 @@ class VisionAgent:
                 target_y = max(0, min(screen_height - 1, target_y))
                 
                 # Smooth move and click
-                pyautogui.moveTo(target_x, target_y, duration=0.8, tween=pyautogui.easeInOutQuad)
-                pyautogui.click()
+                pyautogui.moveTo(target_x, target_y, duration=0.8, tween=pyautogui.easeInOutQuad)  # type: ignore
+                pyautogui.click()  # type: ignore
                 time.sleep(1)
                 
                 return {
                     "success": True, 
                     "message": f"I used my vision to locate the target and clicked on it. Thought: {thought}",
                     "data": {"x": target_x, "y": target_y, "screen_size": [screen_width, screen_height]}
-                    }
                 }
             except (json.JSONDecodeError, ValueError) as e:
                 print(f"{YELLOW}[VisionAgent] AI failed to output valid JSON coordinates: {result_json}{RESET}")
@@ -214,13 +214,10 @@ class VisionAgent:
             return {"success": False, "message": f"Error clicking element: {str(e)}"}
     
     def _find_and_type_text(self, task: str) -> Dict[str, Any]:
-        # TO DO: Implement typing functionality
-        pass
+        return {"success": False, "message": "Not implemented"}
     
     def _scroll_screen(self, task: str) -> Dict[str, Any]:
-        # TO DO: Implement scrolling functionality
-        pass
+        return {"success": False, "message": "Not implemented"}
     
     def _describe_screen(self) -> str:
-        # TO DO: Implement screen description functionality
-        pass
+        return ""

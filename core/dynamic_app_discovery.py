@@ -10,10 +10,10 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 try:
-    import pyautogui
+    import pyautogui  # type: ignore
     from PIL import Image
-    import win32gui
-    import win32con
+    import win32gui  # type: ignore
+    import win32con  # type: ignore
     import winreg
 except ImportError as e:
     print(f"[Dynamic Discovery] Warning: Some dependencies missing: {e}")
@@ -27,15 +27,15 @@ class DynamicAppDiscovery:
     """Intelligent app discovery that works with ANY installed application."""
     
     def __init__(self):
-        self.installed_apps = {}
-        self.desktop_apps = []
-        self.start_menu_apps = []
+        self.installed_apps: Dict[str, str] = {}
+        self.desktop_apps: List[Any] = []
+        self.start_menu_apps: List[Any] = []
         
     def discover_installed_apps(self) -> Dict[str, str]:
         """Discover all installed applications on the system."""
         print("[Dynamic Discovery] Scanning for installed applications...")
         
-        apps = {}
+        apps: Dict[str, str] = {}
         
         # Method 1: Scan common installation directories
         common_paths = [
@@ -80,16 +80,16 @@ class DynamicAppDiscovery:
         try:
             import winreg
             # Scan HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,  # type: ignore
                                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")
             
-            for i in range(winreg.QueryInfoKey(key)[0]):
-                subkey_name = winreg.EnumKey(key, i)
-                subkey = winreg.OpenKey(key, subkey_name)
+            for i in range(winreg.QueryInfoKey(key)[0]):  # type: ignore
+                subkey_name = winreg.EnumKey(key, i)  # type: ignore
+                subkey = winreg.OpenKey(key, subkey_name)  # type: ignore
                 
                 try:
-                    display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]
-                    install_location = winreg.QueryValueEx(subkey, "InstallLocation")[0]
+                    display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]  # type: ignore
+                    install_location = winreg.QueryValueEx(subkey, "InstallLocation")[0]  # type: ignore
                     
                     if display_name and install_location:
                         exe_path = self._find_exe_in_directory(install_location)
@@ -98,8 +98,8 @@ class DynamicAppDiscovery:
                 except (FileNotFoundError, OSError):
                     pass
                     
-                winreg.CloseKey(subkey)
-            winreg.CloseKey(key)
+                winreg.CloseKey(subkey)  # type: ignore
+            winreg.CloseKey(key)  # type: ignore
         except (ImportError, OSError):
             pass  # Registry access not available
             
@@ -202,13 +202,13 @@ class DynamicAppDiscovery:
     def get_app_suggestions(self, partial_name: str) -> List[str]:
         """Get app suggestions based on partial name."""
         partial = partial_name.lower()
-        suggestions = []
+        suggestions: List[str] = []
         
         for app_name in self.installed_apps:
             if partial in app_name or app_name in partial:
                 suggestions.append(app_name)
         
-        return sorted(suggestions)[:10]  # Return top 10 suggestions
+        return sorted(suggestions)[:10]  # type: ignore
 
 # Global instance
 dynamic_discovery = DynamicAppDiscovery()

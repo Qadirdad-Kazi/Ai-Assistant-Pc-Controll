@@ -2,9 +2,9 @@
 Model Manager - Utilities for loading/unloading Ollama models.
 """
 
-import requests
+import requests  # type: ignore
 import threading
-from config import OLLAMA_URL, GRAY, RESET
+from config import OLLAMA_URL, GRAY, RESET  # type: ignore
 
 
 def sync_unload_model(model_name: str):

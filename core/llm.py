@@ -2,12 +2,12 @@
 LLM interaction and function execution.
 """
 
-import requests
+import requests  # type: ignore
 import json
 import re
 import threading
 from typing import Dict, Any, Optional
-from config import (
+from config import (  # type: ignore
     OLLAMA_URL, LOCAL_ROUTER_PATH, GREEN, CYAN, YELLOW, GRAY, RESET, RESPONDER_MODEL
 )
 
@@ -37,7 +37,7 @@ def route_query(user_input):
     # Lazy Initialization
     if not router:
         try:
-            from core.router import FunctionGemmaRouter
+            from core.router import FunctionGemmaRouter  # type: ignore
             # We load without compilation for faster initialization and stability
             router = FunctionGemmaRouter(model_path=LOCAL_ROUTER_PATH, compile_model=False)
         except Exception as e:
@@ -71,7 +71,7 @@ def execute_function(name, params):
 
 def preload_models():
     """Client-side preload to ensure models are in memory before user interaction. Parallelized."""
-    from core.router import FunctionGemmaRouter
+    from core.router import FunctionGemmaRouter  # type: ignore
     from core.tts import tts
     
     global router

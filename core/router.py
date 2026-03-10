@@ -169,7 +169,7 @@ def ensure_model_available(model_path: str = LOCAL_ROUTER_PATH) -> Optional[str]
     print(f"[Router] Attempting download from Hugging Face: {HF_ROUTER_REPO}...")
     
     try:
-        from huggingface_hub import snapshot_download
+        from huggingface_hub import snapshot_download  # type: ignore
         downloaded_path = snapshot_download(
             repo_id=HF_ROUTER_REPO,
             local_dir=model_path,
@@ -230,7 +230,7 @@ class FunctionGemmaRouter:
             self.tokenizer = None
             print("[Router] Initialized in Ollama Fallback mode.")
     
-    def _ollama_route(self, user_prompt: str) -> tuple[str, Dict[str, Any]]:
+    def _ollama_route(self, user_prompt: str) -> str:
         """Fallback routing using Ollama."""
         print(f"[Router] Using Ollama fallback for: '{user_prompt}'")
         
@@ -312,6 +312,9 @@ class FunctionGemmaRouter:
             response = self._ollama_route(user_prompt)
             return self._parse_function_call(response, user_prompt)
 
+        # Define system message
+        SYSTEM_MSG = "You are a helpful AI routing assistant. You must map the user's request to the correct function."
+        
         # Build messages
         messages = [
             {"role": "developer", "content": SYSTEM_MSG},
@@ -403,7 +406,7 @@ class FunctionGemmaRouter:
         pattern = rf"call:{func_name}\{{([^}}]+)\}}"
         match = re.search(pattern, response)
         
-        args = {}
+        args: Dict[str, Any] = {}
         if match:
             args_str = match.group(1)
             
@@ -485,21 +488,22 @@ if __name__ == "__main__":
     print("FUNCTION CALLING ROUTER TEST")
     print("="*70)
     
-    total_time = 0
-    correct = 0
+    total_time: float = 0.0
+    correct: int = 0
     
     for prompt, expected in test_prompts:
-        (func_name, args), elapsed = router.route_with_timing(prompt)
+        calls, elapsed = router.route_with_timing(prompt)
+        func_name, args = calls[0] if calls else ("unknown", {})
         total_time += elapsed
         match = "✓" if func_name == expected else "✗"
         if func_name == expected:
-            correct += 1
+            correct += 1  # type: ignore
         
         print(f"\n[{match}] {prompt}")
         print(f"    → {func_name}({args}) [{elapsed*1000:.0f}ms]")
     
     avg_time = total_time / len(test_prompts)
     print(f"\n{'='*70}")
-    print(f"Accuracy: {correct}/{len(test_prompts)} ({100*correct/len(test_prompts):.0f}%)")
+    print(f"Accuracy: {correct}/{len(test_prompts)} ({100*correct/len(test_prompts):.0f}%)")  # type: ignore
     print(f"Average routing time: {avg_time*1000:.0f}ms per prompt")
     print(f"Total time: {total_time:.2f}s for {len(test_prompts)} prompts")

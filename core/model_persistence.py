@@ -4,13 +4,13 @@ Model Persistence Manager - Manages which models stay loaded and which can sleep
 
 import threading
 import time
-import requests
-from typing import Optional
-from config import (
+import requests  # type: ignore
+from typing import Optional, Dict, Any
+from config import (  # type: ignore
     RESPONDER_MODEL, OLLAMA_URL, LLM_TIMEOUT_SECONDS, 
     LLM_KEEP_ALIVE, GRAY, RESET, CYAN
 )
-from core.model_manager import get_running_models, sync_unload_model
+from core.model_manager import get_running_models, sync_unload_model  # type: ignore
 
 
 class LlamaModelManager:
@@ -103,7 +103,7 @@ class LlamaModelManager:
         self.monitoring = True
         
         # Stop existing thread if any
-        if self.timeout_thread and self.timeout_thread.is_alive():
+        if self.timeout_thread and getattr(self.timeout_thread, "is_alive", lambda: False)():  # type: ignore
             # Thread will check self.monitoring and exit
             pass
         
@@ -112,7 +112,7 @@ class LlamaModelManager:
             target=self._timeout_monitor_loop,
             daemon=True
         )
-        self.timeout_thread.start()
+        self.timeout_thread.start()  # type: ignore
     
     def _timeout_monitor_loop(self):
         """Monitor for timeout and unload model if inactive."""
@@ -126,14 +126,14 @@ class LlamaModelManager:
                 if self.last_used_time is None:
                     continue
                 
-                elapsed = time.time() - self.last_used_time
+                elapsed = time.time() - self.last_used_time  # type: ignore
                 
                 if elapsed >= LLM_TIMEOUT_SECONDS:
                     print(f"{GRAY}[LlamaManager] Timeout reached ({elapsed:.0f}s), unloading {self.model_name}...{RESET}")
                     self.unload("timeout")
                     break
     
-    def check_status(self) -> dict:
+    def check_status(self) -> Dict[str, Any]:
         """Get current status of Llama model."""
         with self.lock:
             running_models = get_running_models()
@@ -145,7 +145,7 @@ class LlamaModelManager:
                 "is_loaded": self.is_loaded,
                 "is_running": is_running,
                 "last_used": self.last_used_time,
-                "time_since_use": time.time() - self.last_used_time if self.last_used_time else None
+                "time_since_use": time.time() - self.last_used_time if self.last_used_time else None  # type: ignore
             }
 
 
@@ -168,6 +168,6 @@ def unload_llama(reason: str = "manual"):
     llama_manager.unload(reason)
 
 
-def get_llama_status() -> dict:
+def get_llama_status() -> Dict[str, Any]:
     """Get Llama model status. Public interface."""
     return llama_manager.check_status()

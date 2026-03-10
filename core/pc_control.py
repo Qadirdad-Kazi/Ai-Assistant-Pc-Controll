@@ -9,13 +9,13 @@ import shutil
 from typing import Dict, Any
 
 try:
-    import pyautogui
+    import pyautogui  # type: ignore
 except Exception as e:
-    pyautogui = None
+    pyautogui = None  # type: ignore
     print(f"[PC Control] pyautogui failed to load. Volume/Media controls will be limited. ERROR: {e}")
 
 # Import dynamic app discovery
-from core.dynamic_app_discovery import dynamic_discovery
+from core.dynamic_app_discovery import dynamic_discovery  # type: ignore
 
 class PCController:
     """Handles system level commands like controlling volume, opening apps, or locking the PC."""
@@ -189,6 +189,7 @@ class PCController:
                             pyautogui.press("enter")
                             time.sleep(2)
                             return {"success": True, "message": f"Opened Chrome and searched for {search_type}."}
+                        return {"success": False, "message": "Address bar not found"}
                     except Exception as e:
                         return {"success": True, "message": f"Opened Chrome but search failed: {str(e)}"}
                 else:
@@ -229,13 +230,14 @@ class PCController:
                                     break
                             
                             if gmail_profile:
-                                pyautogui.moveTo(gmail_profile[0], gmail_profile[1])
-                                pyautogui.click()
+                                pyautogui.moveTo(gmail_profile[0], gmail_profile[1])  # type: ignore
+                                pyautogui.click()  # type: ignore
                                 return {"success": True, "message": "Opened Chrome and selected Gmail profile."}
                             else:
                                 return {"success": True, "message": "Opened Chrome but couldn't find Gmail profile option."}
                     except Exception as e:
                         return {"success": True, "message": f"Opened Chrome but profile selection failed: {str(e)}"}
+                    return {"success": False, "message": "Profile button not found."}
                 else:
                     return {"success": True, "message": "Opened Chrome but pyautogui not available for profile selection."}
             else:
@@ -272,7 +274,7 @@ class PCController:
                     pyautogui.moveTo(screen_width // 2, screen_height // 2, duration=0.5)
                     time.sleep(0.5)
                 
-                os.startfile(app_path)
+                os.startfile(app_path)  # type: ignore
                 print(f"[PC Control] ✓ App launched successfully!")
                 time.sleep(2)  # Wait for app to actually open
                 
@@ -305,22 +307,22 @@ class PCController:
             print(f"[PC Control] Starting Windows Search for: '{app_name}'")
             
             # Visually move the cursor to prove control
-            screen_width, screen_height = pyautogui.size()
-            pyautogui.moveTo(screen_width / 2, screen_height / 2, duration=0.5, tween=pyautogui.easeInOutQuad)
+            screen_width, screen_height = pyautogui.size()  # type: ignore
+            pyautogui.moveTo(screen_width / 2, screen_height / 2, duration=0.5, tween=pyautogui.easeInOutQuad)  # type: ignore
             print(f"[PC Control] ✓ Mouse moved to center")
             
             # Use press instead of hotkey (more reliable on Windows 11)
-            pyautogui.press("win")
+            pyautogui.press("win")  # type: ignore
             print(f"[PC Control] ✓ Pressed Windows key")
             time.sleep(1.0)  # Wait for search to appear
             
             # Type out the app name character by character
-            pyautogui.write(app_name, interval=0.1)
+            pyautogui.write(app_name, interval=0.1)  # type: ignore
             print(f"[PC Control] ✓ Typed: '{app_name}'")
             time.sleep(2.0) # Wait for search results to load
             
             # Press Enter to launch
-            pyautogui.press("enter")
+            pyautogui.press("enter")  # type: ignore
             print(f"[PC Control] ✓ Pressed Enter to launch")
             time.sleep(3.0)  # Wait for app to fully open
             
@@ -411,7 +413,7 @@ class PCController:
     def _lock_pc(self) -> Dict[str, Any]:
         try:
             # Lock workstation on Windows
-            ctypes.windll.user32.LockWorkStation()
+            ctypes.windll.user32.LockWorkStation()  # type: ignore
             return {"success": True, "message": "Locked the PC."}
         except Exception as e:
             return {"success": False, "message": f"Could not lock PC: {e}"}
@@ -440,7 +442,7 @@ class PCController:
     def _empty_recycle_bin(self) -> Dict[str, Any]:
         try:
             # SHEmptyRecycleBinW
-            result = ctypes.windll.shell32.SHEmptyRecycleBinW(None, None, 7) # 7 = no confirmation, no progress, no sound
+            result = ctypes.windll.shell32.SHEmptyRecycleBinW(None, None, 7) # type: ignore
             if result == 0:
                 return {"success": True, "message": "Emptied the recycle bin."}
             else:
@@ -452,7 +454,7 @@ class PCController:
         if not pyautogui:
             return {"success": False, "message": "pyautogui is missing."}
         try:
-            pyautogui.hotkey('win', 'd')
+            pyautogui.hotkey('win', 'd')  # type: ignore
             return {"success": True, "message": "Toggled minimize all windows."}
         except Exception as e:
             return {"success": False, "message": f"Could not minimize windows: {e}"}
@@ -462,7 +464,7 @@ class PCController:
             return {"success": False, "message": "pyautogui is missing."}
         try:
             out_file = "screenshot.png"
-            pyautogui.screenshot(out_file)
+            pyautogui.screenshot(out_file)  # type: ignore
             return {"success": True, "message": f"Saved screenshot to {os.path.abspath(out_file)}."}
         except Exception as e:
             return {"success": False, "message": f"Could not take screenshot: {e}"}

@@ -4,13 +4,14 @@ Watches the screen in a background thread for application crashes or terminal er
 """
 import time
 import threading
+from typing import Optional
 try:
-    import pyautogui
+    import pyautogui  # type: ignore
 except ImportError:
     pyautogui = None
 
 try:
-    import pytesseract
+    import pytesseract  # type: ignore
     from PIL import Image
     # Windows default Tesseract path (user may need to install tesseract-ocr)
     pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
@@ -22,7 +23,7 @@ class BugWatcher:
     def __init__(self):
         self.interval = 10 # Scan every 10 seconds
         self.running = False
-        self._thread = None
+        self._thread: Optional[threading.Thread] = None
         
         # Keywords to look for
         self.alert_keywords = ["exception", "traceback (most recent call last)", "fatal error", "syntaxerror", "referenceerror", "typeerror"]
@@ -34,13 +35,13 @@ class BugWatcher:
         if not self.running:
             self.running = True
             self._thread = threading.Thread(target=self._scan_loop, daemon=True)
-            self._thread.start()
+            self._thread.start()  # type: ignore
             print("[Proactive Layer] Bug Watcher started. Polling screen...")
 
     def stop(self):
         self.running = False
         if self._thread:
-            self._thread.join(timeout=2)
+            self._thread.join(timeout=2)  # type: ignore
             print("[Proactive Layer] Bug Watcher stopped.")
 
     def _scan_loop(self):
@@ -55,7 +56,7 @@ class BugWatcher:
                     ocr_text = pytesseract.image_to_string(screenshot, config='--psm 11').lower()
                     
                     # 3. Analyze text for crash signatures
-                    detected_error = None
+                    detected_error: Optional[str] = None
                     for keyword in self.alert_keywords:
                         if keyword in ocr_text:
                             detected_error = keyword
@@ -68,14 +69,14 @@ class BugWatcher:
                         
                         if snippet != self.last_alerted_text:
                             self.last_alerted_text = snippet
-                            print(f"[Proactive Layer] 🔥 CRASH DETECTED ON SCREEN: {detected_error.upper()}")
+                            print(f"[Proactive Layer] 🔥 CRASH DETECTED ON SCREEN: {detected_error.upper()}")  # type: ignore
                             print(f"Context: {snippet}")
                             
                             # Trigger HUD if initialized
                             try:
-                                from gui.windows.hud_window import hud_window
+                                from gui.windows.hud_window import hud_window  # type: ignore
                                 if hud_window:
-                                    hud_window.show_alert(f"BUG DETECTED: {detected_error.upper()}")
+                                    hud_window.show_alert(f"BUG DETECTED: {detected_error.upper()}")  # type: ignore
                             except Exception:
                                 pass
                             

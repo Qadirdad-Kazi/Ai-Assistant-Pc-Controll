@@ -13,8 +13,8 @@ import re
 import threading
 import time
 import os
-from typing import Optional, Callable
-from config import (
+from typing import Optional, Callable, Any
+from config import (  # type: ignore
     WAKE_WORD, REALTIMESTT_MODEL, WAKE_WORD_SENSITIVITY,
     CUSTOM_PPN_PATH, GRAY, RESET, CYAN, YELLOW, GREEN
 )
@@ -44,9 +44,9 @@ class STTListener:
         self.stop_callback      = stop_callback   # called when user says "stop"
 
         self.running  = False
-        self.recorder = None
+        self.recorder: Optional[Any] = None
         self.initialized = False
-        self.listening_thread = None
+        self.listening_thread: Optional[threading.Thread] = None
 
         # Conversation-mode state
         self._mode = self.MODE_WAKE_WORD
@@ -86,9 +86,9 @@ class STTListener:
         """Initialize RealTimeSTT with wake word detection."""
         import os as _os
         try:
-            from RealtimeSTT import AudioToTextRecorder
-            import torch
-            import pvporcupine
+            from RealtimeSTT import AudioToTextRecorder  # type: ignore
+            import torch  # type: ignore
+            import pvporcupine  # type: ignore
 
             print(f"{CYAN}[STT] Loading RealTimeSTT...{RESET}")
 
@@ -99,7 +99,7 @@ class STTListener:
             else:
                 print(f"{YELLOW}[STT] ⚠ CUDA not available, will use CPU{RESET}")
 
-            from core.settings_store import settings
+            from core.settings_store import settings  # type: ignore
             porcupine_key = settings.get("picovoice.key", "")
             ppn_path      = settings.get("picovoice.ppn_path", "")
 
@@ -163,19 +163,19 @@ class STTListener:
         """Fired by Porcupine when the hardware detects 'Wolf'."""
         print(f"\n{CYAN}[STT] 👂 Wake word '{WAKE_WORD}' detected! Listening...{RESET}")
         if self.wake_word_callback:
-            self.wake_word_callback()
+            self.wake_word_callback()  # type: ignore
 
     # ── Timeout timer ─────────────────────────────────────────────────────────
 
     def _reset_timeout_timer(self):
         self._cancel_timeout_timer()
         self._timeout_timer = threading.Timer(CONVERSATION_TIMEOUT, self._on_conversation_timeout)
-        self._timeout_timer.daemon = True
-        self._timeout_timer.start()
+        self._timeout_timer.daemon = True  # type: ignore
+        self._timeout_timer.start()  # type: ignore
 
     def _cancel_timeout_timer(self):
         if self._timeout_timer:
-            self._timeout_timer.cancel()
+            self._timeout_timer.cancel()  # type: ignore
             self._timeout_timer = None
 
     def _on_conversation_timeout(self):
@@ -194,7 +194,7 @@ class STTListener:
         self.running = True
         print(f"{CYAN}[STT] Starting RealTimeSTT listener...{RESET}")
         self.listening_thread = threading.Thread(target=self._run_listener, daemon=True)
-        self.listening_thread.start()
+        self.listening_thread.start()  # type: ignore
         print(f"{CYAN}[STT] ✓ Listener started{RESET}")
         return True
 
@@ -216,7 +216,7 @@ class STTListener:
                     print(f"{GRAY}[STT] ⏳ Waiting for wake word '{WAKE_WORD}'...{RESET}")
 
                 t0   = time.time()
-                text = self.recorder.text()
+                text = str(self.recorder.text() or "")  # type: ignore
                 elapsed = time.time() - t0
 
                 if not text or not text.strip():
@@ -237,8 +237,8 @@ class STTListener:
                 # This prevents accidentally dropping commands like "stop the music" or "quit vim"
                 check_text = text_lower
                 for alias in WOLF_ALIASES + ["hey wolf", "hey wolff"]:
-                    if check_text.startswith(alias):
-                        check_text = check_text[len(alias):].strip()
+                    if check_text.startswith(alias):  # type: ignore
+                        check_text = check_text[len(alias):].strip()  # type: ignore
                         break
                 
                 is_stop = check_text in STOP_PHRASES
@@ -247,7 +247,7 @@ class STTListener:
                     print(f"{YELLOW}[STT] 🛑 Stop command detected! Text: '{check_text}'{RESET}")
                     if self.stop_callback:
                         print(f"{YELLOW}[STT] 📞 Calling stop callback...{RESET}")
-                        self.stop_callback()
+                        self.stop_callback()  # type: ignore
                     self.exit_conversation_mode()
                     continue
 
@@ -257,12 +257,12 @@ class STTListener:
                     pattern = re.compile(re.escape(found_alias), re.IGNORECASE)
                     m = pattern.search(text_original)
                     if m:
-                        text_clean = text_original[m.end():].strip()
+                        text_clean = text_original[m.end():].strip()  # type: ignore
                         print(f"{GREEN}[STT] ✨ Wake word '{found_alias}' stripped.{RESET}")
 
                     # Fire wake-word callback if hardware hasn't already
                     if not in_convo and self.wake_word_callback:
-                        self.wake_word_callback()
+                        self.wake_word_callback()  # type: ignore
 
                 # ── Guard: only wake-word said, no command ────────────────────
                 if not text_clean:
@@ -276,7 +276,7 @@ class STTListener:
                 if in_convo:
                     self._reset_timeout_timer()
 
-                self.speech_callback(text_clean)
+                self.speech_callback(text_clean)  # type: ignore
 
         except Exception as e:
             print(f"{GRAY}[STT] Listener error: {e}{RESET}")
@@ -291,9 +291,9 @@ class STTListener:
         if self.recorder:
             try:
                 print(f"{CYAN}[STT] Shutting down recorder...{RESET}")
-                self.recorder.shutdown()
+                self.recorder.shutdown()  # type: ignore
             except Exception as e:
                 print(f"{GRAY}[STT] Error stopping recorder: {e}{RESET}")
         if self.listening_thread:
-            self.listening_thread.join(timeout=2.0)
+            self.listening_thread.join(timeout=2.0)  # type: ignore
         print(f"{CYAN}[STT] Listener stopped{RESET}")

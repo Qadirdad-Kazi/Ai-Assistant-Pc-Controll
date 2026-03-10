@@ -6,24 +6,24 @@ without requiring physical GSM hardware.
 
 import threading
 import time
-from typing import Callable
-from core.settings_store import settings
+from typing import Callable, Optional, Any
+from core.settings_store import settings  # type: ignore
 
 try:
-    from pyvoip.SIP import SIPApp, CallState
+    from pyvoip.SIP import SIPApp, CallState  # type: ignore
 except ImportError:
-    SIPApp = None
-    CallState = None
+    SIPApp = None  # type: ignore
+    CallState = None  # type: ignore
 
 class SIPGateway:
     def __init__(self):
-        self.sip_app = None
+        self.sip_app: Optional[Any] = None
         self.running = False
-        self._thread = None
-        self.current_call = None
+        self._thread: Optional[threading.Thread] = None
+        self.current_call: Optional[Any] = None
         
         # Callback for when a call is received
-        self.on_incoming_call: Callable[[str], None] = None
+        self.on_incoming_call: Optional[Callable[[str], None]] = None
         
     def start(self):
         """Initializes the SIP listener using settings from the GUI."""
@@ -50,7 +50,7 @@ class SIPGateway:
             
             # Start the background polling thread to handle call states
             self._thread = threading.Thread(target=self._poll_loop, daemon=True)
-            self._thread.start()
+            self._thread.start()  # type: ignore
             
         except Exception as e:
             print(f"[SIP Gateway] Failed to start: {e}")
@@ -61,9 +61,9 @@ class SIPGateway:
         while self.running and self.sip_app:
             try:
                 # Check for calls in 'RINGING' state
-                calls = self.sip_app.get_calls()
+                calls = self.sip_app.get_calls()  # type: ignore
                 for call in calls:
-                    if call.state == CallState.RINGING and self.current_call is None:
+                    if call.state == CallState.RINGING and self.current_call is None:  # type: ignore
                         self.current_call = call
                         caller_id = call.request.headers.get("From", "Unknown SIP Caller")
                         
@@ -85,9 +85,9 @@ class SIPGateway:
 
     def answer_call(self):
         """Instructs the SIP protocol to pick up the ringing call."""
-        if self.current_call and self.current_call.state == CallState.RINGING:
+        if self.current_call and self.current_call.state == CallState.RINGING:  # type: ignore
             print("[SIP Gateway] Answering call over Wi-Fi...")
-            self.current_call.answer()
+            self.current_call.answer()  # type: ignore
             
             # Here we would normally bind the pyvoip audio stream
             # to our audio_bridge for STT/TTS interaction.
@@ -100,7 +100,7 @@ class SIPGateway:
         if self.current_call:
             print("[SIP Gateway] Hanging up SIP connection...")
             try:
-                self.current_call.hangup()
+                self.current_call.hangup()  # type: ignore
             except Exception as e:
                 print(f"[SIP Gateway] Hangup error: {e}")
             finally:
@@ -113,7 +113,7 @@ class SIPGateway:
         self.running = False
         if self.sip_app:
             print("[SIP Gateway] Stopping SIP listener...")
-            self.sip_app.stop()
+            self.sip_app.stop()  # type: ignore
             self.sip_app = None
 
 # Singleton instance

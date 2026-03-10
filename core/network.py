@@ -2,7 +2,7 @@ import socket
 import threading
 import json
 import time
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal  # type: ignore
 
 class PackLink(QObject):
     """
@@ -56,7 +56,7 @@ class PackLink(QObject):
                     peer_host = msg.get("hostname")
                     if peer_ip not in self.peers and peer_host != self.hostname:
                         self.peers[peer_ip] = peer_host
-                        self.peer_discovered.emit(peer_ip, peer_host)
+                        self.peer_discovered.emit(peer_ip, peer_host)  # type: ignore
             except socket.timeout:
                 continue
             except:

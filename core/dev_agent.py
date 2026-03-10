@@ -5,11 +5,11 @@ Handles interactive project scaffolding and actual code generation using Ollama.
 
 import os
 import subprocess
-import requests
+import requests  # type: ignore
 import re
 import shutil
 from typing import Dict, Any
-from config import OLLAMA_URL, RESPONDER_MODEL
+from config import OLLAMA_URL, RESPONDER_MODEL  # type: ignore
 
 class DevAgent:
     def __init__(self, workspace_dir: str = "./workspace"):
