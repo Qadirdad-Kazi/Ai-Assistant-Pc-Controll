@@ -13,8 +13,9 @@ from config import OLLAMA_URL, RESPONDER_MODEL  # type: ignore
 import json
 import re
 import requests  # type: ignore
+import threading
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 class FunctionExecutor:
     """Central executor for simplified core functions."""
@@ -23,6 +24,9 @@ class FunctionExecutor:
         # Placeholder for managers if needed later
         self.tasks_file = "tasks.json"
         self.tasks = self._load_tasks()
+        self._event_lock = threading.Lock()
+        self._event_counter = 0
+        self._execution_events: List[Dict[str, Any]] = []
         self.app_map = {
             "visual studio code": "C:\\Users\\User\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
             "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -39,6 +43,29 @@ class FunctionExecutor:
             "discord": "C:\\Users\\User\\AppData\\Local\\Discord\\app-1.0.9003\\Discord.exe",
             "slack": "C:\\Users\\User\\AppData\\Local\\slack\\app-4.23.0\\slack.exe"
         }
+
+    def _emit_execution_event(self, event_type: str, message: str, **extra: Any) -> None:
+        """Store a structured execution event for live frontend streaming."""
+        with self._event_lock:
+            self._event_counter += 1
+            event = {
+                "id": self._event_counter,
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+                "type": event_type,
+                "message": message,
+            }
+            event.update(extra)
+            self._execution_events.append(event)
+
+            # Keep memory bounded.
+            if len(self._execution_events) > 1000:
+                self._execution_events = self._execution_events[-1000:]
+
+    def get_execution_events(self, after_id: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+        """Return execution events newer than the provided event id."""
+        with self._event_lock:
+            new_events = [e for e in self._execution_events if e.get("id", 0) > after_id]
+            return new_events[:limit]
     
     def execute(self, func_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a function and return result."""
@@ -155,6 +182,19 @@ Say "stop" or "quit" at any time to interrupt me."""
     def _enhanced_thinking(self, prompt: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute enhanced thinking with structured reasoning stages."""
         print(f"[FunctionExecutor] Enhanced Thinking Mode: {prompt}")
+
+        # If this is an actionable computer-ops prompt, execute it instead of only reasoning.
+        if self._is_actionable_computer_task(prompt):
+            print("[FunctionExecutor] Thinking prompt is actionable. Delegating to autonomous task executor...")
+            delegated = self._execute_task({
+                "description": prompt,
+                "max_steps": params.get("max_steps", 15)
+            })
+            data = delegated.get("data", {}) if isinstance(delegated, dict) else {}
+            data["type"] = "autonomous_execution"
+            data["routed_from"] = "thinking"
+            delegated["data"] = data
+            return delegated
         
         # Determine reasoning depth from params
         depth = params.get("depth", "medium")  # shallow, medium, deep
@@ -182,6 +222,29 @@ Say "stop" or "quit" at any time to interrupt me."""
                 "message": f"Thinking error: {str(e)}",
                 "data": {}
             }
+
+    def _is_actionable_computer_task(self, prompt: str) -> bool:
+        """Heuristic detector for prompts that should execute on the PC instead of pure reasoning."""
+        if not prompt:
+            return False
+
+        text = prompt.lower()
+
+        action_verbs = [
+            "open", "launch", "start", "run", "create", "make", "delete", "remove",
+            "rename", "move", "copy", "write", "save", "install", "uninstall"
+        ]
+        computer_objects = [
+            "file", "folder", "directory", "desktop", "downloads", "documents", "vscode",
+            "vs code", "visual studio code", "terminal", "powershell", "cmd", ".html", ".py", ".txt"
+        ]
+        execution_markers = ["then", "after that", "step", "and then", "on my pc", "on my computer"]
+
+        has_action = any(v in text for v in action_verbs)
+        has_object = any(o in text for o in computer_objects)
+        has_exec_marker = any(m in text for m in execution_markers)
+
+        return (has_action and has_object) or (has_action and has_exec_marker)
 
     def _pc_control(self, params: Dict):
         """Handle system level commands."""
@@ -321,6 +384,15 @@ Say "stop" or "quit" at any time to interrupt me."""
         if not description:
             return {"success": False, "message": "No task description provided."}
         
+        max_steps = int(params.get("max_steps", 10) or 10)
+        self._emit_execution_event(
+            "task_start",
+            f"Starting autonomous task: {description}",
+            task_id=task_id,
+            description=description,
+            max_steps=max_steps,
+        )
+
         try:
             print(f"[FunctionExecutor] Executing autonomous agent task: '{description}'")
             
@@ -340,6 +412,12 @@ Say "stop" or "quit" at any time to interrupt me."""
             Example 1 (Open App): call:pc_control{{action:open_app,target:Visual Studio Code}}
             Example 2 (Run Script): call:pc_control{{action:command,target:mkdir C:\\temp}}
             Example 3 (Finished): call:task_complete{{message:I finished everything.}}
+
+            EXECUTION QUALITY RULES:
+            1) Prefer deterministic commands for file/folder operations using pc_control(action=command).
+            2) For file and folder creation, verify success with a follow-up check command (e.g., Test-Path) before task_complete.
+            3) If a step fails, adapt and retry with a safer equivalent command.
+            4) Do not call task_complete until verification confirms the requested outcome.
             
             HISTORY OF EXECUTED STEPS:
             """
@@ -351,9 +429,16 @@ Say "stop" or "quit" at any time to interrupt me."""
             results = []
             router = FunctionGemmaRouter()
             
-            for step in range(10): # Max 10 steps to prevent infinite loops
+            for step in range(max_steps):
                 # Ask LLM for next step based on history
                 try:
+                    self._emit_execution_event(
+                        "step_thinking",
+                        f"Planning step {step + 1}/{max_steps}",
+                        task_id=task_id,
+                        step=step + 1,
+                        max_steps=max_steps,
+                    )
                     full_prompt = prompt + history_str + "\nBased on the history, what is the SINGLE next function call?"
                     print(f"[AgentLoop] Step {step+1}: Thinking...")
                     
@@ -365,9 +450,22 @@ Say "stop" or "quit" at any time to interrupt me."""
                     }, timeout=15).json()
                     
                     raw_response = response.get("response", "").strip()
+                    self._emit_execution_event(
+                        "step_model_output",
+                        "Model produced next action",
+                        task_id=task_id,
+                        step=step + 1,
+                        raw_output=raw_response[:300],
+                    )
                     calls = router._parse_function_call(raw_response, description)
                     
                     if not calls:
+                        self._emit_execution_event(
+                            "step_error",
+                            "No valid function call found in model output.",
+                            task_id=task_id,
+                            step=step + 1,
+                        )
                         history_str += f"\n- AI Output: '{raw_response}'\n- Result: ERROR - No valid function call found. Use call:function{{...}} syntax.\n"
                         continue
                         
@@ -376,9 +474,23 @@ Say "stop" or "quit" at any time to interrupt me."""
                     if func_name == "task_complete":
                         final_message = route_params.get("message", "Task completed via agent logic.")
                         success = True
+                        self._emit_execution_event(
+                            "task_complete",
+                            final_message,
+                            task_id=task_id,
+                            step=step + 1,
+                        )
                         break
                         
                     print(f"[AgentLoop] Step {step+1}: Executing {func_name} with {route_params}")
+                    self._emit_execution_event(
+                        "step_execute",
+                        f"Executing {func_name}",
+                        task_id=task_id,
+                        step=step + 1,
+                        function=func_name,
+                        params=route_params,
+                    )
                     executed_funcs.append(func_name)
                         
                     # Execute the function
@@ -387,6 +499,14 @@ Say "stop" or "quit" at any time to interrupt me."""
                     
                     # Update history
                     res_msg = result.get("message", "No message")
+                    self._emit_execution_event(
+                        "step_result",
+                        res_msg,
+                        task_id=task_id,
+                        step=step + 1,
+                        function=func_name,
+                        success=result.get("success", False),
+                    )
                     history_str += f"\n- Step: call:{func_name}{route_params}\n- Result: {res_msg}\n"
                     
                     print(f"[AgentLoop] Step {step+1} Result: {res_msg}")
@@ -395,10 +515,22 @@ Say "stop" or "quit" at any time to interrupt me."""
                     print(f"[AgentLoop] Error in LLM step: {e}")
                     success = False
                     final_message = f"Error communicating with AI: {e}"
+                    self._emit_execution_event(
+                        "step_error",
+                        final_message,
+                        task_id=task_id,
+                        step=step + 1,
+                    )
                     break
             
             if not success and final_message == "Task stopped.":
-                final_message = "Reached maximum steps without calling task_complete."
+                final_message = f"Reached maximum steps ({max_steps}) without calling task_complete."
+                self._emit_execution_event(
+                    "task_timeout",
+                    final_message,
+                    task_id=task_id,
+                    max_steps=max_steps,
+                )
             
             # Update task status if we have a task_id
             if task_id:
@@ -419,10 +551,21 @@ Say "stop" or "quit" at any time to interrupt me."""
                     "result": results[-1] if results else {}
                 }
             }
+            self._emit_execution_event(
+                "task_end",
+                final_message,
+                task_id=task_id,
+                success=success,
+            )
             return result_data
                 
         except Exception as e:
             print(f"[FunctionExecutor] Error executing task: {e}")
+            self._emit_execution_event(
+                "task_error",
+                f"Task execution crashed: {str(e)}",
+                task_id=task_id,
+            )
             return {"success": False, "message": f"Error executing task: {str(e)}"}
 
 # Global instance

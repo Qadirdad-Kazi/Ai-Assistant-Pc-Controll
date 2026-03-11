@@ -152,6 +152,20 @@ async def websocket_chat(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
+@app.websocket("/ws/execution")
+async def websocket_execution(websocket: WebSocket):
+    await websocket.accept()
+    last_event_id = 0
+    try:
+        while True:
+            events = function_executor.get_execution_events(after_id=last_event_id, limit=200)
+            if events:
+                last_event_id = events[-1].get("id", last_event_id)
+                await websocket.send_json({"events": events})
+            await asyncio.sleep(0.2)
+    except WebSocketDisconnect:
+        pass
+
 # --- Tasks API ---
 class TaskData(BaseModel):
     title: str

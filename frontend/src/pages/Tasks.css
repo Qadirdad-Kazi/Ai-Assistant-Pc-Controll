@@ -182,6 +182,16 @@
   flex-grow: 1;
 }
 
+.live-events-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: var(--text-sub);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
 .log-header {
   font-weight: bold;
   margin-bottom: 10px;

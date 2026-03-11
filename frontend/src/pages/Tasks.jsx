@@ -7,6 +7,8 @@ export default function Tasks() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionLog, setExecutionLog] = useState("");
+  const [liveEvents, setLiveEvents] = useState([]);
+  const [activeExecutionTaskId, setActiveExecutionTaskId] = useState(null);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,6 +29,49 @@ export default function Tasks() {
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8000/ws/execution');
+
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        const incoming = payload.events || [];
+        if (incoming.length === 0) return;
+
+        const filtered = activeExecutionTaskId
+          ? incoming.filter((evt) => evt.task_id === activeExecutionTaskId)
+          : incoming;
+
+        if (filtered.length === 0) return;
+
+        setLiveEvents((prev) => [...prev, ...filtered].slice(-200));
+
+        const lines = filtered.map((evt) => {
+          const stepPrefix = evt.step ? `[Step ${evt.step}] ` : '';
+          return `[${evt.timestamp}] ${stepPrefix}${evt.type}: ${evt.message}`;
+        });
+
+        if (lines.length > 0) {
+          setExecutionLog((prev) => {
+            const next = prev ? `${prev}\n${lines.join('\n')}` : lines.join('\n');
+            const maxChars = 20000;
+            return next.length > maxChars ? next.slice(next.length - maxChars) : next;
+          });
+        }
+      } catch (err) {
+        console.error('Failed to parse execution event payload', err);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error('Execution WebSocket error:', err);
+    };
+
+    return () => {
+      if (ws.readyState === 1) ws.close();
+    };
+  }, [activeExecutionTaskId]);
 
   const handleSaveTask = async (e) => {
     e.preventDefault();
@@ -92,15 +137,17 @@ export default function Tasks() {
     if (!selectedTask || isExecuting) return;
     
     setIsExecuting(true);
+    setActiveExecutionTaskId(selectedTask.id);
+    setLiveEvents([]);
     const timeNow = new Date().toLocaleTimeString();
-    setExecutionLog(`[${timeNow}] Starting task execution...`);
+    setExecutionLog(`[${timeNow}] Starting task execution...\n[${timeNow}] Waiting for live execution events...`);
     
     try {
       const res = await fetch(`http://localhost:8000/api/tasks/${selectedTask.id}/execute`, { method: 'POST' });
       const data = await res.json();
       
       const timeDone = new Date().toLocaleTimeString();
-      const newLog = `\n[${timeDone}] Response: ${data.message}\n` + 
+      const newLog = `\n[${timeDone}] Final Response: ${data.message}\n` + 
         (data.data ? JSON.stringify(data.data.result, null, 2) : '');
       
       setExecutionLog(prev => prev + newLog);
@@ -166,6 +213,11 @@ export default function Tasks() {
                   >
                       <Play size={16}/> {isExecuting ? 'Executing...' : 'Run Task Now'}
                   </button>
+                </div>
+
+                <div className="live-events-meta">
+                  <span>Live Events: {liveEvents.length}</span>
+                  <span>{activeExecutionTaskId ? `Task Stream: ${activeExecutionTaskId}` : 'Task Stream: waiting'}</span>
                 </div>
 
                 <div className="execution-log">

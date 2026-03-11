@@ -311,10 +311,19 @@ class VoiceAssistant(QObject):
                         self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=True)
                     
                 elif func_name in ("thinking", "nonthinking"):
-                    # Direct Qwen passthrough
                     if is_last_action:
-                        enable_thinking = (func_name == "thinking")
-                        self._stream_qwen_response(user_text, stop_event, enable_thinking)
+                        if func_name == "thinking":
+                            # First try executable thinking (autonomous computer actions when prompt is actionable).
+                            result = function_executor.execute(func_name, params)
+                            result_type = result.get("data", {}).get("type", "") if isinstance(result, dict) else ""
+
+                            if result_type in ("autonomous_execution", "enhanced_thinking"):
+                                self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=False)
+                            else:
+                                self._stream_qwen_response(user_text, stop_event, True)
+                        else:
+                            # nonthinking remains direct conversational passthrough
+                            self._stream_qwen_response(user_text, stop_event, False)
                 
                 else:
                     # Fallback to nonthinking
