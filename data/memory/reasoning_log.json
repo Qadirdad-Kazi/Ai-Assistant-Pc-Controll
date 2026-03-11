@@ -1,0 +1,65 @@
+[
+  {
+    "timestamp": "2026-03-11T13:44:53.518734",
+    "session_id": "20260311_134304",
+    "query": "Open spotify.",
+    "reasoning_steps": [],
+    "action_taken": "pc_control",
+    "result": "{'message': \"I used Windows Search to find and open 'spotify'.\", 'success': True}",
+    "confidence": 5
+  },
+  {
+    "timestamp": "2026-03-11T13:45:15.726265",
+    "session_id": "20260311_134304",
+    "query": "Play any music in Spotify.",
+    "reasoning_steps": [],
+    "action_taken": "play_music",
+    "result": "{'message': \"Could not play 'music'. Spotify/local/YouTube were unavailable.\", 'success': False}",
+    "confidence": 5
+  },
+  {
+    "timestamp": "2026-03-11T13:46:03.657415",
+    "session_id": "20260311_134304",
+    "query": "Yes, please play a music.",
+    "reasoning_steps": [],
+    "action_taken": "play_music",
+    "result": "{'message': \"Could not play 'music'. Spotify/local/YouTube were unavailable.\", 'success': False}",
+    "confidence": 5
+  },
+  {
+    "timestamp": "2026-03-11T13:47:07.287026",
+    "session_id": "20260311_134304",
+    "query": "Open Spotify which is in our local machine and then play any music on that.",
+    "reasoning_steps": [],
+    "action_taken": "play_music",
+    "result": "{'message': \"Could not play 'any music'. Spotify/local/YouTube were unavailable.\", 'success': False}",
+    "confidence": 5
+  },
+  {
+    "timestamp": "2026-03-11T13:54:36.583249",
+    "session_id": "20260311_135328",
+    "query": "Open the Spotify then play any recent music.",
+    "reasoning_steps": [],
+    "action_taken": "pc_control",
+    "result": "{'message': \"I used Windows Search to find and open 'spotify'.\", 'success': True}",
+    "confidence": 5
+  },
+  {
+    "timestamp": "2026-03-11T13:57:57.529469",
+    "session_id": "20260311_135647",
+    "query": "Open Spotify, then play any recent music.",
+    "reasoning_steps": [],
+    "action_taken": "play_music",
+    "result": "{'message': 'Now playing Recent Music via spotify_desktop.', 'success': True}",
+    "confidence": 5
+  },
+  {
+    "timestamp": "2026-03-11T14:03:04.349416",
+    "session_id": "20260311_140146",
+    "query": "Open Spotify then play a recent music.",
+    "reasoning_steps": [],
+    "action_taken": "play_music",
+    "result": "{'message': 'Now playing Recent Music via spotify_desktop.', 'success': True}",
+    "confidence": 5
+  }
+]

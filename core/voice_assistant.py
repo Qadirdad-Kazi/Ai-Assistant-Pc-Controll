@@ -70,6 +70,8 @@ class VoiceAssistant(QObject):
         self.current_stop_event = None
         self.current_user_prompt = ""
         self.current_stream = ""
+        self._request_lock = threading.Lock()
+        self._active_request_id = 0
         
     def initialize(self) -> bool:
         """Initialize voice assistant components."""
@@ -141,6 +143,15 @@ class VoiceAssistant(QObject):
         self.wake_word_detected.emit()
         print(f"{GREEN}[VoiceAssistant] ✓ Signal emitted. Listening for speech...{RESET}")
 
+    def _next_request_id(self) -> int:
+        with self._request_lock:
+            self._active_request_id += 1
+            return self._active_request_id
+
+    def _is_stale_request(self, request_id: int, stop_event: threading.Event) -> bool:
+        with self._request_lock:
+            return stop_event.is_set() or request_id != self._active_request_id
+
     def _on_speech(self, text: str):
         """Handle recognized speech. STT already stripped the wake word."""
         if not text.strip():
@@ -160,8 +171,9 @@ class VoiceAssistant(QObject):
 
         local_stop = threading.Event()
         self.current_stop_event = local_stop
+        request_id = self._next_request_id()
 
-        thread = threading.Thread(target=self._process_query, args=(text, local_stop), daemon=True)
+        thread = threading.Thread(target=self._process_query, args=(text, local_stop, request_id), daemon=True)
         thread.start()
 
     def _is_pc_capability_query(self, user_text: str) -> bool:
@@ -171,10 +183,22 @@ class VoiceAssistant(QObject):
         mentions_pc = bool(re.search(r"\b(pc|computer|desktop|laptop|system)\b", txt))
         mentions_control = bool(re.search(r"\b(control|open|close|volume|shutdown|restart|lock|launch|manage)\b", txt))
         return asks_capability and (mentions_pc or mentions_control)
+
+    def _is_complex_request(self, user_text: str) -> bool:
+        """Heuristic complexity check used for fatigue gating."""
+        txt = (user_text or "").lower()
+        connectors = [" and then ", " then ", " after that ", " step ", "first", "second", "multi", "complex"]
+        complex_keywords = ["analyze", "explain in detail", "architecture", "design", "build", "scaffold", "reason"]
+        has_connectors = any(c in txt for c in connectors)
+        has_complex_kw = any(k in txt for k in complex_keywords)
+        return has_connectors or has_complex_kw or len(txt.split()) > 14
     
-    def _process_query(self, user_text: str, stop_event: threading.Event):
+    def _process_query(self, user_text: str, stop_event: threading.Event, request_id: int):
         """Process user query through the pipeline with Chain-of-Thought reasoning and human-like thinking."""
         try:
+            if self._is_stale_request(request_id, stop_event):
+                return
+
             if self._is_pc_capability_query(user_text):
                 capability_answer = (
                     "Yes. I can control your PC directly when you ask commands like "
@@ -187,6 +211,9 @@ class VoiceAssistant(QObject):
                     spoke_ok = bool(tts.speak(capability_answer))
                 except Exception as tts_err:
                     print(f"{YELLOW}[VoiceAssistant] Capability TTS fallback triggered: {tts_err}{RESET}")
+
+                if self._is_stale_request(request_id, stop_event):
+                    return
 
                 if not spoke_ok:
                     tts.queue_sentence(capability_answer)
@@ -246,7 +273,7 @@ class VoiceAssistant(QObject):
             
             # Step 0e: Check if should refuse complex task due to fatigue
             refuse_complex, refuse_reason = energy_manager.should_refuse_complex_task()
-            if refuse_complex:
+            if refuse_complex and self._is_complex_request(user_text):
                 print(f"{YELLOW}[EnergyManager] {refuse_reason}{RESET}")
                 tts.speak(refuse_reason)
                 self.processing_finished.emit()
@@ -274,19 +301,25 @@ class VoiceAssistant(QObject):
                 calls = [("nonthinking", {"prompt": user_text})]
             else:
                 calls = route_query(user_text)
+
+            if self._is_stale_request(request_id, stop_event):
+                return
             
             print(f"{GRAY}[VoiceAssistant] Routed to: {[c[0] for c in calls]}{RESET}")
             
             # Step 3: Handle based on function type. 
             # Iterate through all detected functions.
             for i, (func_name, params) in enumerate(calls):
-                if stop_event.is_set(): break
+                if self._is_stale_request(request_id, stop_event):
+                    break
                 
                 # If there are multiple actions, only the LAST action generates a verbal response,
                 # unless a prior action failed.
                 is_last_action = i == len(calls) - 1
                 
                 if func_name in ACTION_FUNCTIONS:
+                    if self._is_stale_request(request_id, stop_event):
+                        break
                     # Execute action function
                     result = function_executor.execute(func_name, params)
                     response_text = result.get("message", "Done.")
@@ -319,12 +352,18 @@ class VoiceAssistant(QObject):
                     failed_action = not result.get("success", False)
                     
                     if is_last_action or failed_action:
-                        self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=failed_action)
-                    
-                    # For successful PC control actions, also ensure conversation mode is activated
-                    if func_name == "pc_control" and not failed_action:
-                        if self.stt_listener:
-                            self.stt_listener.enter_conversation_mode()
+                        self._generate_response_with_context(
+                            func_name,
+                            result,
+                            user_text,
+                            stop_event,
+                            enable_thinking=failed_action,
+                            request_id=request_id,
+                            detected_emotion=detected_emotion,
+                            emotion_intensity=emotion_intensity,
+                            reasoning_steps=reasoning_steps,
+                            result_confidence=result_confidence,
+                        )
                     
                     if failed_action:
                         break # Stop pipeline if an action fails
@@ -334,13 +373,33 @@ class VoiceAssistant(QObject):
                     tts.speak("Looking at your screen right now...")
                     result = function_executor.execute(func_name, params)
                     if is_last_action or not result.get("success", False):
-                        self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=False)
+                        self._generate_response_with_context(
+                            func_name,
+                            result,
+                            user_text,
+                            stop_event,
+                            enable_thinking=False,
+                            request_id=request_id,
+                            detected_emotion=detected_emotion,
+                            emotion_intensity=emotion_intensity,
+                            reasoning_steps=reasoning_steps,
+                        )
                     
                 elif func_name == "get_system_info":
                     # Get system info
                     result = function_executor.execute(func_name, params)
                     if is_last_action:
-                        self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=True)
+                        self._generate_response_with_context(
+                            func_name,
+                            result,
+                            user_text,
+                            stop_event,
+                            enable_thinking=True,
+                            request_id=request_id,
+                            detected_emotion=detected_emotion,
+                            emotion_intensity=emotion_intensity,
+                            reasoning_steps=reasoning_steps,
+                        )
                     
                 elif func_name in ("thinking", "nonthinking"):
                     if is_last_action:
@@ -350,17 +409,27 @@ class VoiceAssistant(QObject):
                             result_type = result.get("data", {}).get("type", "") if isinstance(result, dict) else ""
 
                             if result_type in ("autonomous_execution", "enhanced_thinking"):
-                                self._generate_response_with_context(func_name, result, user_text, stop_event, enable_thinking=False)
+                                self._generate_response_with_context(
+                                    func_name,
+                                    result,
+                                    user_text,
+                                    stop_event,
+                                    enable_thinking=False,
+                                    request_id=request_id,
+                                    detected_emotion=detected_emotion,
+                                    emotion_intensity=emotion_intensity,
+                                    reasoning_steps=reasoning_steps,
+                                )
                             else:
-                                self._stream_qwen_response(user_text, stop_event, True)
+                                self._stream_qwen_response(user_text, stop_event, True, request_id=request_id)
                         else:
                             # nonthinking remains direct conversational passthrough
-                            self._stream_qwen_response(user_text, stop_event, False)
+                            self._stream_qwen_response(user_text, stop_event, False, request_id=request_id)
                 
                 else:
                     # Fallback to nonthinking
                     if is_last_action:
-                        self._stream_qwen_response(user_text, stop_event, False)
+                        self._stream_qwen_response(user_text, stop_event, False, request_id=request_id)
                 
         except Exception as e:
             error_msg = f"Error processing query: {e}"
@@ -368,9 +437,27 @@ class VoiceAssistant(QObject):
             self.error_occurred.emit(error_msg)
             self.processing_finished.emit()
     
-    def _generate_response_with_context(self, func_name: str, result: dict, user_text: str, stop_event: threading.Event, enable_thinking: bool = False):
+    def _generate_response_with_context(
+        self,
+        func_name: str,
+        result: dict,
+        user_text: str,
+        stop_event: threading.Event,
+        enable_thinking: bool = False,
+        request_id: int = 0,
+        detected_emotion: str = "neutral",
+        emotion_intensity: str = "medium",
+        reasoning_steps=None,
+        result_confidence: int = 5,
+    ):
         """Generate Llama response with function execution context."""
         try:
+            if reasoning_steps is None:
+                reasoning_steps = []
+
+            if self._is_stale_request(request_id, stop_event):
+                return
+
             # Ensure Llama is loaded
             if not ensure_llama_loaded():
                 print(f"{GRAY}[VoiceAssistant] Failed to load Llama model.{RESET}")
@@ -435,32 +522,48 @@ class VoiceAssistant(QObject):
             full_response = ""
             
             # Stream response
-            with http_session.post(f"{OLLAMA_URL}/chat", json=payload, stream=True, timeout=60) as r:
-                r.raise_for_status()
-                
-                for line in r.iter_lines():
-                    if stop_event.is_set():
-                        break
-                    
-                    if line:
-                        try:
-                            chunk = json.loads(line.decode('utf-8'))
-                            msg = chunk.get('message', {})
-                            
-                            if 'content' in msg and msg['content']:
-                                content = msg['content']
-                                full_response += content
-                                self.current_stream = full_response
-                                
-                                # Queue for TTS
-                                sentences = sentence_buffer.add(content)
-                                for s in sentences:
-                                    tts.queue_sentence(s)
-                        except:
-                            continue
+            try:
+                with http_session.post(f"{OLLAMA_URL}/chat", json=payload, stream=True, timeout=60) as r:
+                    r.raise_for_status()
+
+                    for line in r.iter_lines():
+                        if self._is_stale_request(request_id, stop_event):
+                            break
+
+                        if line:
+                            try:
+                                chunk = json.loads(line.decode('utf-8'))
+                                msg = chunk.get('message', {})
+
+                                if 'content' in msg and msg['content']:
+                                    content = msg['content']
+                                    full_response += content
+                                    self.current_stream = full_response
+
+                                    # Queue for TTS
+                                    sentences = sentence_buffer.add(content)
+                                    for s in sentences:
+                                        tts.queue_sentence(s)
+                            except Exception:
+                                continue
+            except requests.HTTPError as chat_error:
+                print(f"{YELLOW}[VoiceAssistant] Context /chat failed ({chat_error}). Falling back to /generate.{RESET}")
+                fallback_payload = {
+                    "model": RESPONDER_MODEL,
+                    "prompt": context_prompt,
+                    "stream": False,
+                    "keep_alive": "5m"
+                }
+                fallback_resp = http_session.post(f"{OLLAMA_URL}/generate", json=fallback_payload, timeout=60)
+                if fallback_resp.status_code == 200:
+                    full_response = fallback_resp.json().get("response", "")
+                    if full_response and not self._is_stale_request(request_id, stop_event):
+                        tts.queue_sentence(full_response)
+                else:
+                    raise
             
             # Flush remaining
-            if not stop_event.is_set():
+            if not self._is_stale_request(request_id, stop_event):
                 rem = sentence_buffer.flush()
                 if rem:
                     tts.queue_sentence(rem)
@@ -548,6 +651,9 @@ class VoiceAssistant(QObject):
                 print(f"{YELLOW}[EnergyManager] Break needed: {break_recommendation}{RESET}")
             
             # Update messages
+            if self._is_stale_request(request_id, stop_event):
+                return
+
             self.messages.append({'role': 'assistant', 'content': full_response})
             self.current_user_prompt = ""
             self.current_stream = ""
@@ -589,9 +695,12 @@ class VoiceAssistant(QObject):
             print(f"{GRAY}[VoiceAssistant] Error generating response: {e}{RESET}")
             self.processing_finished.emit()
     
-    def _stream_qwen_response(self, user_text: str, stop_event: threading.Event, enable_thinking: bool):
+    def _stream_qwen_response(self, user_text: str, stop_event: threading.Event, enable_thinking: bool, request_id: int = 0):
         """Stream direct Llama response with intelligent model selection."""
         try:
+            if self._is_stale_request(request_id, stop_event):
+                return
+
             # Ensure Llama is loaded
             if not ensure_llama_loaded():
                 print(f"{GRAY}[VoiceAssistant] Failed to load Llama model.{RESET}")
@@ -641,7 +750,7 @@ class VoiceAssistant(QObject):
                     r.raise_for_status()
                     
                     for line in r.iter_lines():
-                        if stop_event.is_set():
+                        if self._is_stale_request(request_id, stop_event):
                             break
                         
                         if line:
@@ -677,7 +786,7 @@ class VoiceAssistant(QObject):
                     raise
             
             # Flush remaining
-            if not stop_event.is_set():
+            if not self._is_stale_request(request_id, stop_event):
                 rem = sentence_buffer.flush()
                 if rem:
                     tts.queue_sentence(rem)
@@ -706,6 +815,9 @@ class VoiceAssistant(QObject):
             full_response = metacognitive_result.get("final_response", full_response)
             
             # Update messages
+            if self._is_stale_request(request_id, stop_event):
+                return
+
             self.messages.append({'role': 'assistant', 'content': full_response})
             self.current_user_prompt = ""
             self.current_stream = ""

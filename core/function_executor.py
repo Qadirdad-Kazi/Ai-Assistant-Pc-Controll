@@ -17,6 +17,7 @@ import threading
 import time
 import os
 import hashlib
+import psutil  # type: ignore
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
@@ -57,6 +58,7 @@ class FunctionExecutor:
         self.spotify_ready = False
         self._local_song_map: Dict[str, str] = {}
         self._local_song_catalog: List[Dict[str, Any]] = []
+        self._last_app_open_ts: Dict[str, float] = {}
         self._reindex_local_songs()
         self.app_map = {
             "visual studio code": "C:\\Users\\User\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
@@ -192,6 +194,44 @@ class FunctionExecutor:
             "trackArtist": track.get("artist", "Spotify"),
             "durationSec": int(track.get("duration_ms", 0) / 1000) if track.get("duration_ms") else 0,
             "streamUrl": track.get("preview_url") or "",
+            "localSongId": "",
+        }
+
+    def _attempt_spotify_desktop_play(self, query: str) -> Dict[str, Any]:
+        """Fallback for local Spotify app control without Spotify API credentials."""
+        now = time.time()
+        if (now - float(self._last_app_open_ts.get("spotify", 0.0))) < 8.0:
+            # Spotify was just opened by a previous action in this same command chain.
+            spotify_running = True
+        else:
+            spotify_running = False
+
+        try:
+            if not spotify_running:
+                for proc in psutil.process_iter(["name"]):
+                    name = (proc.info.get("name") or "").lower()
+                    if name == "spotify.exe" or name == "spotify":
+                        spotify_running = True
+                        break
+        except Exception:
+            if not spotify_running:
+                spotify_running = False
+
+        if not spotify_running:
+            open_result = self._pc_control({"action": "open_app", "target": "spotify"})
+            if not open_result.get("success"):
+                return {}
+
+        # Best effort: toggle system media playback to start/resume Spotify.
+        self._pc_control({"action": "media", "target": "playpause"})
+
+        return {
+            "source": "spotify_desktop",
+            "service": "spotify",
+            "trackTitle": query.title() if query else "Spotify Playback",
+            "trackArtist": "Spotify",
+            "durationSec": 0,
+            "streamUrl": "",
             "localSongId": "",
         }
 
@@ -419,6 +459,12 @@ Say "stop" or "quit" at any time to interrupt me."""
         try:
             result = pc_controller.execute(action, target)
             result["data"] = {"action": action, "target": target}
+
+            if action == "open_app" and result.get("success"):
+                app_key = str(target or "").strip().lower()
+                if app_key:
+                    self._last_app_open_ts[app_key] = time.time()
+
             print(f"[FunctionExecutor] PC Control result: {result}")
             return result
         except Exception as e:
@@ -436,6 +482,9 @@ Say "stop" or "quit" at any time to interrupt me."""
         if preferred_service in ("auto", "spotify"):
             attempts.append("spotify")
             source_payload = self._attempt_spotify_play(query)
+            if not source_payload:
+                attempts.append("spotify_desktop")
+                source_payload = self._attempt_spotify_desktop_play(query)
 
         if not source_payload and preferred_service in ("auto", "local"):
             attempts.append("local")

@@ -361,24 +361,24 @@ class FunctionGemmaRouter:
         
         print(f"[Router] Parsing response: '{response}'")
         calls = []
-        
-        # Check for both formats: call:func{...} and func(...)
-        for func_name in VALID_FUNCTIONS:
-            # Pattern 1: call:func_name{...} (allow newlines inside)
-            pattern1 = rf"call:{func_name}\{{([^}}]*)\}}"
-            for match in re.finditer(pattern1, response, re.DOTALL):
-                args_str = match.group(1)
-                full_match = match.group(0)
-                print(f"[Router] Found function: {func_name} (Format 1)")
-                args = self._extract_arguments(full_match, func_name, user_prompt)
-                print(f"[Router] Extracted args: {args}")
-                calls.append((func_name, args))
-                
-            # Pattern 2: func_name(...) (allow newlines inside)
-            pattern2 = rf"{func_name}\((.*?)\)"
-            for match in re.finditer(pattern2, response, re.DOTALL):
-                # Ensure it's not preceded by 'def ' or similar python keywords 
-                args_str = match.group(1)
+
+        # Pattern 1: parse call:func{...} in textual order of appearance.
+        for match in re.finditer(r"call:(\w+)\{([^}]*)\}", response, re.DOTALL):
+            func_name = match.group(1)
+            if func_name not in VALID_FUNCTIONS:
+                continue
+            full_match = match.group(0)
+            print(f"[Router] Found function: {func_name} (Format 1)")
+            args = self._extract_arguments(full_match, func_name, user_prompt)
+            print(f"[Router] Extracted args: {args}")
+            calls.append((func_name, args))
+
+        # Pattern 2 fallback: func_name(...) in textual order, only if no call:...{} found.
+        if not calls:
+            for match in re.finditer(r"\b(\w+)\((.*?)\)", response, re.DOTALL):
+                func_name = match.group(1)
+                if func_name not in VALID_FUNCTIONS:
+                    continue
                 full_match = match.group(0)
                 print(f"[Router] Found function: {func_name} (Format 2)")
                 args = self._extract_arguments(full_match, func_name, user_prompt)
@@ -389,8 +389,21 @@ class FunctionGemmaRouter:
         if not calls:
             print(f"[Router] No function found, falling back to nonthinking")
             return [("nonthinking", {"prompt": user_prompt})]
-            
-        return calls
+
+        # Deduplicate repeated identical calls that often appear in verbose LLM explanations.
+        unique_calls = []
+        seen = set()
+        for name, args in calls:
+            key = (name, json.dumps(args, sort_keys=True, ensure_ascii=True))
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_calls.append((name, args))
+
+        if len(unique_calls) != len(calls):
+            print(f"[Router] Deduplicated calls: {len(calls)} -> {len(unique_calls)}")
+
+        return unique_calls
     
     def _extract_arguments(self, response: str, func_name: str, user_prompt: str) -> Dict[str, Any]:
         """Extract arguments from the response."""

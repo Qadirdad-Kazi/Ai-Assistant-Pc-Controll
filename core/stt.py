@@ -261,9 +261,11 @@ class STTListener:
                         check_text = check_text[len(alias):].strip()  # type: ignore
                         break
                 
-                is_stop = check_text in STOP_PHRASES
+                normalized = re.sub(r"[^a-z\s]", " ", check_text.lower())
+                normalized = re.sub(r"\s+", " ", normalized).strip()
+
+                is_stop = normalized in STOP_PHRASES
                 if not is_stop:
-                    normalized = re.sub(r"\s+", " ", check_text).strip()
                     natural_stop_patterns = [
                         r"^(please\s+)?stop(\s+now)?$",
                         r"^(please\s+)?(can you\s+)?stop(\s+talking)?(\s+please)?$",

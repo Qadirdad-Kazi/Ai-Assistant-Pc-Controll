@@ -1,0 +1,114 @@
+[
+  {
+    "timestamp": "2026-03-11T13:44:53.517741",
+    "session_id": "20260311_134304",
+    "user_input": "Open spotify.",
+    "ai_response": "I could easily be wrong about this... \n\nThink of it like this: [analogy would go here]",
+    "interaction_type": "pc_control",
+    "metadata": {
+      "quality_score": 5,
+      "quality_level": "Low",
+      "reasoning_steps": [],
+      "verification_confidence": 5,
+      "response_confidence": 50,
+      "confidence_level": "medium",
+      "uncertainty_indicators": []
+    }
+  },
+  {
+    "timestamp": "2026-03-11T13:45:15.710746",
+    "session_id": "20260311_134304",
+    "user_input": "Play any music in Spotify.",
+    "ai_response": "I lack sufficient information here... \n\nThink of it like this: [analogy would go here]",
+    "interaction_type": "play_music",
+    "metadata": {
+      "quality_score": 5,
+      "quality_level": "Low",
+      "reasoning_steps": [],
+      "verification_confidence": 5,
+      "response_confidence": 50,
+      "confidence_level": "medium",
+      "uncertainty_indicators": []
+    }
+  },
+  {
+    "timestamp": "2026-03-11T13:46:03.638791",
+    "session_id": "20260311_134304",
+    "user_input": "Yes, please play a music.",
+    "ai_response": "This is outside my confidence zone... \n\nThink of it like this: [analogy would go here]",
+    "interaction_type": "play_music",
+    "metadata": {
+      "quality_score": 5,
+      "quality_level": "Low",
+      "reasoning_steps": [],
+      "verification_confidence": 5,
+      "response_confidence": 50,
+      "confidence_level": "medium",
+      "uncertainty_indicators": []
+    }
+  },
+  {
+    "timestamp": "2026-03-11T13:47:07.269566",
+    "session_id": "20260311_134304",
+    "user_input": "Open Spotify which is in our local machine and then play any music on that.",
+    "ai_response": "I lack sufficient information here... \n\nThink of it like this: [analogy would go here]",
+    "interaction_type": "play_music",
+    "metadata": {
+      "quality_score": 5,
+      "quality_level": "Low",
+      "reasoning_steps": [],
+      "verification_confidence": 5,
+      "response_confidence": 50,
+      "confidence_level": "medium",
+      "uncertainty_indicators": []
+    }
+  },
+  {
+    "timestamp": "2026-03-11T13:54:36.579244",
+    "session_id": "20260311_135328",
+    "user_input": "Open the Spotify then play any recent music.",
+    "ai_response": "I lack sufficient information here... \n\nThink of it like this: [analogy would go here]",
+    "interaction_type": "pc_control",
+    "metadata": {
+      "quality_score": 5,
+      "quality_level": "Low",
+      "reasoning_steps": [],
+      "verification_confidence": 5,
+      "response_confidence": 50,
+      "confidence_level": "medium",
+      "uncertainty_indicators": []
+    }
+  },
+  {
+    "timestamp": "2026-03-11T13:57:57.527468",
+    "session_id": "20260311_135647",
+    "user_input": "Open Spotify, then play any recent music.",
+    "ai_response": "I could easily be wrong about this... \n\nThink of it like this: [analogy would go here]",
+    "interaction_type": "play_music",
+    "metadata": {
+      "quality_score": 5,
+      "quality_level": "Low",
+      "reasoning_steps": [],
+      "verification_confidence": 5,
+      "response_confidence": 50,
+      "confidence_level": "medium",
+      "uncertainty_indicators": []
+    }
+  },
+  {
+    "timestamp": "2026-03-11T14:03:04.348408",
+    "session_id": "20260311_140146",
+    "user_input": "Open Spotify then play a recent music.",
+    "ai_response": "I could easily be wrong about this... \n\nThink of it like this: [analogy would go here]",
+    "interaction_type": "play_music",
+    "metadata": {
+      "quality_score": 5,
+      "quality_level": "Low",
+      "reasoning_steps": [],
+      "verification_confidence": 5,
+      "response_confidence": 50,
+      "confidence_level": "medium",
+      "uncertainty_indicators": []
+    }
+  }
+]
