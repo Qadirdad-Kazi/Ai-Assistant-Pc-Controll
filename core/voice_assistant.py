@@ -22,6 +22,14 @@ from core.self_reflection import self_reflection_engine
 from core.memory import memory_manager
 from core.multi_model import multi_model_reasoner
 from core.uncertainty import quantify_and_disclose_uncertainty, uncertainty_analyzer
+from core.emotional_intelligence import emotional_analyzer
+from core.intuition import intuition_engine
+from core.curiosity import curiosity_engine
+from core.personalization import adaptive_personalizer
+from core.attention import attention_manager
+from core.personality import personality_system
+from core.fatigue import energy_manager
+from core.metacognition import metacognition_engine
 
 # Functions that are actions (not passthrough)
 ACTION_FUNCTIONS = {
@@ -156,9 +164,63 @@ class VoiceAssistant(QObject):
         thread.start()
     
     def _process_query(self, user_text: str, stop_event: threading.Event):
-        """Process user query through the pipeline with Chain-of-Thought reasoning."""
+        """Process user query through the pipeline with Chain-of-Thought reasoning and human-like thinking."""
         try:
-            # Step 0: Chain-of-Thought Reasoning - Think before routing
+            # Step 0a: EMOTIONAL INTELLIGENCE - Detect user emotion
+            print(f"{CYAN}[VoiceAssistant] Analyzing user emotional state...{RESET}")
+            emotion_analysis = emotional_analyzer.detect_user_emotion(user_text)
+            detected_emotion = emotion_analysis.get("emotion", "neutral")
+            emotion_intensity = emotion_analysis.get("intensity", 0)
+            print(f"{CYAN}[EmotionalIntelligence] Detected: {detected_emotion} (intensity: {emotion_intensity:.2f}){RESET}")
+            
+            # Step 0b: ATTENTION MANAGER - Check if can handle new task
+            print(f"{CYAN}[VoiceAssistant] Assessing attention state...{RESET}")
+            attention_result = attention_manager.process_query(user_text, task_id=f"query_{id(user_text)}", task_priority=5)
+            can_process = attention_result.get("can_process", True)
+            distraction_level = attention_result.get("distraction_level", 0)
+            print(f"{CYAN}[AttentionManager] Can process: {can_process}, Distraction: {distraction_level:.2f}{RESET}")
+            
+            if not can_process:
+                # Overwhelmed - suggest simpler task or break
+                should_break, break_reason = attention_manager.should_take_break()
+                if should_break:
+                    tts.speak(f"I'm feeling overwhelmed right now. {break_reason} Let me take a moment.")
+                    print(f"{YELLOW}[AttentionManager] {break_reason}{RESET}")
+                    self.processing_finished.emit()
+                    return
+            
+            # Step 0c: INTUITION ENGINE - Quick response for common patterns
+            print(f"{CYAN}[VoiceAssistant] Checking intuition for instant response...{RESET}")
+            intuition_response = intuition_engine.make_quick_decision(user_text)
+            if intuition_response and intuition_response.get("should_respond_quickly"):
+                quick_response = intuition_response.get("response", "")
+                confidence = intuition_response.get("confidence", 0.5)
+                if confidence > 0.75:
+                    print(f"{GREEN}[IntuitiveEngine] Using intuitive response (confidence: {confidence:.2f}){RESET}")
+                    # Consume minimal energy for quick response
+                    energy_manager.consume_energy("simple_query", "simple")
+                    tts.speak(quick_response)
+                    self.messages.append({'role': 'user', 'content': user_text})
+                    self.messages.append({'role': 'assistant', 'content': quick_response})
+                    memory_manager.log_interaction(user_text, quick_response, "intuition_fast_response")
+                    self.processing_finished.emit()
+                    if self.stt_listener:
+                        self.stt_listener.enter_conversation_mode()
+                    return
+            
+            # Step 0d: ENERGY MANAGER - Track energy for this complex operation
+            energy_cost = energy_manager.consume_energy("reasoning_step", "complex")
+            print(f"{CYAN}[EnergyManager] Consumed {energy_cost:.1f} energy. Status: {energy_manager.get_energy_status()['degradation_level']}{RESET}")
+            
+            # Step 0e: Check if should refuse complex task due to fatigue
+            refuse_complex, refuse_reason = energy_manager.should_refuse_complex_task()
+            if refuse_complex:
+                print(f"{YELLOW}[EnergyManager] {refuse_reason}{RESET}")
+                tts.speak(refuse_reason)
+                self.processing_finished.emit()
+                return
+            
+            # Step 0f: Chain-of-Thought Reasoning - Think before routing
             print(f"{CYAN}[VoiceAssistant] Engaging chain-of-thought reasoning...{RESET}")
             reasoning_result = reasoning_engine.think_step_by_step(user_text)
             thinking_context = reasoning_result.get("thinking", {}).get("raw_thinking", "")
@@ -166,7 +228,16 @@ class VoiceAssistant(QObject):
             
             print(f"{CYAN}[VoiceAssistant] Reasoning context: {len(reasoning_steps)} steps identified{RESET}")
             
-            # Step 1: Route through Function Gemma (with reasoning context)
+            # Step 1: CURIOSITY MODULE - Detect ambiguities and generate clarifying questions
+            print(f"{CYAN}[VoiceAssistant] Checking for ambiguous queries...{RESET}")
+            ambiguities = curiosity_engine.identify_ambiguities(user_text)
+            if ambiguities:
+                print(f"{CYAN}[CuriosityEngine] Ambiguities detected: {ambiguities}{RESET}")
+                clarifying_questions = curiosity_engine.generate_clarifying_questions(user_text, ambiguities)
+                if clarifying_questions:
+                    print(f"{CYAN}[CuriosityEngine] Generated clarifying questions: {clarifying_questions[:2]}{RESET}")
+            
+            # Step 2: Route through Function Gemma (with reasoning context)
             if should_bypass_router(user_text):
                 calls = [("nonthinking", {"prompt": user_text})]
             else:
@@ -174,7 +245,7 @@ class VoiceAssistant(QObject):
             
             print(f"{GRAY}[VoiceAssistant] Routed to: {[c[0] for c in calls]}{RESET}")
             
-            # Step 2: Handle based on function type. 
+            # Step 3: Handle based on function type. 
             # Iterate through all detected functions.
             for i, (func_name, params) in enumerate(calls):
                 if stop_event.is_set(): break
@@ -394,6 +465,44 @@ class VoiceAssistant(QObject):
                 print(f"{YELLOW}[VoiceAssistant] Low confidence detected, including uncertainty disclosure${RESET}")
                 full_response = uncertainty_result.get("adjusted_response", full_response)
             
+            # PERSONALITY SYSTEM: Apply personality traits to response
+            print(f"{CYAN}[PersonalitySystem] Applying personality traits...{RESET}")
+            full_response = personality_system.apply_all_trait_modifications(full_response)
+            
+            # PERSONALIZATION: Adapt response to user preferences and style
+            print(f"{CYAN}[Personalization] Adapting response to user profile...{RESET}")
+            user_id = "default_user"  # In production, would use actual user ID
+            full_response = adaptive_personalizer.personalize_response(full_response, user_id)
+            full_response = adaptive_personalizer.adapt_communication_style(full_response, user_id)
+            
+            # EMOTIONAL INTELLIGENCE: Generate empathetic response envelope if needed
+            if detected_emotion != "neutral":
+                print(f"{CYAN}[EmotionalIntelligence] Adding empathetic response for {detected_emotion}...{RESET}")
+                empathetic_response = emotional_analyzer.generate_empathetic_response(detected_emotion, emotion_intensity)
+                if empathetic_response:
+                    full_response = f"{empathetic_response}\n\n{full_response}"
+            
+            # METACOGNITION ENGINE: Add thinking-about-thinking to response
+            print(f"{CYAN}[MetacognitionEngine] Adding metacognitive awareness...{RESET}")
+            metacognitive_result = metacognition_engine.process_with_metacognition(
+                query=user_text,
+                response=full_response,
+                reasoning_steps=reasoning_steps,
+                confidence=confidence_score / 100.0  # Convert to 0-1 scale
+            )
+            full_response = metacognitive_result.get("final_response", full_response)
+            has_warning = metacognitive_result.get("has_warning", False)
+            warning_msg = metacognitive_result.get("warning_message", "")
+            
+            if has_warning:
+                print(f"{YELLOW}[MetacognitionEngine] Warning issued: {warning_msg}{RESET}")
+            
+            # ENERGY MANAGER: Track energy recovery and fatigue effects
+            energy_status = energy_manager.get_energy_status()
+            if energy_status.get("should_take_break"):
+                break_recommendation = energy_manager.get_estimated_break_needed()
+                print(f"{YELLOW}[EnergyManager] Break needed: {break_recommendation}{RESET}")
+            
             # Update messages
             self.messages.append({'role': 'assistant', 'content': full_response})
             self.current_user_prompt = ""
@@ -511,6 +620,26 @@ class VoiceAssistant(QObject):
                 rem = sentence_buffer.flush()
                 if rem:
                     tts.queue_sentence(rem)
+            
+            # PERSONALITY SYSTEM: Apply personality traits
+            print(f"{CYAN}[PersonalitySystem] Applying personality traits...{RESET}")
+            full_response = personality_system.apply_all_trait_modifications(full_response)
+            
+            # PERSONALIZATION: Adapt response to user
+            print(f"{CYAN}[Personalization] Personalizing response...{RESET}")
+            user_id = "default_user"
+            full_response = adaptive_personalizer.personalize_response(full_response, user_id)
+            full_response = adaptive_personalizer.adapt_communication_style(full_response, user_id)
+            
+            # METACOGNITION ENGINE: Add self-reflection
+            print(f"{CYAN}[MetacognitionEngine] Adding metacognitive elements...{RESET}")
+            metacognitive_result = metacognition_engine.process_with_metacognition(
+                query=user_text,
+                response=full_response,
+                reasoning_steps=[],
+                confidence=0.7
+            )
+            full_response = metacognitive_result.get("final_response", full_response)
             
             # Update messages
             self.messages.append({'role': 'assistant', 'content': full_response})
