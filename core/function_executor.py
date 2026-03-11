@@ -8,6 +8,7 @@ from core.vision_agent import vision_agent  # type: ignore
 from core.dev_agent import dev_agent  # type: ignore
 from core.receptionist import receptionist  # type: ignore
 from core.router import FunctionGemmaRouter  # type: ignore
+from core.enhanced_thinking import enhanced_thinking_router  # type: ignore
 from config import OLLAMA_URL, RESPONDER_MODEL  # type: ignore
 import json
 import re
@@ -65,6 +66,9 @@ class FunctionExecutor:
                 # Check if this is a capability question
                 if self._is_capability_question(prompt):
                     return self._capability_overview()
+                elif func_name == "thinking":
+                    # Use enhanced thinking router for complex reasoning
+                    return self._enhanced_thinking(prompt, params)
                 else:
                     return {"success": True, "message": "Direct LLM response."}
             else:
@@ -147,6 +151,37 @@ Say "stop" or "quit" at any time to interrupt me."""
             "message": capabilities.strip(),
             "data": {"type": "capability_overview"}
         }
+
+    def _enhanced_thinking(self, prompt: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute enhanced thinking with structured reasoning stages."""
+        print(f"[FunctionExecutor] Enhanced Thinking Mode: {prompt}")
+        
+        # Determine reasoning depth from params
+        depth = params.get("depth", "medium")  # shallow, medium, deep
+        
+        # Route through enhanced thinking
+        try:
+            thinking_result = enhanced_thinking_router.route_thinking_query(prompt, depth=depth)
+            
+            return {
+                "success": True,
+                "message": thinking_result.get("reasoning", "Reasoning complete."),
+                "data": {
+                    "type": "enhanced_thinking",
+                    "strategy": thinking_result.get("strategy", "unknown"),
+                    "depth": thinking_result.get("depth", depth),
+                    "stages": thinking_result.get("stages", []),
+                    "full_result": thinking_result
+                }
+            }
+        
+        except Exception as e:
+            print(f"[FunctionExecutor] Error in enhanced thinking: {e}")
+            return {
+                "success": False,
+                "message": f"Thinking error: {str(e)}",
+                "data": {}
+            }
 
     def _pc_control(self, params: Dict):
         """Handle system level commands."""

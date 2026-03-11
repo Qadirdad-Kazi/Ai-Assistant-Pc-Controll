@@ -10,13 +10,18 @@ from typing import Optional
 from PySide6.QtCore import QObject, Signal
 
 from config import (
-    RESPONDER_MODEL, OLLAMA_URL, MAX_HISTORY, GRAY, RESET, CYAN, GREEN, WAKE_WORD
+    RESPONDER_MODEL, OLLAMA_URL, MAX_HISTORY, GRAY, RESET, CYAN, GREEN, WAKE_WORD, YELLOW
 )
 from core.stt import STTListener
 from core.llm import route_query, should_bypass_router, http_session
 from core.model_persistence import ensure_llama_loaded, mark_llama_used, unload_llama
 from core.tts import tts, SentenceBuffer
 from core.function_executor import executor as function_executor
+from core.reasoning import reasoning_engine
+from core.self_reflection import self_reflection_engine
+from core.memory import memory_manager
+from core.multi_model import multi_model_reasoner
+from core.uncertainty import quantify_and_disclose_uncertainty, uncertainty_analyzer
 
 # Functions that are actions (not passthrough)
 ACTION_FUNCTIONS = {
@@ -151,9 +156,17 @@ class VoiceAssistant(QObject):
         thread.start()
     
     def _process_query(self, user_text: str, stop_event: threading.Event):
-        """Process user query through the pipeline."""
+        """Process user query through the pipeline with Chain-of-Thought reasoning."""
         try:
-            # Step 1: Route through Function Gemma
+            # Step 0: Chain-of-Thought Reasoning - Think before routing
+            print(f"{CYAN}[VoiceAssistant] Engaging chain-of-thought reasoning...{RESET}")
+            reasoning_result = reasoning_engine.think_step_by_step(user_text)
+            thinking_context = reasoning_result.get("thinking", {}).get("raw_thinking", "")
+            reasoning_steps = reasoning_result.get("steps", [])
+            
+            print(f"{CYAN}[VoiceAssistant] Reasoning context: {len(reasoning_steps)} steps identified{RESET}")
+            
+            # Step 1: Route through Function Gemma (with reasoning context)
             if should_bypass_router(user_text):
                 calls = [("nonthinking", {"prompt": user_text})]
             else:
@@ -175,6 +188,18 @@ class VoiceAssistant(QObject):
                     result = function_executor.execute(func_name, params)
                     response_text = result.get("message", "Done.")
                     print(f"[Function Result] {response_text}")
+                    
+                    # Verify result using reasoning
+                    evaluation = reasoning_engine.reason_about_result(
+                        user_text, 
+                        f"{func_name}({params})", 
+                        result,
+                        thinking_context
+                    )
+                    result_confidence = evaluation.get("confidence", 5)
+                    result_complete = evaluation.get("is_complete", True)
+                    
+                    print(f"{CYAN}[Verification] Confidence: {result_confidence}/10, Complete: {result_complete}{RESET}")
                     
                     # Emit GUI update signals for specific actions
                     if func_name == "set_timer" and result.get("success"):
@@ -328,14 +353,80 @@ class VoiceAssistant(QObject):
                 if rem:
                     tts.queue_sentence(rem)
             
+            # Self-Reflection: Verify response quality before finalizing
+            print(f"{CYAN}[VoiceAssistant] Applying self-reflection to verify response...{RESET}")
+            quality_report = self_reflection_engine.rate_response_quality(
+                full_response, 
+                user_text, 
+                context=func_name
+            )
+            
+            quality_level = quality_report.get("quality_level", "Medium")
+            overall_score = quality_report.get("overall_score", 5)
+            
+            if overall_score < 6:
+                # Low quality - attempt correction
+                print(f"{YELLOW}[VoiceAssistant] Low quality response detected (score: {overall_score:.1f}), attempting correction...{RESET}")
+                correction = self_reflection_engine.self_correct(
+                    user_text,
+                    full_response,
+                    ["Low quality response"],
+                    func_name
+                )
+                
+                if correction.get("success"):
+                    corrected = correction.get("corrected_response", full_response)
+                    print(f"{GREEN}[VoiceAssistant] Response corrected.{RESET}")
+                    full_response = corrected
+            else:
+                print(f"{GREEN}[VoiceAssistant] Response quality verified (score: {overall_score:.1f}, level: {quality_level}){RESET}")
+            
+            # Uncertainty Quantification: Analyze confidence in response
+            print(f"{CYAN}[VoiceAssistant] Analyzing uncertainty in response...{RESET}")
+            uncertainty_result = quantify_and_disclose_uncertainty(full_response)
+            confidence_disclosure = uncertainty_result.get("confidence_disclosure", "")
+            confidence_score = uncertainty_result["uncertainty_data"]["confidence_score"]
+            
+            print(f"{CYAN}[UncertaintyAnalyzer] Confidence: {confidence_score}% - {uncertainty_result['uncertainty_data']['confidence_level'].upper()}{RESET}")
+            
+            # If confidence is low, consider what to add
+            if confidence_score < 50:
+                print(f"{YELLOW}[VoiceAssistant] Low confidence detected, including uncertainty disclosure${RESET}")
+                full_response = uncertainty_result.get("adjusted_response", full_response)
+            
             # Update messages
             self.messages.append({'role': 'assistant', 'content': full_response})
             self.current_user_prompt = ""
             self.current_stream = ""
             
+            # Log interaction to memory
+            memory_manager.log_interaction(
+                user_input=user_text,
+                ai_response=full_response,
+                interaction_type=func_name,
+                metadata={
+                    "quality_score": overall_score,
+                    "quality_level": quality_level,
+                    "reasoning_steps": reasoning_steps,
+                    "verification_confidence": result_confidence,
+                    "response_confidence": confidence_score,
+                    "confidence_level": uncertainty_result["uncertainty_data"]["confidence_level"],
+                    "uncertainty_indicators": uncertainty_result["uncertainty_data"]["uncertainty_indicators"]
+                }
+            )
+            
+            # Log reasoning for future reference
+            memory_manager.log_reasoning(
+                query=user_text,
+                reasoning_steps=reasoning_steps,
+                action_taken=func_name,
+                result={"message": result.get("message", ""), "success": result.get("success", False)},
+                confidence=result_confidence
+            )
+            
             mark_llama_used()  # Update usage time
             
-            print(f"{GREEN}[VoiceAssistant] Response generated.{RESET}")
+            print(f"{GREEN}[VoiceAssistant] Response generated and logged to memory.{RESET}")
             self.processing_finished.emit()
             # Keep mic open for follow-up without re-saying the wake word
             if self.stt_listener:
@@ -346,7 +437,7 @@ class VoiceAssistant(QObject):
             self.processing_finished.emit()
     
     def _stream_qwen_response(self, user_text: str, stop_event: threading.Event, enable_thinking: bool):
-        """Stream direct Llama response."""
+        """Stream direct Llama response with intelligent model selection."""
         try:
             # Ensure Llama is loaded
             if not ensure_llama_loaded():
@@ -356,6 +447,13 @@ class VoiceAssistant(QObject):
             
             mark_llama_used()
             
+            # Multi-Model: Select optimal model for this query
+            model_selection = multi_model_reasoner.adaptive_model_selection(user_text)
+            selected_model = model_selection.get("model", RESPONDER_MODEL)
+            model_info = model_selection.get("model_info", {})
+            
+            print(f"{CYAN}[MultiModel] Using {selected_model} (Reasoning Depth: {model_info.get('reasoning_depth', 'unknown')}){RESET}")
+            
             # Manage context window
             max_hist = MAX_HISTORY
             if len(self.messages) > max_hist:
@@ -363,9 +461,9 @@ class VoiceAssistant(QObject):
             
             self.messages.append({'role': 'user', 'content': user_text})
             
-            # Prepare payload
+            # Prepare payload with selected model
             payload = {
-                "model": RESPONDER_MODEL,
+                "model": selected_model,
                 "messages": self.messages,
                 "stream": True,
                 "think": enable_thinking,
