@@ -9,13 +9,20 @@ from core.dev_agent import dev_agent  # type: ignore
 from core.receptionist import receptionist  # type: ignore
 from core.router import FunctionGemmaRouter  # type: ignore
 from core.enhanced_thinking import enhanced_thinking_router  # type: ignore
-from config import OLLAMA_URL, RESPONDER_MODEL  # type: ignore
+from config import OLLAMA_URL, RESPONDER_MODEL, SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI  # type: ignore
 import json
 import re
 import requests  # type: ignore
 import threading
+import time
+import os
+import hashlib
+from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
+
+from utilities.youtube_handler import YouTubeHandler  # type: ignore
+from utilities.spotify_handler import SpotifyHandler  # type: ignore
 
 class FunctionExecutor:
     """Central executor for simplified core functions."""
@@ -27,6 +34,30 @@ class FunctionExecutor:
         self._event_lock = threading.Lock()
         self._event_counter = 0
         self._execution_events: List[Dict[str, Any]] = []
+        self._media_lock = threading.Lock()
+        self._media_state: Dict[str, Any] = {
+            "isPlaying": False,
+            "service": "auto",
+            "source": "none",
+            "trackTitle": "Idle",
+            "trackArtist": "Wolf AI",
+            "durationSec": 0,
+            "positionSec": 0,
+            "volume": 70,
+            "streamUrl": "",
+            "localSongId": "",
+            "updatedAt": time.time()
+        }
+        self.youtube_handler = YouTubeHandler()
+        self.spotify_handler = SpotifyHandler(
+            client_id=SPOTIPY_CLIENT_ID,
+            client_secret=SPOTIPY_CLIENT_SECRET,
+            redirect_uri=SPOTIPY_REDIRECT_URI,
+        )
+        self.spotify_ready = False
+        self._local_song_map: Dict[str, str] = {}
+        self._local_song_catalog: List[Dict[str, Any]] = []
+        self._reindex_local_songs()
         self.app_map = {
             "visual studio code": "C:\\Users\\User\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
             "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -66,6 +97,138 @@ class FunctionExecutor:
         with self._event_lock:
             new_events = [e for e in self._execution_events if e.get("id", 0) > after_id]
             return new_events[:limit]
+
+    def _reindex_local_songs(self) -> None:
+        """Index local audio files from common folders for fallback playback."""
+        search_roots = [
+            Path.cwd() / "music",
+            Path.cwd() / "Music",
+            Path.home() / "Music",
+            Path.home() / "Downloads",
+        ]
+        exts = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac"}
+
+        catalog: List[Dict[str, Any]] = []
+        id_map: Dict[str, str] = {}
+
+        for root in search_roots:
+            if not root.exists() or not root.is_dir():
+                continue
+            try:
+                for file in root.rglob("*"):
+                    if not file.is_file() or file.suffix.lower() not in exts:
+                        continue
+                    sid = hashlib.sha1(str(file).encode("utf-8")).hexdigest()[:16]
+                    title = file.stem.replace("_", " ").replace("-", " ").strip()
+                    rec = {
+                        "id": sid,
+                        "title": title,
+                        "artist": file.parent.name,
+                        "path": str(file),
+                    }
+                    catalog.append(rec)
+                    id_map[sid] = str(file)
+            except Exception:
+                continue
+
+        self._local_song_catalog = catalog
+        self._local_song_map = id_map
+
+    def get_local_song_path(self, song_id: str) -> str:
+        """Resolve a local song id to absolute path."""
+        return self._local_song_map.get(song_id, "")
+
+    def _search_local_song(self, query: str) -> Dict[str, Any]:
+        """Best-effort local song matcher by filename tokens."""
+        if not self._local_song_catalog:
+            self._reindex_local_songs()
+        if not self._local_song_catalog:
+            return {}
+
+        q = (query or "").lower().strip()
+        tokens = [t for t in re.split(r"\s+", q) if t]
+
+        scored: List[Dict[str, Any]] = []
+        for item in self._local_song_catalog:
+            hay = f"{item.get('title','')} {item.get('artist','')}".lower()
+            if not tokens:
+                score = 1
+            else:
+                score = sum(1 for t in tokens if t in hay)
+            if score > 0:
+                scored.append({"score": score, "item": item})
+
+        if not scored:
+            return {}
+        scored.sort(key=lambda x: x["score"], reverse=True)
+        return scored[0]["item"]
+
+    def _ensure_spotify_ready(self) -> bool:
+        """Initialize Spotify auth once if API credentials are available."""
+        if self.spotify_ready:
+            return True
+        ok, _msg = self.spotify_handler.authenticate()
+        self.spotify_ready = bool(ok)
+        return self.spotify_ready
+
+    def _attempt_spotify_play(self, query: str) -> Dict[str, Any]:
+        """Try playing through Spotify API. Returns source payload or empty dict on failure."""
+        if not self._ensure_spotify_ready():
+            return {}
+
+        track = self.spotify_handler.search_track_info(query)
+        if not track:
+            return {}
+
+        played = self.spotify_handler.play_track_uri(track.get("uri", ""))
+        if not played:
+            return {}
+
+        self._pc_control({"action": "open_app", "target": "spotify"})
+        return {
+            "source": "spotify",
+            "service": "spotify",
+            "trackTitle": track.get("title", query.title()),
+            "trackArtist": track.get("artist", "Spotify"),
+            "durationSec": int(track.get("duration_ms", 0) / 1000) if track.get("duration_ms") else 0,
+            "streamUrl": track.get("preview_url") or "",
+            "localSongId": "",
+        }
+
+    def _attempt_local_play(self, query: str) -> Dict[str, Any]:
+        """Try local file playback and return a browser-playable backend URL."""
+        song = self._search_local_song(query)
+        if not song:
+            return {}
+        return {
+            "source": "local",
+            "service": "local",
+            "trackTitle": song.get("title", query.title()),
+            "trackArtist": song.get("artist", "Local Library"),
+            "durationSec": 0,
+            "streamUrl": f"/api/media/local/{song.get('id','')}",
+            "localSongId": song.get("id", ""),
+        }
+
+    def _attempt_youtube_play(self, query: str) -> Dict[str, Any]:
+        """Try YouTube search + direct stream URL fallback."""
+        results = self.youtube_handler.search(query, limit=1)
+        if not results:
+            return {}
+        first = results[0]
+        stream_url = self.youtube_handler.get_stream_url(first.get("url", "")) or ""
+        if not stream_url:
+            return {}
+        self._pc_control({"action": "open_app", "target": "chrome"})
+        return {
+            "source": "youtube",
+            "service": "youtube",
+            "trackTitle": first.get("title", query.title()),
+            "trackArtist": first.get("uploader", "YouTube"),
+            "durationSec": int(first.get("duration", 0) or 0),
+            "streamUrl": stream_url,
+            "localSongId": "",
+        }
     
     def execute(self, func_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a function and return result."""
@@ -263,14 +426,144 @@ Say "stop" or "quit" at any time to interrupt me."""
             return {"success": False, "message": f"PC Control error: {str(e)}"}
 
     def _play_music(self, params: Dict):
-        """Handle music commands."""
-        query = params.get("query", "unknown")
-        service = params.get("service", "youtube")
+        """Handle music commands with source fallback: spotify -> local -> youtube."""
+        query = str(params.get("query", "music") or "music").strip()
+        preferred_service = str(params.get("service", "auto") or "auto").lower().strip()
+
+        source_payload: Dict[str, Any] = {}
+        attempts: List[str] = []
+
+        if preferred_service in ("auto", "spotify"):
+            attempts.append("spotify")
+            source_payload = self._attempt_spotify_play(query)
+
+        if not source_payload and preferred_service in ("auto", "local"):
+            attempts.append("local")
+            source_payload = self._attempt_local_play(query)
+
+        if not source_payload and preferred_service in ("auto", "youtube"):
+            attempts.append("youtube")
+            source_payload = self._attempt_youtube_play(query)
+
+        if not source_payload:
+            self._emit_execution_event(
+                "media_error",
+                f"Playback failed for '{query}'. Tried: {', '.join(attempts) if attempts else 'none'}"
+            )
+            return {
+                "success": False,
+                "message": f"Could not play '{query}'. Spotify/local/YouTube were unavailable.",
+                "data": {"query": query, "attempts": attempts, "state": self.get_media_state()}
+            }
+
+        with self._media_lock:
+            self._media_state.update({
+                "isPlaying": True,
+                "service": source_payload.get("service", "auto"),
+                "source": source_payload.get("source", "unknown"),
+                "trackTitle": source_payload.get("trackTitle", query.title()),
+                "trackArtist": source_payload.get("trackArtist", "Unknown Artist"),
+                "durationSec": int(source_payload.get("durationSec", 0) or 0),
+                "positionSec": 0,
+                "streamUrl": source_payload.get("streamUrl", ""),
+                "localSongId": source_payload.get("localSongId", ""),
+                "updatedAt": time.time(),
+            })
+
+        state = self.get_media_state()
+        self._emit_execution_event(
+            "media_play",
+            f"Now playing {state.get('trackTitle')} via {state.get('source')}",
+            media_state=state,
+            attempts=attempts,
+        )
+
         return {
-            "success": True, 
-            "message": f"Now playing {query} on {service}", 
-            "data": {"query": query, "service": service}
+            "success": True,
+            "message": f"Now playing {state.get('trackTitle')} via {state.get('source')}.",
+            "data": {"query": query, "service": preferred_service, "state": state, "attempts": attempts}
         }
+
+    def get_media_state(self) -> Dict[str, Any]:
+        """Return media state with real-time progress interpolation."""
+        with self._media_lock:
+            now = time.time()
+            state = dict(self._media_state)
+
+            if state.get("isPlaying") and state.get("durationSec", 0) > 0:
+                elapsed = max(0, int(now - state.get("updatedAt", now)))
+                state["positionSec"] = min(state.get("positionSec", 0) + elapsed, state.get("durationSec", 0))
+
+                if state["positionSec"] >= state.get("durationSec", 0):
+                    state["isPlaying"] = False
+                    self._media_state.update({
+                        "isPlaying": False,
+                        "positionSec": state["positionSec"],
+                        "updatedAt": now
+                    })
+                else:
+                    self._media_state.update({
+                        "positionSec": state["positionSec"],
+                        "updatedAt": now
+                    })
+
+            return state
+
+    def control_media(self, action: str, **kwargs: Any) -> Dict[str, Any]:
+        """Control media state and mirror media-key actions where possible."""
+        action = (action or "").lower().strip()
+        now = time.time()
+
+        if action == "play":
+            query = kwargs.get("query") or self._media_state.get("trackTitle") or "music"
+            service = kwargs.get("service") or self._media_state.get("service") or "youtube"
+            return self._play_music({"query": query, "service": service})
+
+        if action in ("pause", "toggle"):
+            # Trigger OS media key for active player.
+            self._pc_control({"action": "media", "target": "playpause"})
+            current = self.get_media_state()
+            with self._media_lock:
+                self._media_state.update({
+                    "isPlaying": not current.get("isPlaying", False),
+                    "updatedAt": now
+                })
+
+        elif action in ("next", "prev", "previous"):
+            media_target = "next" if action == "next" else "prev"
+            self._pc_control({"action": "media", "target": media_target})
+            with self._media_lock:
+                self._media_state.update({
+                    "positionSec": 0,
+                    "updatedAt": now
+                })
+
+        elif action == "seek":
+            target_sec = int(kwargs.get("positionSec", 0) or 0)
+            with self._media_lock:
+                duration = int(self._media_state.get("durationSec", 0) or 0)
+                if duration > 0:
+                    target_sec = max(0, min(target_sec, duration))
+                self._media_state.update({
+                    "positionSec": target_sec,
+                    "updatedAt": now
+                })
+
+        elif action == "set_volume":
+            volume = int(kwargs.get("volume", 70) or 70)
+            volume = max(0, min(volume, 100))
+            self._pc_control({"action": "volume", "target": str(volume)})
+            with self._media_lock:
+                self._media_state.update({
+                    "volume": volume,
+                    "updatedAt": now
+                })
+        else:
+            return {"success": False, "message": f"Unsupported media action: {action}", "data": {"state": self.get_media_state()}}
+
+        state = self.get_media_state()
+        self._emit_execution_event("media_control", f"Media action executed: {action}", action=action, media_state=state)
+        return {"success": True, "message": f"Media action executed: {action}", "data": {"state": state}}
 
     def _scaffold_website(self, params: Dict):
         """Handle website scaffolding."""

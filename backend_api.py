@@ -1,7 +1,9 @@
 import asyncio
 import psutil  # type: ignore
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect  # type: ignore
+from fastapi import HTTPException  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+from fastapi.responses import FileResponse  # type: ignore
 from pydantic import BaseModel  # type: ignore
 from typing import Optional
 from core.voice_assistant import voice_assistant  # type: ignore
@@ -104,6 +106,13 @@ async def websocket_system_status(websocket: WebSocket):
 class ChatMessage(BaseModel):
     text: str
 
+class MediaControlRequest(BaseModel):
+    action: str
+    query: Optional[str] = None
+    service: Optional[str] = None
+    volume: Optional[int] = None
+    positionSec: Optional[int] = None
+
 @app.post("/api/chat")
 async def send_chat(message: ChatMessage):
     if VOICE_ASSISTANT_ENABLED:
@@ -152,6 +161,16 @@ async def websocket_chat(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
+@app.websocket("/ws/media")
+async def websocket_media(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            await websocket.send_json({"state": function_executor.get_media_state()})
+            await asyncio.sleep(0.5)
+    except WebSocketDisconnect:
+        pass
+
 @app.websocket("/ws/execution")
 async def websocket_execution(websocket: WebSocket):
     await websocket.accept()
@@ -165,6 +184,28 @@ async def websocket_execution(websocket: WebSocket):
             await asyncio.sleep(0.2)
     except WebSocketDisconnect:
         pass
+
+@app.get("/api/media/state")
+async def get_media_state():
+    return {"state": function_executor.get_media_state()}
+
+@app.post("/api/media/control")
+async def control_media(req: MediaControlRequest):
+    result = function_executor.control_media(
+        action=req.action,
+        query=req.query,
+        service=req.service,
+        volume=req.volume,
+        positionSec=req.positionSec,
+    )
+    return result
+
+@app.get("/api/media/local/{song_id}")
+async def stream_local_song(song_id: str):
+    file_path = function_executor.get_local_song_path(song_id)
+    if not file_path:
+        raise HTTPException(status_code=404, detail="Song not found")
+    return FileResponse(file_path, media_type="audio/mpeg")
 
 # --- Tasks API ---
 class TaskData(BaseModel):

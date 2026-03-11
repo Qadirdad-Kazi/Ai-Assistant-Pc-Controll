@@ -63,3 +63,34 @@ class SpotifyHandler:
             return False
         except:
             return False
+
+    def search_track_info(self, query):
+        """Search track and return rich metadata including URI and preview URL."""
+        if not self.sp:
+            return None
+        try:
+            results = self.sp.search(q=query, limit=1, type='track')
+            items = results.get('tracks', {}).get('items', [])
+            if not items:
+                return None
+            item = items[0]
+            return {
+                'uri': item.get('uri'),
+                'title': item.get('name'),
+                'artist': (item.get('artists') or [{}])[0].get('name', 'Spotify'),
+                'duration_ms': item.get('duration_ms', 0),
+                'preview_url': item.get('preview_url'),
+                'id': item.get('id')
+            }
+        except Exception:
+            return None
+
+    def play_track_uri(self, track_uri):
+        """Start playback for a known Spotify track URI."""
+        if not self.sp or not track_uri:
+            return False
+        try:
+            self.sp.start_playback(uris=[track_uri])
+            return True
+        except Exception:
+            return False
