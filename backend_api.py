@@ -1,5 +1,9 @@
 import asyncio
+import os
+import sqlite3
+import shutil
 import psutil  # type: ignore
+import requests  # type: ignore
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect  # type: ignore
 from fastapi import HTTPException  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
@@ -8,7 +12,10 @@ from pydantic import BaseModel  # type: ignore
 from typing import Optional
 from core.voice_assistant import voice_assistant  # type: ignore
 from core.function_executor import executor as function_executor  # type: ignore
-from config import VOICE_ASSISTANT_ENABLED  # type: ignore
+from core.database import db  # type: ignore
+from core.receptionist import receptionist  # type: ignore
+from core.settings_store import settings as settings_store  # type: ignore
+from config import VOICE_ASSISTANT_ENABLED, OLLAMA_URL, LOCAL_ROUTER_PATH, CUSTOM_PPN_PATH  # type: ignore
 
 app = FastAPI(title="Wolf AI Backend API")
 
@@ -29,6 +36,121 @@ system_status = {
     "Neural Sonic": "STANDBY",
     "Dev Agent": "IDLE"
 }
+
+diagnostics_state = {
+    "router_api": {"key": "router_api", "title": "Router API", "desc": "Test local LLM and Ollama bindings", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "local_database": {"key": "local_database", "title": "Local Database", "desc": "Verify SQLite read/write access", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "tts_engine": {"key": "tts_engine", "title": "TTS Engine", "desc": "Check Piper speech synthesis binaries", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "stt_engine": {"key": "stt_engine", "title": "STT Engine", "desc": "Validate Transcription vs Porcupine engine", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "pc_control": {"key": "pc_control", "title": "PC Control", "desc": "Check screen control and system permissions", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "phone_gateway": {"key": "phone_gateway", "title": "Phone Gateway", "desc": "Validate SIP/GSM hardware connection", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "ocr_vision": {"key": "ocr_vision", "title": "OCR Vision", "desc": "Detect Tesseract engine for Bug Watcher", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+}
+
+
+def _diagnostic_result(ok: bool, detail: str):
+    return ok, detail
+
+
+def _check_router_api():
+    base = OLLAMA_URL.replace("/api", "")
+    try:
+        resp = requests.get(f"{base}/api/tags", timeout=4)
+        if resp.status_code == 200:
+            model_files_ok = os.path.isdir(LOCAL_ROUTER_PATH)
+            model_note = "router model dir found" if model_files_ok else "router model dir missing"
+            return _diagnostic_result(True, f"Ollama reachable (200), {model_note}")
+        return _diagnostic_result(False, f"Ollama returned status {resp.status_code}")
+    except Exception as e:
+        return _diagnostic_result(False, f"Ollama unreachable: {e}")
+
+
+def _check_local_database():
+    try:
+        with sqlite3.connect(db.db_path) as conn:
+            conn.execute("SELECT 1")
+        return _diagnostic_result(True, f"SQLite reachable at {db.db_path}")
+    except Exception as e:
+        return _diagnostic_result(False, f"Database error: {e}")
+
+
+def _check_tts_engine():
+    voice_dir = os.path.join("models", "piper", "voices")
+    fallback_voice = os.path.join("voices", "en_GB-northern_english_male-medium.onnx")
+    has_voice_dir = os.path.isdir(voice_dir)
+    has_fallback = os.path.exists(fallback_voice)
+    if has_voice_dir or has_fallback:
+        where = voice_dir if has_voice_dir else fallback_voice
+        return _diagnostic_result(True, f"Piper assets found at {where}")
+    return _diagnostic_result(False, "Piper voice assets not found")
+
+
+def _check_stt_engine():
+    try:
+        from RealtimeSTT import AudioToTextRecorder  # type: ignore # noqa: F401
+        ppn_ok = os.path.exists(CUSTOM_PPN_PATH)
+        suffix = "custom wakeword found" if ppn_ok else "custom wakeword file missing"
+        return _diagnostic_result(True, f"RealtimeSTT import ok, {suffix}")
+    except Exception as e:
+        return _diagnostic_result(False, f"RealtimeSTT import failed: {e}")
+
+
+def _check_pc_control():
+    try:
+        has_code = shutil.which("code") is not None
+        has_ps = shutil.which("powershell") is not None
+        if has_ps:
+            note = "PowerShell available"
+            if has_code:
+                note += ", VS Code CLI available"
+            return _diagnostic_result(True, note)
+        return _diagnostic_result(False, "PowerShell executable not found")
+    except Exception as e:
+        return _diagnostic_result(False, f"PC control precheck failed: {e}")
+
+
+def _check_phone_gateway():
+    try:
+        from core.gsm_gateway import gsm_gateway  # type: ignore
+        status = "connected" if gsm_gateway.is_connected else "not connected"
+        return _diagnostic_result(True, f"GSM gateway loaded, current status: {status}")
+    except Exception as e:
+        return _diagnostic_result(False, f"GSM gateway unavailable: {e}")
+
+
+def _check_ocr_vision():
+    tesseract_default = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+    if os.path.exists(tesseract_default):
+        return _diagnostic_result(True, f"Tesseract found at {tesseract_default}")
+    return _diagnostic_result(False, "Tesseract executable not found at default path")
+
+
+diagnostic_checkers = {
+    "router_api": _check_router_api,
+    "local_database": _check_local_database,
+    "tts_engine": _check_tts_engine,
+    "stt_engine": _check_stt_engine,
+    "pc_control": _check_pc_control,
+    "phone_gateway": _check_phone_gateway,
+    "ocr_vision": _check_ocr_vision,
+}
+
+
+def run_single_diagnostic(key: str):
+    if key not in diagnostics_state or key not in diagnostic_checkers:
+        raise HTTPException(status_code=404, detail=f"Unknown diagnostic: {key}")
+
+    diagnostics_state[key]["status"] = "RUNNING"
+    ok, detail = diagnostic_checkers[key]()
+    diagnostics_state[key]["ok"] = ok
+    diagnostics_state[key]["detail"] = detail
+    diagnostics_state[key]["status"] = "PASS" if ok else "FAIL"
+    diagnostics_state[key]["checked_at"] = asyncio.get_event_loop().time()
+    return diagnostics_state[key]
+
+
+def get_diagnostics_payload():
+    return {"diagnostics": list(diagnostics_state.values())}
 
 # Connect to the voice assistant's signals to dynamically update state
 if VOICE_ASSISTANT_ENABLED:
@@ -103,6 +225,22 @@ async def websocket_system_status(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
+
+@app.websocket("/ws/diagnostics")
+async def websocket_diagnostics(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        last_hash = ""
+        while True:
+            payload = get_diagnostics_payload()
+            payload_hash = str(payload)
+            if payload_hash != last_hash:
+                await websocket.send_json(payload)
+                last_hash = payload_hash
+            await asyncio.sleep(0.5)
+    except WebSocketDisconnect:
+        pass
+
 class ChatMessage(BaseModel):
     text: str
 
@@ -112,6 +250,66 @@ class MediaControlRequest(BaseModel):
     service: Optional[str] = None
     volume: Optional[int] = None
     positionSec: Optional[int] = None
+
+
+class DiagnosticsRunRequest(BaseModel):
+    key: Optional[str] = None
+
+
+class SettingsUpdateRequest(BaseModel):
+    settings: dict
+
+
+def _flatten_settings(data: dict, prefix: str = ""):
+    flat = {}
+    for key, value in data.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            flat.update(_flatten_settings(value, path))
+        else:
+            flat[path] = value
+    return flat
+
+
+def _apply_runtime_setting(key_path: str, value):
+    """Apply a subset of settings immediately to running modules when safe."""
+    try:
+        if key_path == "gsm.port":
+            from core.gsm_gateway import gsm_gateway  # type: ignore
+            gsm_gateway.port = str(value)
+        elif key_path == "bug_watcher.enabled":
+            from core.bug_watcher import bug_watcher  # type: ignore
+            if bool(value):
+                bug_watcher.start()
+            else:
+                bug_watcher.stop()
+    except Exception as e:
+        print(f"[Settings Runtime Apply] Failed to apply {key_path}: {e}")
+
+def _get_call_logs(limit: int = 100):
+    """Get call logs from database and fallback to in-memory receptionist logs."""
+    logs = []
+    try:
+        logs = db.get_call_logs(limit=limit)
+    except Exception:
+        logs = []
+
+    if not logs:
+        raw = receptionist.call_logs[-limit:] if getattr(receptionist, "call_logs", None) else []
+        logs = list(reversed(raw))
+
+    normalized = []
+    for idx, item in enumerate(logs):
+        ts = item.get("timestamp", "")
+        normalized.append({
+            "id": item.get("id") or f"call_{idx}_{hash(str(item)) & 0xffff}",
+            "caller": item.get("caller", "Unknown"),
+            "status": item.get("status", "Unknown"),
+            "instructions": item.get("instructions", item.get("intent_executed", "No instructions")),
+            "transcript": item.get("transcript", ""),
+            "timestamp": ts,
+        })
+    return normalized
 
 @app.post("/api/chat")
 async def send_chat(message: ChatMessage):
@@ -171,6 +369,21 @@ async def websocket_media(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
+@app.websocket("/ws/call-logs")
+async def websocket_call_logs(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        last_hash = ""
+        while True:
+            logs = _get_call_logs(limit=200)
+            payload_hash = str(logs)
+            if payload_hash != last_hash:
+                await websocket.send_json({"logs": logs})
+                last_hash = payload_hash
+            await asyncio.sleep(1.0)
+    except WebSocketDisconnect:
+        pass
+
 @app.websocket("/ws/execution")
 async def websocket_execution(websocket: WebSocket):
     await websocket.accept()
@@ -188,6 +401,92 @@ async def websocket_execution(websocket: WebSocket):
 @app.get("/api/media/state")
 async def get_media_state():
     return {"state": function_executor.get_media_state()}
+
+
+@app.get("/api/diagnostics")
+async def get_diagnostics():
+    return get_diagnostics_payload()
+
+
+@app.post("/api/diagnostics/run")
+async def run_diagnostics(req: DiagnosticsRunRequest):
+    if req.key:
+        result = run_single_diagnostic(req.key)
+        return {"result": result, "diagnostics": list(diagnostics_state.values())}
+
+    for key in diagnostics_state.keys():
+        run_single_diagnostic(key)
+    return {"diagnostics": list(diagnostics_state.values())}
+
+
+@app.get("/api/settings")
+async def get_settings():
+    return {"settings": settings_store.get_all()}
+
+
+@app.put("/api/settings")
+async def update_settings(req: SettingsUpdateRequest):
+    incoming = req.settings or {}
+    flat = _flatten_settings(incoming)
+
+    changed = []
+    restart_required_keys = [
+        "ollama_url", "models.chat", "models.web_agent", "tts.voice",
+        "wake_word.keyword", "wake_word.sensitivity", "wake_word.confirmation_count",
+        "picovoice.enabled", "picovoice.key", "picovoice.ppn_path"
+    ]
+    restart_required = False
+
+    for key_path, value in flat.items():
+        settings_store.set(key_path, value)
+        _apply_runtime_setting(key_path, value)
+        changed.append(key_path)
+        if key_path in restart_required_keys:
+            restart_required = True
+
+    return {
+        "success": True,
+        "message": "Settings saved.",
+        "changed_keys": changed,
+        "restart_required": restart_required,
+        "settings": settings_store.get_all(),
+    }
+
+
+@app.post("/api/settings/reset")
+async def reset_settings():
+    settings_store.reset_to_defaults()
+    return {"success": True, "message": "Settings reset to defaults.", "settings": settings_store.get_all()}
+
+
+@app.get("/api/settings/validate")
+async def validate_settings():
+    cfg = settings_store.get_all()
+    ollama_url = cfg.get("ollama_url", "http://localhost:11434")
+    base = str(ollama_url).rstrip("/")
+
+    checks = {
+        "ollama": {"ok": False, "detail": "Not checked"},
+        "spotify_credentials": {"ok": False, "detail": "Not set"},
+    }
+
+    try:
+        resp = requests.get(f"{base}/api/tags", timeout=4)
+        checks["ollama"] = {"ok": resp.status_code == 200, "detail": f"HTTP {resp.status_code}"}
+    except Exception as e:
+        checks["ollama"] = {"ok": False, "detail": str(e)}
+
+    spotify_id = cfg.get("spotify", {}).get("client_id")
+    spotify_secret = cfg.get("spotify", {}).get("client_secret")
+    if spotify_id and spotify_secret:
+        checks["spotify_credentials"] = {"ok": True, "detail": "Client ID/Secret present"}
+
+    return {"checks": checks}
+
+@app.get("/api/call-logs")
+async def get_call_logs(limit: int = 100):
+    safe_limit = max(1, min(limit, 500))
+    return {"logs": _get_call_logs(limit=safe_limit), "count": safe_limit}
 
 @app.post("/api/media/control")
 async def control_media(req: MediaControlRequest):

@@ -7,6 +7,7 @@ import json
 import re
 from typing import Dict, Any, List, Tuple, Optional
 from config import OLLAMA_URL, GRAY, RESET, CYAN, GREEN, YELLOW
+from config import RESPONDER_MODEL
 import requests
 
 http_session = requests.Session()
@@ -108,7 +109,7 @@ class MultiModelReasoner:
     # Model definitions with strengths
     MODELS = {
         "fast": {
-            "name": "gemma:2b",
+            "name": RESPONDER_MODEL,
             "strengths": ["fast responses", "simple queries", "quick reasoning"],
             "latency": "low",
             "reasoning_depth": "shallow"

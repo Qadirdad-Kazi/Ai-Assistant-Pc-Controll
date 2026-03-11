@@ -194,7 +194,21 @@ Provide detailed validation feedback."""
                 response_data = response.json()
                 return response_data.get("response", "")
             else:
-                print(f"{GRAY}[CoT] LLM call failed with status {response.status_code}{RESET}")
+                print(f"{GRAY}[CoT] LLM call failed with status {response.status_code}. Retrying with responder model...{RESET}")
+                fallback_payload = {
+                    "model": RESPONDER_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "think": enable_thinking,
+                    "keep_alive": "5m"
+                }
+                fallback_response = http_session.post(
+                    f"{OLLAMA_URL}/generate",
+                    json=fallback_payload,
+                    timeout=60
+                )
+                if fallback_response.status_code == 200:
+                    return fallback_response.json().get("response", "")
                 return ""
         
         except Exception as e:

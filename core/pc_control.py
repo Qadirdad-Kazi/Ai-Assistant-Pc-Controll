@@ -6,6 +6,7 @@ import os
 import subprocess
 import time
 import shutil
+import threading
 from typing import Dict, Any
 
 try:
@@ -19,10 +20,21 @@ from core.dynamic_app_discovery import dynamic_discovery  # type: ignore
 
 class PCController:
     """Handles system level commands like controlling volume, opening apps, or locking the PC."""
+    _global_lock = threading.Lock()
+    _global_discovery_started = False
+    _global_discovered_apps: Dict[str, str] = {}
+    _global_discovery_in_progress = False
+    _instance_count = 0
     
     def __init__(self):
-        # Initialize dynamic app discovery
-        self.discovered_apps = dynamic_discovery.discover_installed_apps()
+        with self.__class__._global_lock:
+            self.__class__._instance_count += 1
+            instance_no = self.__class__._instance_count
+
+        # Initialize app discovery lazily in background to speed startup.
+        self.discovered_apps: Dict[str, str] = dict(self.__class__._global_discovered_apps)
+        self._discovery_lock = threading.Lock()
+        self._discovery_started = False
         
         # Keep some common mappings as fallback
         self.app_map = {
@@ -44,7 +56,40 @@ class PCController:
             "discord": "Update.exe --processStart Discord.exe"
         }
         
-        print(f"[PC Control] Initialized with {len(self.discovered_apps)} discovered apps")
+        if instance_no == 1:
+            print("[PC Control] Initialized (app discovery will start on first app request)")
+        else:
+            print(f"[PC Control] Initialized (instance #{instance_no}, using shared discovery state)")
+
+    def _start_discovery_background(self):
+        with self.__class__._global_lock:
+            if self.__class__._global_discovered_apps:
+                self.discovered_apps = dict(self.__class__._global_discovered_apps)
+                return
+            if self.__class__._global_discovery_in_progress:
+                return
+            self.__class__._global_discovery_in_progress = True
+
+        with self._discovery_lock:
+            if self._discovery_started:
+                return
+            self._discovery_started = True
+
+        def _worker():
+            try:
+                apps = dynamic_discovery.discover_installed_apps()
+                self.discovered_apps = apps
+                with self.__class__._global_lock:
+                    self.__class__._global_discovered_apps = dict(apps)
+                    self.__class__._global_discovery_started = True
+                    self.__class__._global_discovery_in_progress = False
+                print(f"[PC Control] App discovery completed: {len(apps)} apps")
+            except Exception as e:
+                with self.__class__._global_lock:
+                    self.__class__._global_discovery_in_progress = False
+                print(f"[PC Control] App discovery failed: {e}")
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def execute(self, action: str, target: str = "") -> Dict[str, Any]:
         """Execute a PC control action with intelligent command parsing."""
@@ -260,6 +305,9 @@ class PCController:
         app_name = re.sub(r'\s+(for me|please)\b', '', app_name).strip()
         
         print(f"[PC Control] Searching for app: '{app_name}'")
+
+        if not self.discovered_apps and not self._discovery_started:
+            self._start_discovery_background()
         
         # Method 1: Try dynamic discovery first (works with ANY app)
         app_path = dynamic_discovery.find_app_by_name(app_name)
@@ -469,5 +517,23 @@ class PCController:
         except Exception as e:
             return {"success": False, "message": f"Could not take screenshot: {e}"}
 
-# Global instance
-pc_controller = PCController()
+class _LazyPCController:
+    """Lazy proxy to avoid heavy startup work during module import."""
+
+    def __init__(self):
+        self._instance = None
+        self._lock = threading.Lock()
+
+    def _get_instance(self) -> PCController:
+        if self._instance is None:
+            with self._lock:
+                if self._instance is None:
+                    self._instance = PCController()
+        return self._instance
+
+    def __getattr__(self, item):
+        return getattr(self._get_instance(), item)
+
+
+# Global lazy instance
+pc_controller = _LazyPCController()

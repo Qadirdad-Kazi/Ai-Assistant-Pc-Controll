@@ -27,6 +27,16 @@ DEFAULT_SETTINGS = {
     "tts": {
         "voice": "en_GB-alba-medium"
     },
+    "wake_word": {
+        "keyword": "wolf",
+        "sensitivity": 0.6,
+        "confirmation_count": 1
+    },
+    "picovoice": {
+        "enabled": False,
+        "key": "",
+        "ppn_path": "resources/wakewords/hey_wolf.ppn"
+    },
     "general": {
         "max_history": 20,
         "auto_fetch_news": True

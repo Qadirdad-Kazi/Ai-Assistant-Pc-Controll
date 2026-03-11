@@ -4,8 +4,10 @@ Receptionist Module - Handles incoming GSM calls and expected directives.
 from typing import Dict, Any, Optional
 import requests  # type: ignore
 import time
+import datetime
 from config import OLLAMA_URL, RESPONDER_MODEL  # type: ignore
 from core.tts import tts  # type: ignore
+from core.database import db  # type: ignore
 
 class Receptionist:
     def __init__(self):
@@ -126,9 +128,21 @@ class Receptionist:
                 "caller": matched_caller,
                 "instructions": matched_instructions,
                 "transcript": transcript_log,
-                "status": "Completed" if not ("talk to qadirdad" in caller_speech.lower() and user_response == 'ok') else "Handed Over"  # type: ignore
+                "status": "Completed" if not ("talk to qadirdad" in caller_speech.lower() and user_response == 'ok') else "Handed Over",  # type: ignore
+                "timestamp": datetime.datetime.now().isoformat(timespec="seconds")
             }
             self.call_logs.append(log_entry)
+
+            # Persist to sqlite so logs survive restarts and are available via backend APIs.
+            try:
+                db.log_call(
+                    caller_id=matched_caller,
+                    status=log_entry["status"],
+                    intent=matched_instructions,
+                    transcript=transcript_log,
+                )
+            except Exception as e:
+                print(f"[Receptionist] Failed to persist call log: {e}")
             
             # Remove directive after processing
             del self.expected_calls[matched_caller]  # type: ignore

@@ -287,6 +287,13 @@ class AdaptivePersonalizer:
         response = self.level_adapter.adapt_explanation(response, profile.technical_level)
         
         return response
+
+    def adapt_communication_style(self, response: str, user_id: str) -> str:
+        """Backwards-compatible API used by voice assistant for style-only adaptation."""
+        profile = self.get_or_create_profile(user_id)
+        if profile.communication_style == "neutral":
+            return response
+        return self.style_adapter.adapt_response(response, profile.communication_style)
     
     def update_profile_from_interactions(self, user_id: str, interactions: List[Dict[str, Any]]):
         """Update user profile based on recent interactions."""

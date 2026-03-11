@@ -7,7 +7,6 @@ import Settings from './pages/Settings'
 import Media from './pages/Media'
 import CallLogs from './pages/CallLogs'
 import Diagnostics from './pages/Diagnostics'
-import SystemMonitor from './components/SystemMonitor'
 import './App.css'
 
 function App() {
@@ -16,7 +15,6 @@ function App() {
       <div className="app-container">
         <Sidebar />
         <div className="main-content">
-          <SystemMonitor />
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/chat" element={<Chat />} />

@@ -1,6 +1,7 @@
 import './Dashboard.css'
 import GreetingsHeader from './GreetingsHeader'
 import StatusCard from './StatusCard'
+import SystemMonitor from './SystemMonitor'
 import { useState, useEffect } from 'react'
 import { Mic, Monitor, Music, Code } from 'lucide-react'
 
@@ -35,6 +36,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard-container">
       <div className="dashboard-content">
+        <SystemMonitor />
         <GreetingsHeader />
         
         <div className="center-container">

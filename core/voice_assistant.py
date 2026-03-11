@@ -6,6 +6,7 @@ Manages: STT → Function Gemma → Qwen → TTS pipeline.
 import threading
 import json
 import requests
+import re
 from typing import Optional
 from PySide6.QtCore import QObject, Signal
 
@@ -162,16 +163,47 @@ class VoiceAssistant(QObject):
 
         thread = threading.Thread(target=self._process_query, args=(text, local_stop), daemon=True)
         thread.start()
+
+    def _is_pc_capability_query(self, user_text: str) -> bool:
+        """Detect capability checks that should get deterministic assistant grounding."""
+        txt = user_text.lower().strip()
+        asks_capability = bool(re.search(r"\b(can you|do you|are you able to|do u)\b", txt))
+        mentions_pc = bool(re.search(r"\b(pc|computer|desktop|laptop|system)\b", txt))
+        mentions_control = bool(re.search(r"\b(control|open|close|volume|shutdown|restart|lock|launch|manage)\b", txt))
+        return asks_capability and (mentions_pc or mentions_control)
     
     def _process_query(self, user_text: str, stop_event: threading.Event):
         """Process user query through the pipeline with Chain-of-Thought reasoning and human-like thinking."""
         try:
+            if self._is_pc_capability_query(user_text):
+                capability_answer = (
+                    "Yes. I can control your PC directly when you ask commands like "
+                    "open apps, close apps, adjust volume, lock, shutdown, restart, "
+                    "take screenshots, and basic media controls."
+                )
+                print(f"{CYAN}[VoiceAssistant] Capability query detected. Sending direct capability response...{RESET}")
+                spoke_ok = False
+                try:
+                    spoke_ok = bool(tts.speak(capability_answer))
+                except Exception as tts_err:
+                    print(f"{YELLOW}[VoiceAssistant] Capability TTS fallback triggered: {tts_err}{RESET}")
+
+                if not spoke_ok:
+                    tts.queue_sentence(capability_answer)
+                    tts.wait_for_completion()
+                self.messages.append({'role': 'user', 'content': user_text})
+                self.messages.append({'role': 'assistant', 'content': capability_answer})
+                self.processing_finished.emit()
+                if self.stt_listener:
+                    self.stt_listener.enter_conversation_mode()
+                return
+
             # Step 0a: EMOTIONAL INTELLIGENCE - Detect user emotion
             print(f"{CYAN}[VoiceAssistant] Analyzing user emotional state...{RESET}")
             emotion_analysis = emotional_analyzer.detect_user_emotion(user_text)
-            detected_emotion = emotion_analysis.get("emotion", "neutral")
-            emotion_intensity = emotion_analysis.get("intensity", 0)
-            print(f"{CYAN}[EmotionalIntelligence] Detected: {detected_emotion} (intensity: {emotion_intensity:.2f}){RESET}")
+            detected_emotion = emotion_analysis.get("primary_emotion", "neutral")
+            emotion_intensity = str(emotion_analysis.get("intensity", "medium"))
+            print(f"{CYAN}[EmotionalIntelligence] Detected: {detected_emotion} (intensity: {emotion_intensity}){RESET}")
             
             # Step 0b: ATTENTION MANAGER - Check if can handle new task
             print(f"{CYAN}[VoiceAssistant] Assessing attention state...{RESET}")
@@ -482,7 +514,10 @@ class VoiceAssistant(QObject):
             print(f"{CYAN}[Personalization] Adapting response to user profile...{RESET}")
             user_id = "default_user"  # In production, would use actual user ID
             full_response = adaptive_personalizer.personalize_response(full_response, user_id)
-            full_response = adaptive_personalizer.adapt_communication_style(full_response, user_id)
+            if hasattr(adaptive_personalizer, "adapt_communication_style"):
+                full_response = adaptive_personalizer.adapt_communication_style(full_response, user_id)
+            else:
+                full_response = adaptive_personalizer.personalize_response(full_response, user_id)
             
             # EMOTIONAL INTELLIGENCE: Generate empathetic response envelope if needed
             if detected_emotion != "neutral":
@@ -601,28 +636,45 @@ class VoiceAssistant(QObject):
             tts.set_completion_callback(on_tts_complete)
             
             # Stream response
-            with http_session.post(f"{OLLAMA_URL}/chat", json=payload, stream=True, timeout=60) as r:
-                r.raise_for_status()
-                
-                for line in r.iter_lines():
-                    if stop_event.is_set():
-                        break
+            try:
+                with http_session.post(f"{OLLAMA_URL}/chat", json=payload, stream=True, timeout=60) as r:
+                    r.raise_for_status()
                     
-                    if line:
-                        try:
-                            chunk = json.loads(line.decode('utf-8'))
-                            msg = chunk.get('message', {})
-                            
-                            if 'content' in msg and msg['content']:
-                                content = msg['content']
-                                full_response += content
+                    for line in r.iter_lines():
+                        if stop_event.is_set():
+                            break
+                        
+                        if line:
+                            try:
+                                chunk = json.loads(line.decode('utf-8'))
+                                msg = chunk.get('message', {})
                                 
-                                # Queue for TTS
-                                sentences = sentence_buffer.add(content)
-                                for s in sentences:
-                                    tts.queue_sentence(s)
-                        except:
-                            continue
+                                if 'content' in msg and msg['content']:
+                                    content = msg['content']
+                                    full_response += content
+                                    
+                                    # Queue for TTS
+                                    sentences = sentence_buffer.add(content)
+                                    for s in sentences:
+                                        tts.queue_sentence(s)
+                            except Exception:
+                                continue
+            except requests.HTTPError as chat_error:
+                # Fallback path for old Ollama builds or missing chat-model endpoints.
+                print(f"{YELLOW}[VoiceAssistant] /chat streaming failed ({chat_error}). Falling back to /generate with responder model.{RESET}")
+                fallback_payload = {
+                    "model": RESPONDER_MODEL,
+                    "prompt": user_text,
+                    "stream": False,
+                    "keep_alive": "5m"
+                }
+                fallback_resp = http_session.post(f"{OLLAMA_URL}/generate", json=fallback_payload, timeout=60)
+                if fallback_resp.status_code == 200:
+                    full_response = fallback_resp.json().get("response", "")
+                    if full_response:
+                        tts.queue_sentence(full_response)
+                else:
+                    raise
             
             # Flush remaining
             if not stop_event.is_set():
@@ -638,7 +690,10 @@ class VoiceAssistant(QObject):
             print(f"{CYAN}[Personalization] Personalizing response...{RESET}")
             user_id = "default_user"
             full_response = adaptive_personalizer.personalize_response(full_response, user_id)
-            full_response = adaptive_personalizer.adapt_communication_style(full_response, user_id)
+            if hasattr(adaptive_personalizer, "adapt_communication_style"):
+                full_response = adaptive_personalizer.adapt_communication_style(full_response, user_id)
+            else:
+                full_response = adaptive_personalizer.personalize_response(full_response, user_id)
             
             # METACOGNITION ENGINE: Add self-reflection
             print(f"{CYAN}[MetacognitionEngine] Adding metacognitive elements...{RESET}")

@@ -5,13 +5,11 @@ Provides streaming sentence-based synthesis with interrupt support.
 
 import io
 import os
-import os
 import queue
 import threading
 import time
 import json
 import re
-import io
 import base64
 import zipfile
 import subprocess
@@ -19,6 +17,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
 import requests
+import sounddevice as sd  # type: ignore
 
 # ANSI colors for console output
 GRAY = "\033[90m"
@@ -99,32 +98,42 @@ class PiperTTS:
         self.interrupt_event = threading.Event()
         self.current_process = None
         self.running = False
+        self._init_lock = threading.RLock()
+        self.available = False
+        self.worker_thread = None
+        self.completion_callback = None
         
-        # Try to initialize Piper
-        self.enabled = self._initialize_piper()
-        
-        if self.enabled:
-            self._load_voice_model()
-            self.running = True
-            self.speech_worker = threading.Thread(target=self._speech_worker, daemon=True)
-            self.speech_worker.start()
+        # Delay heavy initialization until first use to improve startup time.
+        self.enabled = False
+
+    def _find_piper_executable(self) -> Optional[str]:
+        """Find Piper executable across known extraction layouts."""
+        candidates = [
+            self.piper_dir / "piper.exe",
+            self.piper_dir / "piper" / "piper.exe",
+            self.piper_dir / "piper_windows" / "piper.exe",
+        ]
+        for candidate in candidates:
+            if candidate.exists() and candidate.is_file():
+                return str(candidate.resolve())
+        return None
     
     def _initialize_piper(self) -> bool:
         """Initialize Piper TTS executable."""
         try:
-            # Check if piper executable exists
-            piper_exe_path = self.piper_dir / "piper_windows" / "piper.exe"
-            
-            if piper_exe_path.exists():
-                self.piper_exe = str(piper_exe_path)
+            # Check if Piper executable already exists in any known layout.
+            existing_exe = self._find_piper_executable()
+
+            if existing_exe:
+                self.piper_exe = existing_exe
                 print(f"{GREEN}[TTS] ✓ Piper executable found: {self.piper_exe}{RESET}")
                 return True
             else:
                 # Try to download Piper executable
                 print(f"{CYAN}[TTS] Piper executable not found. Downloading...{RESET}")
                 downloaded_exe = self._download_piper_executable()
-                if downloaded_exe:
-                    self.piper_exe = downloaded_exe
+                if downloaded_exe and Path(downloaded_exe).exists():
+                    self.piper_exe = str(Path(downloaded_exe).resolve())
                     print(f"{GREEN}[TTS] ✓ Piper executable ready: {self.piper_exe}{RESET}")
                     return True
                 else:
@@ -146,7 +155,6 @@ class PiperTTS:
             self.model_path = None
     
     def _download_piper_executable(self) -> Optional[str]:
-        piper_exe_dir = self.piper_dir / "piper_windows"
         try:
             # Create piper directory if it doesn't exist
             self.piper_dir.mkdir(parents=True, exist_ok=True)
@@ -165,36 +173,11 @@ class PiperTTS:
                 with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
                     zip_ref.extractall(self.piper_dir)
                     print(f"{GREEN}[TTS] ✓ Piper executable downloaded and extracted{RESET}")
-                    return str(self.piper_dir / "piper_windows" / "piper.exe")
-            else:
-                print(f"{GRAY}[TTS] Failed to download Piper. Status: {response.status_code}{RESET}")
-                return None
-                
-        except Exception as e:
-            print(f"{YELLOW}[TTS] Failed to download Piper: {e}{RESET}")
-            return None
-    
-    def _download_piper_executable(self):
-        """Download and extract Piper Windows executable."""
-        try:
-            # Create piper directory if it doesn't exist
-            self.piper_dir.mkdir(parents=True, exist_ok=True)
-            print(f"{CYAN}[TTS] Downloading Piper executable...{RESET}")
-            
-            # Download URL for Windows
-            piper_url = f"https://github.com/rhasspy/piper/releases/download/{self.PIPER_VERSION}/piper_windows_amd64.zip"
-            
-            # Download to memory
-            response = requests.get(piper_url, timeout=30)
-            response.raise_for_status()
-            
-            if response.status_code == 200:
-                # Extract to memory
-                import zipfile
-                with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-                    zip_ref.extractall(self.piper_dir)
-                    print(f"{GREEN}[TTS] Piper executable downloaded and extracted{RESET}")
-                    return str(self.piper_dir / "piper_windows" / "piper.exe")
+                    detected_exe = self._find_piper_executable()
+                    if detected_exe:
+                        return detected_exe
+                    print(f"{YELLOW}[TTS] Piper extracted, but executable path was not found{RESET}")
+                    return None
             else:
                 print(f"{GRAY}[TTS] Failed to download Piper. Status: {response.status_code}{RESET}")
                 return None
@@ -231,54 +214,65 @@ class PiperTTS:
     
     def initialize(self):
         """Set up Piper executable and initial voice model."""
-        try:
-            from core.settings_store import settings
-            current_voice = settings.get("tts.voice", "Male (Northern)")
-            
-            print(f"{CYAN}[TTS] Initializing Piper TTS (executable mode)...{RESET}")
-            
-            # Check if piper executable already exists
-            piper_exe_path = self.piper_dir / "piper_windows" / "piper.exe"
-            if piper_exe_path.exists():
-                self.piper_exe = str(piper_exe_path)
-                print(f"{GREEN}[TTS] ✓ Piper executable found: {self.piper_exe}{RESET}")
-            else:
-                print(f"{CYAN}[TTS] Piper executable not found. Downloading...{RESET}")
-                self.piper_exe = self._download_piper_executable()
-                if not self.piper_exe:
-                    print(f"{YELLOW}[TTS] Could not set up Piper executable{RESET}")
-                self.available = False
-                return False
-            
-            # Download/find voice model
-            self.model_path = self._download_model(current_voice)
-            
-            # Test the executable
+        with self._init_lock:
+            if self.enabled and self.piper_exe and self.model_path and self.running:
+                return True
+
             try:
-                result = subprocess.run(
-                    [self.piper_exe, "--version"],
-                    capture_output=True,
-                    text=True,
-                    timeout=10
-                )
-                print(f"{CYAN}[TTS] Piper version: {result.stdout.strip()}{RESET}")
+                from core.settings_store import settings
+                current_voice = settings.get("tts.voice", "Male (Northern)")
+
+                print(f"{CYAN}[TTS] Initializing Piper TTS (executable mode)...{RESET}")
+
+                # Check if Piper executable already exists in any known layout.
+                existing_exe = self._find_piper_executable()
+                if existing_exe:
+                    self.piper_exe = existing_exe
+                    print(f"{GREEN}[TTS] ✓ Piper executable found: {self.piper_exe}{RESET}")
+                else:
+                    print(f"{CYAN}[TTS] Piper executable not found. Downloading...{RESET}")
+                    self.piper_exe = self._download_piper_executable()
+                    if not self.piper_exe or not Path(self.piper_exe).exists():
+                        print(f"{YELLOW}[TTS] Could not set up Piper executable{RESET}")
+                        self.available = False
+                        return False
+
+                # Download/find voice model
+                self.model_path = self._download_model(current_voice)
+                if self.model_path:
+                    self.model_path = str(Path(self.model_path).resolve())
+
+                # Test the executable
+                try:
+                    if not self.piper_exe or not Path(self.piper_exe).exists():
+                        raise FileNotFoundError(f"Piper executable not found at: {self.piper_exe}")
+                    result = subprocess.run(
+                        [self.piper_exe, "--version"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                        cwd=str(Path(self.piper_exe).parent)
+                    )
+                    print(f"{CYAN}[TTS] Piper version: {result.stdout.strip()}{RESET}")
+                except Exception as e:
+                    print(f"{YELLOW}[TTS] Warning: Could not get Piper version: {e}{RESET}")
+
+                # Start the worker thread
+                if not self.running:
+                    self.running = True
+                    self.worker_thread = threading.Thread(target=self._speech_worker, daemon=True)
+                    self.worker_thread.start()
+                self.enabled = True
+                self.available = True
+
+                print(f"{GREEN}[TTS] [OK] Piper TTS ready ({current_voice}){RESET}")
+                return True
+
             except Exception as e:
-                print(f"{YELLOW}[TTS] Warning: Could not get Piper version: {e}{RESET}")
-            
-            
-            # Start the worker thread
-            self.running = True
-            self.worker_thread = threading.Thread(target=self._speech_worker, daemon=True)
-            self.worker_thread.start()
-            
-            print(f"{GREEN}[TTS] [OK] Piper TTS ready ({current_voice}){RESET}")
-            return True
-            
-        except Exception as e:
-            print(f"{YELLOW}[TTS] Failed to initialize: {e}{RESET}")
-            import traceback
-            traceback.print_exc()
-            return False
+                print(f"{YELLOW}[TTS] Failed to initialize: {e}{RESET}")
+                import traceback
+                traceback.print_exc()
+                return False
     
     def _speech_worker(self):
         """Background thread that plays queued sentences."""
@@ -376,6 +370,19 @@ class PiperTTS:
         """Add a sentence to the speech queue."""
         if self.enabled and self.piper_exe and sentence.strip():
             self.speech_queue.put(sentence)
+
+    def speak(self, text: str) -> bool:
+        """Backward-compatible synchronous speak API used by older call sites."""
+        if not text or not text.strip():
+            return False
+
+        if not self.enabled:
+            if not self.initialize():
+                return False
+
+        self.queue_sentence(text)
+        self.wait_for_completion()
+        return True
     
     def stop(self):
         """Interrupt current speech and clear queue."""
