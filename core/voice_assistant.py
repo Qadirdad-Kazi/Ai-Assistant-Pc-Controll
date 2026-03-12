@@ -7,7 +7,7 @@ import threading
 import json
 import requests # type: ignore
 import re
-from typing import Optional, cast
+from typing import Optional, cast, Any
 from PySide6.QtCore import QObject, Signal # type: ignore
 
 from config import ( # type: ignore
@@ -117,7 +117,8 @@ class VoiceAssistant(QObject):
                 return
         
         self.running = True
-        self.stt_listener.start()
+        stt = cast(Any, self.stt_listener)
+        stt.start()
         print(f"{CYAN}[VoiceAssistant] Voice assistant started. Say '{GREEN}{WAKE_WORD}{RESET}{CYAN}' to activate.{RESET}")
     
     def stop(self):
@@ -127,14 +128,16 @@ class VoiceAssistant(QObject):
         
         self.running = False
         if self.stt_listener:
-            self.stt_listener.stop()
+            stt = cast(Any, self.stt_listener)
+            stt.stop()
         print(f"{GRAY}[VoiceAssistant] Voice assistant stopped.{RESET}")
     
     def _on_stop(self):
         """Handle 'stop' voice command — interrupt TTS immediately."""
         print(f"{YELLOW}[VoiceAssistant] 🛑 Stop command received! Interrupting TTS and LLM.{RESET}")
         if self.current_stop_event:
-            self.current_stop_event.set()
+            stop_evt = cast(Any, self.current_stop_event)
+            stop_evt.set()
         tts.stop()
     
     def _on_wake_word(self):
@@ -164,7 +167,8 @@ class VoiceAssistant(QObject):
 
         # Interrupt any ongoing TTS before processing the new query
         if self.current_stop_event:
-            self.current_stop_event.set()
+            stop_evt = cast(Any, self.current_stop_event)
+            stop_evt.set()
         tts.stop()
 
         self.current_user_prompt = text

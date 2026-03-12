@@ -57,6 +57,9 @@ python-kasa>=0.10.0            # TP-Link Kasa smart device control
 requests>=2.32.0               # HTTP requests for API calls
 duckduckgo-search>=8.0.0       # DuckDuckGo search API (provides DDGS class)
 httpx>=0.28.0                  # Async HTTP client
+pyautogui>=0.9.54              # GUI automation for PC control
+Pillow>=10.0.0                 # Image processing for screenshots
+pytesseract>=0.3.10            # OCR for Bug Watcher screen analysis
 
 # -----------------------------------------------------
 # System Utilities
