@@ -21,7 +21,7 @@ from config import (  # type: ignore
 
 # ── Constants ────────────────────────────────────────────────────────────────
 CONVERSATION_TIMEOUT = 60          # Seconds of silence before leaving convo mode
-STOP_PHRASES  = {"stop", "please stop", "shut up", "be quiet", "quit", "please quit", "cancel", "abort", "halt", "stop talking", "quiet"}
+STOP_PHRASES  = {"stop", "please stop", "shut up", "be quiet", "quit", "please quit", "cancel", "abort", "halt", "stop talking", "quiet", "hey stop", "wolf stop", "stop now"}
 WOLF_ALIASES  = ["wolf", "wolff", "woof", "wall", "well", "holy", "bolly", "wulf", "worth"]
 
 
@@ -67,6 +67,15 @@ class STTListener:
             self._mode = self.MODE_CONVERSATION
             self._last_activity = time.time()
         self._reset_timeout_timer()
+        
+        # Update system status to show listening
+        try:
+            from backend_api import system_status
+            system_status["isListening"] = True
+        except ImportError:
+            # Backend not available, skip status update
+            pass
+        
         print(f"{GREEN}[STT] 💬 Conversation mode active (timeout: {CONVERSATION_TIMEOUT}s){RESET}")
 
     def exit_conversation_mode(self):
@@ -74,6 +83,15 @@ class STTListener:
         with self._mode_lock:
             self._mode = self.MODE_WAKE_WORD
         self._cancel_timeout_timer()
+        
+        # Update system status to show not listening
+        try:
+            from backend_api import system_status
+            system_status["isListening"] = False
+        except ImportError:
+            # Backend not available, skip status update
+            pass
+        
         print(f"{CYAN}[STT] 🔇 Returned to wake-word mode.{RESET}")
 
     @property
@@ -263,7 +281,9 @@ class STTListener:
                 
                 normalized = re.sub(r"[^a-z\s]", " ", check_text.lower())
                 normalized = re.sub(r"\s+", " ", normalized).strip()
-
+                
+                print(f"{YELLOW}[STT] Checking for stop command in: '{normalized}'{RESET}")
+                
                 is_stop = normalized in STOP_PHRASES
                 if not is_stop:
                     natural_stop_patterns = [
@@ -294,6 +314,10 @@ class STTListener:
                     # Fire wake-word callback if hardware hasn't already
                     if not in_convo and self.wake_word_callback:
                         self.wake_word_callback()  # type: ignore
+                    
+                    # Enter conversation mode immediately after wake word detection
+                    if not in_convo:
+                        self.enter_conversation_mode()
 
                 # ── Guard: only wake-word said, no command ────────────────────
                 if not text_clean:

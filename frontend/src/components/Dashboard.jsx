@@ -7,6 +7,8 @@ import { Mic, Monitor, Music, Code } from 'lucide-react'
 
 export default function Dashboard() {
   const [isListening, setIsListening] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [statuses, setStatuses] = useState({
     "Voice Core": "OFFLINE",
     "System Control": "READY",
@@ -21,6 +23,16 @@ export default function Dashboard() {
       const data = JSON.parse(event.data);
       setIsListening(data.isListening);
       setStatuses(data);
+      
+      // Determine AI state based on system status
+      const voiceCoreStatus = data["Voice Core"];
+      const neuralSonicStatus = data["Neural Sonic"];
+      
+      // User speaking when isListening is true
+      // AI processing when Voice Core is "PROCESSING" or similar
+      // AI speaking when Neural Sonic is "PLAYING"
+      setIsProcessing(voiceCoreStatus === "PROCESSING" || voiceCoreStatus === "THINKING");
+      setIsSpeaking(neuralSonicStatus === "PLAYING");
     };
 
     ws.onerror = (error) => {
@@ -31,6 +43,32 @@ export default function Dashboard() {
       if (ws.readyState === 1) ws.close();
     };
   }, []);
+
+  // Helper functions to determine blob state and icon
+  const getBlobState = () => {
+    if (isSpeaking) return 'speaking';
+    if (isProcessing) return 'processing';
+    if (isListening) return 'listening';
+    return '';
+  };
+
+  const getBlobIcon = () => {
+    if (isSpeaking) {
+      return <div className="sound-waves">
+        <div className="wave"></div>
+        <div className="wave"></div>
+        <div className="wave"></div>
+      </div>;
+    }
+    if (isProcessing) {
+      return <div className="thinking-dots">
+        <div className="dot"></div>
+        <div className="dot"></div>
+        <div className="dot"></div>
+      </div>;
+    }
+    return <Mic size={48} className="blob-icon" />;
+  };
 
   // Removed clicking toggle since we're tied to backend now
   return (
@@ -44,9 +82,9 @@ export default function Dashboard() {
             <div className="mission-label"></div>
           ) : (
             <div className="blob-container">
-              <div className="blob"></div>
-              <div className="blob-core">
-                <Mic size={48} className="blob-icon" />
+              <div className={`blob ${getBlobState()}`}></div>
+              <div className={`blob-core ${getBlobState()}`}>
+                {getBlobIcon()}
               </div>
             </div>
           )}

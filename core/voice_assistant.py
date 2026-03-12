@@ -138,12 +138,25 @@ class VoiceAssistant(QObject):
         if self.current_stop_event:
             stop_evt = cast(Any, self.current_stop_event)
             stop_evt.set()
+            print(f"{YELLOW}[VoiceAssistant] 🛑 Stop event set for current request.{RESET}")
+        
+        print(f"{YELLOW}[VoiceAssistant] 🛑 Calling TTS.stop()...{RESET}")
         tts.stop()
+        print(f"{YELLOW}[VoiceAssistant] 🛑 TTS stopped.{RESET}")
     
     def _on_wake_word(self):
         """Handle wake word detection."""
         print(f"{GREEN}[VoiceAssistant] ✓ Wake word callback received!{RESET}")
         print(f"{GREEN}[VoiceAssistant] Emitting wake_word_detected signal...{RESET}")
+        
+        # Update system status to show listening
+        try:
+            from backend_api import system_status
+            system_status["isListening"] = True
+        except ImportError:
+            # Backend not available, skip status update
+            pass
+        
         self.wake_word_detected.emit()
         print(f"{GREEN}[VoiceAssistant] ✓ Signal emitted. Listening for speech...{RESET}")
 
@@ -157,28 +170,44 @@ class VoiceAssistant(QObject):
             return stop_event.is_set() or request_id != self._active_request_id
 
     def _on_speech(self, text: str):
-        """Handle recognized speech. STT already stripped the wake word."""
+        """Handle speech recognition."""
         if not text.strip():
             return
 
-        self.speech_recognized.emit(text)
-        self.processing_started.emit()
         print(f"{CYAN}[VoiceAssistant] Processing: {text}{RESET}")
-
-        # Interrupt any ongoing TTS before processing the new query
-        if self.current_stop_event:
-            stop_evt = cast(Any, self.current_stop_event)
-            stop_evt.set()
-        tts.stop()
-
-        self.current_user_prompt = text
-        self.current_stream = ""
-
-        local_stop = threading.Event()
-        self.current_stop_event = local_stop
+        
+        # Reset TTS text length counter for accurate timing
+        try:
+            from core.tts import tts
+            if hasattr(tts, '_last_text_length'):
+                tts._last_text_length = 0
+        except:
+            pass
+        
+        # Update system status to show not listening while processing
+        try:
+            from backend_api import system_status
+            system_status["isListening"] = False
+            system_status["Voice Core"] = "PROCESSING"
+        except ImportError:
+            # Backend not available, skip status update
+            pass
+        
+        self.processing_started.emit()
+        
+        # Create stop event for this request
+        stop_event = threading.Event()
+        self.current_stop_event = stop_event
+        
+        # Get unique request ID
         request_id = self._next_request_id()
-
-        thread = threading.Thread(target=self._process_query, args=(text, local_stop, request_id), daemon=True)
+        
+        # Process in background thread
+        thread = threading.Thread(
+            target=self._process_query,
+            args=(text, stop_event, request_id),
+            daemon=True
+        )
         thread.start()
 
     def _is_pc_capability_query(self, user_text: str) -> bool:
@@ -226,8 +255,7 @@ class VoiceAssistant(QObject):
                 self.messages.append({'role': 'user', 'content': user_text})
                 self.messages.append({'role': 'assistant', 'content': capability_answer})
                 self.processing_finished.emit()
-                if self.stt_listener:
-                    self.stt_listener.enter_conversation_mode()
+                # Note: STT will handle conversation mode entry
                 return
 
             # Step 0a: EMOTIONAL INTELLIGENCE - Detect user emotion
@@ -268,8 +296,7 @@ class VoiceAssistant(QObject):
                     self.messages.append({'role': 'assistant', 'content': quick_response})
                     memory_manager.log_interaction(user_text, quick_response, "intuition_fast_response")
                     self.processing_finished.emit()
-                    if self.stt_listener:
-                        self.stt_listener.enter_conversation_mode()
+                    # Note: STT will handle conversation mode entry
                     return
             
             # Step 0d: ENERGY MANAGER - Track energy for this complex operation
@@ -690,10 +717,20 @@ class VoiceAssistant(QObject):
             mark_llama_used()  # Update usage time
             
             print(f"{GREEN}[VoiceAssistant] Response generated and logged to memory.{RESET}")
+            
+            # Reset Voice Core status
+            try:
+                from backend_api import system_status
+                system_status["Voice Core"] = "ACTIVE"
+            except ImportError:
+                # Backend not available, skip status update
+                pass
+            
+            # Wait for TTS to complete before enabling conversation mode
+            tts.wait_for_completion()
+            
             self.processing_finished.emit()
-            # Keep mic open for follow-up without re-saying the wake word
-            if self.stt_listener:
-                self.stt_listener.enter_conversation_mode()
+            # Note: STT will handle conversation mode entry
             
         except Exception as e:
             print(f"{GRAY}[VoiceAssistant] Error generating response: {e}{RESET}")
@@ -828,10 +865,11 @@ class VoiceAssistant(QObject):
             mark_llama_used()  # Update usage time
             
             print(f"{GREEN}[VoiceAssistant] Response generated.{RESET}")
-            self.processing_finished.emit()
             
             # Wait for TTS to complete before enabling conversation mode
             tts.wait_for_completion()
+            
+            self.processing_finished.emit()
             
         except Exception as e:
             print(f"{GRAY}[VoiceAssistant] Error streaming response: {e}{RESET}")

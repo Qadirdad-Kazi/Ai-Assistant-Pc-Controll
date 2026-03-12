@@ -316,12 +316,8 @@ async def websocket_system_status(websocket: WebSocket):
             if VOICE_ASSISTANT_ENABLED:
                 system_status["Voice Core"] = "LISTENING" if system_status["isListening"] else "ACTIVE"
             
-            # Real-time Neural Sonic Player status
-            m_state = function_executor.get_media_state()
-            if m_state.get("isPlaying"):
-                system_status["Neural Sonic"] = "PLAYING"
-            else:
-                system_status["Neural Sonic"] = "STANDBY"
+            # Neural Sonic status is already set by TTS in system_status
+            # Don't override it with media state which is for music playback
                 
             await websocket.send_json(system_status)
             await asyncio.sleep(0.5) # Send updates twice a second

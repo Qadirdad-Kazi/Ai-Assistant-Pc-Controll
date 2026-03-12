@@ -458,16 +458,43 @@ class UnifiedTTS:
     def speak(self, text: str):
         if self.engine == "kokoro":
             self._last_text_length = len(text)
+            # Set Neural Sonic status to PLAYING
+            try:
+                from backend_api import system_status
+                system_status["Neural Sonic"] = "PLAYING"
+            except ImportError:
+                # Backend not available, skip status update
+                pass
             return self.kokoro.speak(text)
         return self.piper.speak(text)
 
     def queue_sentence(self, sentence: str):
         if self.engine == "kokoro":
-            self._last_text_length = len(sentence)
+            # Accumulate total text length for accurate timing
+            current_length = len(sentence)
+            if hasattr(self, '_last_text_length'):
+                self._last_text_length += current_length
+            else:
+                self._last_text_length = current_length
+            # Set Neural Sonic status to PLAYING
+            try:
+                from backend_api import system_status
+                system_status["Neural Sonic"] = "PLAYING"
+            except ImportError:
+                # Backend not available, skip status update
+                pass
             return self.kokoro.speak(sentence)
         return self.piper.queue_sentence(sentence)
 
     def stop(self):
+        # Reset Neural Sonic status
+        try:
+            from backend_api import system_status
+            system_status["Neural Sonic"] = "STANDBY"
+        except ImportError:
+            # Backend not available, skip status update
+            pass
+        
         self.piper.stop()
         self.kokoro.stop()
 
@@ -483,11 +510,22 @@ class UnifiedTTS:
                 # Simple wait implementation - check if Kokoro is still speaking
                 # This is a basic approach - could be improved with proper callback
                 time.sleep(0.1)  # Small delay to ensure speech starts
+                
                 # Since Kokoro doesn't expose is_speaking, we'll use a reasonable wait time
                 # based on text length (rough estimate: 0.1 seconds per character)
                 if hasattr(self, '_last_text_length'):
                     wait_time = min(self._last_text_length * 0.05, 10.0)  # Max 10 seconds
+                    print(f"[TTS] Waiting for Kokoro TTS completion ({wait_time:.1f}s)...")
                     time.sleep(wait_time)
+                    print(f"[TTS] Kokoro TTS should be finished now")
+                    
+                    # Reset Neural Sonic status when TTS finishes
+                    try:
+                        from backend_api import system_status
+                        system_status["Neural Sonic"] = "STANDBY"
+                    except ImportError:
+                        # Backend not available, skip status update
+                        pass
             return
         self.piper.wait_for_completion()
 
