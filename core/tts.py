@@ -457,11 +457,13 @@ class UnifiedTTS:
 
     def speak(self, text: str):
         if self.engine == "kokoro":
+            self._last_text_length = len(text)
             return self.kokoro.speak(text)
         return self.piper.speak(text)
 
     def queue_sentence(self, sentence: str):
         if self.engine == "kokoro":
+            self._last_text_length = len(sentence)
             return self.kokoro.speak(sentence)
         return self.piper.queue_sentence(sentence)
 
@@ -475,7 +477,17 @@ class UnifiedTTS:
 
     def wait_for_completion(self):
         if self.engine == "kokoro":
-            # Kokoro wait is impl via helper if needed, but for now:
+            # Wait for Kokoro to finish speaking
+            if self.kokoro:
+                import time
+                # Simple wait implementation - check if Kokoro is still speaking
+                # This is a basic approach - could be improved with proper callback
+                time.sleep(0.1)  # Small delay to ensure speech starts
+                # Since Kokoro doesn't expose is_speaking, we'll use a reasonable wait time
+                # based on text length (rough estimate: 0.1 seconds per character)
+                if hasattr(self, '_last_text_length'):
+                    wait_time = min(self._last_text_length * 0.05, 10.0)  # Max 10 seconds
+                    time.sleep(wait_time)
             return
         self.piper.wait_for_completion()
 

@@ -68,6 +68,24 @@ def nonthinking(prompt: str):
     """
     pass
 
+def recall_memory(query: str):
+    """
+    Recall information from past interactions and stored preferences.
+    
+    Args:
+        query: What to search for in memory
+    """
+    pass
+
+def remember(preference: str):
+    """
+    Store user preferences and information for future recall.
+    
+    Args:
+        preference: The information to remember
+    """
+    pass
+
 
 def scaffold_website(prompt: str, framework: str = "html"):
     """
@@ -164,7 +182,8 @@ TOOLS = [
 # All valid function names
 VALID_FUNCTIONS = {
     "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website", 
-    "set_call_directive", "visual_agent", "research_web", "recall_memory", "create_task", "list_tasks", "execute_task", "task_complete"
+    "set_call_directive", "visual_agent", "research_web", "recall_memory", "remember",
+    "create_task", "list_tasks", "execute_task", "task_complete"
 }
 
 
@@ -264,12 +283,17 @@ class FunctionGemmaRouter:
         - nonthinking(prompt): Simple greetings, chitchat only.
         - play_music(query, service): Music.
         - scaffold_website(prompt): Build apps.
-        - recall_memory(query): Past information.
+        - recall_memory(query): Ask about past information or preferences.
+        - remember(preference): Store information or preferences for later.
 
         CRITICAL:
         If query mentions "screen", "see", "look", "describe screen", "what's on screen" -> ALWAYS use visual_agent.
+        If query starts with "remember" or "remember that" -> ALWAYS use remember.
+        If query asks about preferences, style, or past information -> use recall_memory.
 
         Example: "describe my screen" -> call:visual_agent{{task:describe what you see on my screen}}
+        Example: "remember that I like dark mode" -> call:remember{{preference:I like dark mode}}
+        Example: "what are my preferences" -> call:recall_memory{{query:preferences}}
         Example: "open notepad" -> call:pc_control{{action:open_app,target:notepad}}
 
         User Prompt: {user_prompt}

@@ -162,7 +162,12 @@ class WolfAILauncher:
             response = requests.get("http://localhost:5173", timeout=5)
             return response.status_code == 200
         except:
-            return False
+            # If frontend dev server is not running, check if backend serves frontend
+            try:
+                response = requests.get("http://localhost:8000", timeout=5)
+                return response.status_code == 200
+            except:
+                return False
     
     def open_browser(self, url: str):
         """Open browser to specified URL."""
@@ -213,12 +218,12 @@ class WolfAILauncher:
             print("\n🎉 Wolf AI 2.0 is running!")
             print("\n📋 Services:")
             print("   • Backend API: http://localhost:8000")
-            print("   • Frontend UI: http://localhost:5173")
+            print("   • Frontend UI: http://localhost:8000 (served by backend)")
             print("   • API Docs: http://localhost:8000/docs")
             print("   • WebSocket: ws://localhost:8000/ws/status")
             
             if open_browser:
-                self.open_browser("http://localhost:5173")
+                self.open_browser("http://localhost:8000")
             
             print("\n🎙️  Voice Assistant:")
             print("   • Say 'Hey Wolf' to activate")

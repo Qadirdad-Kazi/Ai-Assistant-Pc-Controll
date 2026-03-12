@@ -9,7 +9,8 @@ export default function Settings() {
     model_chat: 'llama3.2:3b',
     model_router: './merged_model',
     ollama_url: 'http://localhost:11434',
-    tts_voice: 'en_GB-alba-medium',
+    tts_engine: 'kokoro',
+    tts_voice: 'af_heart',
     wake_word_keyword: 'wolf',
     wake_word_sensitivity: 0.6,
     wake_word_confirmation_count: 1,
@@ -39,7 +40,8 @@ export default function Settings() {
         model_chat: s.models?.chat || 'llama3.2:3b',
         model_router: s.models?.router || './merged_model',
         ollama_url: s.ollama_url || 'http://localhost:11434',
-        tts_voice: s.tts?.voice || 'en_GB-alba-medium',
+        tts_engine: s.tts?.engine || 'kokoro',
+        tts_voice: s.tts?.voice || 'af_heart',
         wake_word_keyword: s.wake_word?.keyword || 'wolf',
         wake_word_sensitivity: s.wake_word?.sensitivity ?? 0.6,
         wake_word_confirmation_count: s.wake_word?.confirmation_count ?? 1,
@@ -81,6 +83,7 @@ export default function Settings() {
             router: form.model_router,
           },
           tts: {
+            engine: form.tts_engine,
             voice: form.tts_voice,
           },
           wake_word: {
@@ -214,10 +217,19 @@ export default function Settings() {
             <input type="text" value={form.ollama_url} onChange={(e) => setField('ollama_url', e.target.value)} />
           </div>
           <div className="input-group">
+            <label>TTS Engine</label>
+            <select value={form.tts_engine} onChange={(e) => setField('tts_engine', e.target.value)}>
+              <option value="kokoro">Kokoro (Neural)</option>
+              <option value="piper">Piper (Fast)</option>
+            </select>
+          </div>
+          <div className="input-group">
             <label>TTS Voice</label>
             <select value={form.tts_voice} onChange={(e) => setField('tts_voice', e.target.value)}>
-              <option value="en_GB-northern_english_male-medium">Male (Northern)</option>
-              <option value="en_GB-alba-medium">Female (Alba)</option>
+              <option value="af_heart">Heart (Female)</option>
+              <option value="af_sarah">Sarah (Female)</option>
+              <option value="am_adam">Adam (Male)</option>
+              <option value="am_michael">Michael (Male)</option>
             </select>
           </div>
           <div className="input-group">

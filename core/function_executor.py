@@ -300,6 +300,8 @@ class FunctionExecutor:
                 return self._web_search(params)
             elif func_name == "recall_memory":
                 return self._recall_memory(params)
+            elif func_name == "remember":
+                return self._remember_preference(params)
             elif func_name in ("thinking", "nonthinking"):
                 prompt = params.get("prompt", "")
                 # Check if this is a capability question
@@ -555,6 +557,8 @@ Say "stop" or "quit" at any time to interrupt me."""
             message += f"\nLearned patterns:\n"
             for p in relevant_patterns:
                 message += f"- {p['name']}: {p['data'].get('data', {}).get('description', 'N/A')}\n"
+        else:
+            message += f"\nNo specific memories found about '{query}'."
                 
         return {
             "success": True,
@@ -565,6 +569,33 @@ Say "stop" or "quit" at any time to interrupt me."""
                 "history": history
             }
         }
+
+    def _remember_preference(self, params: Dict):
+        """Store user preferences in memory."""
+        preference = params.get("preference", "")
+        if not preference:
+            return {"success": False, "message": "No preference provided to remember."}
+            
+        print(f"[FunctionExecutor] Storing preference: {preference}")
+        
+        # Store in user preferences
+        try:
+            # Extract key information
+            preference_data = {
+                "preference": preference,
+                "timestamp": datetime.now().isoformat(),
+                "category": "user_preference"
+            }
+            
+            # Save to memory
+            memory_manager.save_user_preference("general_preference", preference_data)
+            
+            return {
+                "success": True, 
+                "message": f"I'll remember that: {preference}"
+            }
+        except Exception as e:
+            return {"success": False, "message": f"Failed to store preference: {str(e)}"}
 
     def _play_music(self, params: Dict):
         """Handle music commands with source fallback: spotify -> local -> youtube."""

@@ -38,6 +38,17 @@ async def get_system_status():
     """Get system status for startup script."""
     return system_status
 
+@app.get("/")
+async def serve_frontend():
+    """Serve the frontend index.html."""
+    frontend_dist = os.path.join(os.path.dirname(__file__), "frontend", "dist")
+    index_file = os.path.join(frontend_dist, "index.html")
+    
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    else:
+        return {"message": "Frontend not built. Run 'cd frontend && npm run build'"}
+
 # Global status tracking dictionary mimicking actual backend state
 system_status = {
     "isListening": False,
@@ -53,10 +64,15 @@ diagnostics_state: Dict[str, Dict[str, Any]] = {
     "router_api": {"key": "router_api", "title": "Router API", "desc": "Test local LLM and Ollama bindings", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
     "local_database": {"key": "local_database", "title": "Local Database", "desc": "Verify SQLite read/write access", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
     "tts_engine": {"key": "tts_engine", "title": "TTS Engine", "desc": "Check Piper speech synthesis binaries", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "kokoro_tts": {"key": "kokoro_tts", "title": "Kokoro TTS", "desc": "Check Kokoro neural TTS model", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
     "stt_engine": {"key": "stt_engine", "title": "STT Engine", "desc": "Validate Transcription vs Porcupine engine", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
     "pc_control": {"key": "pc_control", "title": "PC Control", "desc": "Check screen control and system permissions", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
     "phone_gateway": {"key": "phone_gateway", "title": "Phone Gateway", "desc": "Validate SIP/GSM hardware connection", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
     "ocr_vision": {"key": "ocr_vision", "title": "OCR Vision", "desc": "Detect Tesseract engine for Bug Watcher", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "omni_parser": {"key": "omni_parser", "title": "OmniParser", "desc": "Check UI parsing and grounding system", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "memory_system": {"key": "memory_system", "title": "Memory System", "desc": "Verify memory storage and recall functions", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "gpu_acceleration": {"key": "gpu_acceleration", "title": "GPU Acceleration", "desc": "Check CUDA and GPU availability", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
+    "voice_assistant": {"key": "voice_assistant", "title": "Voice Assistant", "desc": "Check voice assistant initialization", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
 }
 
 
@@ -137,14 +153,82 @@ def _check_ocr_vision():
     return _diagnostic_result(False, "Tesseract executable not found at default path")
 
 
+def _check_kokoro_tts():
+    """Check Kokoro TTS model availability."""
+    try:
+        kokoro_path = os.path.join("models", "kokoro", "kokoro-v0_19.pth")
+        if os.path.exists(kokoro_path):
+            return _diagnostic_result(True, f"Kokoro model found at {kokoro_path}")
+        else:
+            return _diagnostic_result(False, f"Kokoro model not found at {kokoro_path}")
+    except Exception as e:
+        return _diagnostic_result(False, f"Kokoro TTS check failed: {e}")
+
+
+def _check_omni_parser():
+    """Check OmniParser availability."""
+    try:
+        omni_path = os.path.join("engines", "omni_parser")
+        if os.path.exists(omni_path):
+            return _diagnostic_result(True, f"OmniParser found at {omni_path}")
+        else:
+            return _diagnostic_result(False, f"OmniParser not found at {omni_path}")
+    except Exception as e:
+        return _diagnostic_result(False, f"OmniParser check failed: {e}")
+
+
+def _check_memory_system():
+    """Check memory system functionality."""
+    try:
+        memory_dir = "data/memory"
+        if os.path.exists(memory_dir):
+            files = os.listdir(memory_dir)
+            return _diagnostic_result(True, f"Memory directory found with {len(files)} files")
+        else:
+            return _diagnostic_result(False, f"Memory directory not found at {memory_dir}")
+    except Exception as e:
+        return _diagnostic_result(False, f"Memory system check failed: {e}")
+
+
+def _check_gpu_acceleration():
+    """Check GPU and CUDA availability."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_count = torch.cuda.device_count()
+            gpu_name = torch.cuda.get_device_name(0) if gpu_count > 0 else "Unknown"
+            return _diagnostic_result(True, f"CUDA available with {gpu_count} GPU(s): {gpu_name}")
+        else:
+            return _diagnostic_result(False, "CUDA not available, using CPU")
+    except Exception as e:
+        return _diagnostic_result(False, f"GPU check failed: {e}")
+
+
+def _check_voice_assistant():
+    """Check voice assistant initialization."""
+    try:
+        from core.voice_assistant import voice_assistant  # type: ignore
+        if hasattr(voice_assistant, 'is_initialized') and voice_assistant.is_initialized:
+            return _diagnostic_result(True, "Voice assistant initialized")
+        else:
+            return _diagnostic_result(False, "Voice assistant not initialized")
+    except Exception as e:
+        return _diagnostic_result(False, f"Voice assistant check failed: {e}")
+
+
 diagnostic_checkers = {
     "router_api": _check_router_api,
     "local_database": _check_local_database,
     "tts_engine": _check_tts_engine,
+    "kokoro_tts": _check_kokoro_tts,
     "stt_engine": _check_stt_engine,
     "pc_control": _check_pc_control,
     "phone_gateway": _check_phone_gateway,
     "ocr_vision": _check_ocr_vision,
+    "omni_parser": _check_omni_parser,
+    "memory_system": _check_memory_system,
+    "gpu_acceleration": _check_gpu_acceleration,
+    "voice_assistant": _check_voice_assistant,
 }
 
 
