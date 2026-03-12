@@ -1,155 +1,111 @@
-# 🐺 Wolf AI 2.0 — The "God-Mode" Agent
+# <img src="frontend/public/wolf_avatar.png" width="48" height="48" align="center"> Wolf AI 2.0: The Ultimate "God-Mode" PC Agent
 
 <p align="center">
-  <img src="frontend\public\wolf_avatar.png" alt="Wolf AI Logo" width="120" height="120">
+  <img src="https://img.shields.io/badge/Version-2.0.1_RC-blueviolet?style=for-the-badge&logo=wolfram" alt="Version">
+  <img src="https://img.shields.io/badge/Local_Inference-Ollama-EE4C2C?style=for-the-badge&logo=ollama" alt="Ollama">
+  <img src="https://img.shields.io/badge/Vision-OmniParser_V2-4CAF50?style=for-the-badge&logo=microsoft" alt="Vision">
+  <img src="https://img.shields.io/badge/Voice-Neural_Sonic_82M-FFD700?style=for-the-badge&logo=audio-technica" alt="Voice">
+  <img src="https://img.shields.io/badge/Privacy-100%25_Local-000000?style=for-the-badge" alt="Privacy">
 </p>
 
-**Wolf AI 2.0** is the ultimate local, privacy-first AI agent designed to command your PC, handle your mobile phone calls via GSM, and master your developer workflow. Moving beyond a simple chatbot, Wolf is a high-performance modular system running entirely on YOUR machine.
+---
 
-> 🔒 **God-Mode, Offline.** No cloud dependencies. No mandatory API keys. Absolute control over your Windows OS and telephony.
+## 🌌 Overview
+**Wolf AI 2.0** is a state-of-the-art, privacy-first autonomous agent that lives on your PC. It doesn't just "chat"—it **sees**, **hears**, **thinks**, and **controls**. Built on a modular "Capability Stack," Wolf leverages local VLMs (Vision Language Models) and custom grounding engines to transform your Desktop into an intelligent, voice-commanded cockpit.
+
+> [!IMPORTANT]
+> **100% Local Logic.** No cloud latency. No subscription fees. No privacy leaks. Wolf is your personal AI sovereign.
 
 ---
 
-## ✨ Key Features (Wolf 2.0)
+## ⚡ God-Mode Intelligence Matrix
 
-| Feature | Description |
-|---------|-------------|
-| 🖥️ **PC Commander** | Full OS integration. Control volume, power states, manage windows, and take screenshots via natural language. |
-| 💻 **Dev Agent** | Autonomous scaffolding. Ask Wolf to build a React app; it interactively gathers requirements, executes Vite/CLI commands in the background, and uses Ollama to dynamically generate the functional source code (e.g., `App.jsx`). |
-| 📞 **Receptionist Mode** | Local GSM/SIP bridge. Connect a SIM800L module to intercept calls. Features a full **Handover Protocol**: puts callers on hold, announces them through your desktop speakers, and bridges your mic if you accept. |
-| 🎨 **Glass HUD** | Transparent, click-through overlay interface that floats above all apps to deliver proactive system alerts. Switchable via Settings. |
-| 🧠 **Proactive Layer** | Background "Bug Watcher" thread that monitors your screen state via OCR and logs crashes or errors pre-emptively. Switchable via Settings. |
-| 🎵 **Sonic Interface** | Futuristic media controller featuring a neural frequency visualizer that mathematically syncs to BPM and audio energy. |
-| ⚙️ **God-Mode Settings** | Dedicated GUI tab to dynamically configure COM Ports for GSM modems and toggle background automation threads (HUD/Bug Watcher). |
-| 🎤 **Ultra-Low Latency Voice** | Streamlined audio pipelines bridging `RealTimeSTT` with `PiperTTS` executable for near-instant conversational responses. |
-
----
-
-## 🏛️ Core Architecture
-
-Wolf 2.0 transitions from a monolithic script into a segmented, high-performance capability stack:
-
-- **Brain (Python):** Central orchestration handled by `FunctionGemma` and `Ollama` (`llama3.2:3b`).
-- **Hands (OS/Dev Agent):** PyAutoGUI, Subprocess, and custom OS hooks to command the system and scaffold code.
-- **Voice (Audio Bridge):** Advanced hardware routing pushing TTS directly to a GSM Modem's Line-Out while isolating the desktop.
-- **UI (PySide6):** Hardware-accelerated components, blur effects, and borderless HUD overlays.
+| Capability | Module | Description |
+|:---:|:---:|---|
+| 👁️ **Omni-Vision** | `VisionAgent` + `OmniParser` | Pixel-perfect UI grounding. Finds buttons, icons, and input fields with surgical precision using Microsoft's OmniParser V2. |
+| 🎵 **Neural Sonic** | `Kokoro-82M` TTS | Ultra-human, low-latency speech synthesis. Sounds like a living assistant, not a robotic script, with real-time HUD status syncing. |
+| 🔍 **Deep Research** | `Crawl4AI` + `Playwright` | Autonomous web intelligence. Wolf browses live websites, bypasses overlays, and extracts deep markdown data to answer complex questions. |
+| 🧠 **Quantum Recall** | `InteractionMemory` | Built-in autonomous memory. Wolf remembers your preferences, past reasoning stages, and specific habits across sessions. |
+| 📞 **Receptionist** | `GSM/SIP Bridge` | Intercepts physical phone calls via hardware modems. Features an intelligent **Handover Protocol** to bridge calls to your speakers. |
+| 💻 **Dev Agent** | `Vite Scaffolder` | Ask for a website; Wolf builds it. It initializes the workspace, runs CLI commands, and generates beautiful React/HTML code. |
+| 🛡️ **Bug Watcher** | `OCR Proactive Layer` | Monitors your screen for crashes, tracebacks, or system errors and alerts you before you even notice them. |
 
 ---
 
-## 📋 Prerequisites
+## 🏗️ Technology Stack
 
-### Required Software
+<p align="center">
+  <code><img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"></code>
+  <code><img src="https://img.shields.io/badge/PySide6-41CD52?style=flat-square&logo=qt&logoColor=white" alt="PySide6"></code>
+  <code><img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI"></code>
+  <code><img src="https://img.shields.io/badge/Ollama-000000?style=flat-square&logo=ollama&logoColor=white" alt="Ollama"></code>
+  <code><img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white" alt="PyTorch"></code>
+  <code><img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind"></code>
+</p>
 
-| Software | Purpose | Download |
-|----------|---------|----------|
-| **Miniconda** | Python environment manager | [miniconda.io](https://docs.anaconda.com/miniconda/) |
-| **Ollama** | Local AI model server | [ollama.com](https://ollama.com/download) |
-| **NVIDIA GPU** (Recommended) | Faster AI inference for local models | GPU with 4GB+ VRAM |
-
-### Hardware Recommendations
-
-- **Minimum**: 8GB RAM, any modern CPU
-- **Recommended**: 16GB RAM, NVIDIA GPU with 6GB+ VRAM
-- *(Optional)*: Hardware GSM Modem (e.g., SIM800L) connected via USB UART for Phone Integration.
+- **Core Reasoning:** Function-Gemma & Llama 3.2 (3B) via Ollama.
+- **Visual Grounding:** Microsoft OmniParser V2 + LLaVA-phi3.
+- **Audio Engine:** RealTimeSTT + Kokoro-82M (Neural Sonic).
+- **Web Intelligence:** DuckDuckGo Search + Crawl4AI (Deep Scraping).
+- **GUI Framework:** PySide6 with custom Fluent-Widgets and Glass Effects.
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Rapid Deployment
 
-### Step 1: Install Ollama & Pull the Model
-
-Ensure Ollama is installed and running in the background.
-
+### 1. Engine Core (Ollama)
+Ensure Ollama is running, then pull the required brains:
 ```bash
-# Recommended Model for routing and chatting
-ollama pull llama3.2:3b
+ollama pull llama3.2:3b         # General reasoning
+ollama pull llava-phi3          # Vision agent
 ```
 
-### Step 2: Set Up the Project
-
+### 2. Physical Setup
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/wolf-ai.git
-cd wolf-ai
+# Clone the core
+git clone https://github.com/Qadirdad-Kazi/Ai-Assistant-Pc-Controll.git
+cd Ai-Assistant-Pc-Controll
 
-# Create a conda environment
-conda create -n wolfai python=3.11 -y
-conda activate wolfai
-
-# Install dependencies
+# Environment setup
+conda create -n wolf python=3.11 -y
+conda activate wolf
 pip install -r requirements.txt
+playwright install
 ```
 
-*(NVIDIA users should install PyTorch with CUDA support for significantly faster STT/TTS and inference).*
+### 3. "God-Mode" Vision Bridge
+To enable pixel-perfect UI control, run the OmniParser REST server:
+```bash
+python engines/omni_parser/download_weights.py  # Download 1.5GB weights
+python engines/omni_parser/omni_server.py      # Starts server on port 8001
+```
 
-### Step 3: Run the Application
-
+### 4. Ignite
 ```bash
 python main.py
 ```
 
 ---
 
-## 🎙️ Operating Wolf
+## 📖 Operational Command Set
 
-Wolf AI is natively listening. Say the wake word **"wolf"** and speak your command naturally.
-
-### Example Commands
-
-- **PC Control:** *"Wolf, lower the volume to 20"* or *"Wolf, take a screenshot"* or *"Wolf, lock the computer"*
-- **Dev Agent:** *"Wolf, build a quick React app for a todo list"*
-- **Media:** *"Wolf, play some lo-fi music"*
-- **Knowledge:** *"Wolf, explain quantum computing"*
+- **"Wolf, click on the Chrome Search bar"** → Triggers Omni-Vision grounding.
+- **"Wolf, research the architecture of Llama 3.2"** → Triggers Deep Web Research.
+- **"Wolf, build a React habbit tracker in dark mode"** → Triggers Dev Agent Scaffolding.
+- **"Wolf, tell me about your memory of our last session"** → Triggers Quantum Recall.
 
 ---
 
-## 📞 Phone Integration (Receptionist Mode) Setup
+## 🧪 Advanced Documentation & Testing
+Explore our deep-dive guides to unlock the full potential of your assistant:
 
-Unlike standard web-based VoIP, Wolf 2.0 connects directly to local Pakistani cellular networks (or any generic GSM) via physical AT commands. 
-
-1. Connect your GSM modem (e.g., SIM800L) to a USB Serial adapter and plug it into your PC.
-2. Open the **Settings** tab in the Wolf UI and navigate to the **God-Mode Integrations** section.
-3. Enter your assigned COM Port (e.g., `COM3`).
-4. Ensure the Audio Line-Out of the modem is routed to a PC Line-In, and the PC Line-Out is routed to the Modem Line-In.
-5. Open the **Receptionist Logs** tab in the GUI. You can now delegate calls, have the AI answer, or utilize the hold-and-announce handover protocol!
-
-## 📚 Comprehensive Documentation
-
-For advanced setup and testing of the "God-Mode" features, please refer to the markdown guides located in the `docs/` folder:
-
-- 🧪 **[docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)**: Includes step-by-step instructions on how to simulate phone handovers, trigger the OCR Bug Watcher manually, and test the Dev Agent's Vite scaffolding.
-- 📞 **[docs/PHONE_INTEGRATION_GUIDE.md](docs/PHONE_INTEGRATION_GUIDE.md)**: A complete guide on how to wire a physical GSM modem (SIM800L) or set up the **Hardware-Free SIP VoIP Pipeline** using your Android phone.
-- 🎙️ **[docs/WAKE_WORD_GUIDE.md](docs/WAKE_WORD_GUIDE.md)**: Instructions on how to compile a custom Picovoice `.ppn` wake word and drop CPU latency to 0%.
+- 🧪 **[ULTIMATE_ENHANCEMENT_TESTING.md](docs/ULTIMATE_ENHANCEMENT_TESTING.md)**: The definitive guide to testing Vision, Memory, and Research.
+- 📞 **[PHONE_INTEGRATION_GUIDE.md](docs/PHONE_INTEGRATION_GUIDE.md)**: Wiring GSM modems for receptionist mode.
+- 🎙️ **[WAKE_WORD_GUIDE.md](docs/WAKE_WORD_GUIDE.md)**: Tuning STT for zero-latency performance.
 
 ---
-
-## 🛠️ Configuration
-
-All configuration is centralized in `config.py`.
-
-```python
-# The main chat model
-RESPONDER_MODEL = "llama3.2:3b"
-
-# Enable/disable voice assistant
-VOICE_ASSISTANT_ENABLED = True
-
-# Change wake word
-WAKE_WORD = "wolf"
-```
-
----
-
-## 🤝 Contributing
-
-We welcome contributions to expand the "God-Mode" capabilities, especially around integrating robust Vision Language Models (VLMs) into the Proactive Bug Watcher layer.
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/advanced-vlm`
-3. Commit your changes
-4. Submit a pull request
 
 <p align="center">
-  <strong>The Wolf is evolving.</strong><br>
-  Made with ❤️ for local AI enthusiasts
+  <strong>The Wolf is no longer just watching. It is leading.</strong><br>
+  Designed by <strong>Qadirdad-Kazi</strong> | 2026 AI Sovereign Project
 </p>

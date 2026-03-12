@@ -136,6 +136,15 @@ def research_web(url: str):
     """
     pass
 
+def recall_memory(query: str):
+    """
+    Search past interactions, reasoning logs, and learned patterns to answer questions about past events or user preferences.
+    
+    Args:
+        query: Keywords or question about what to recall.
+    """
+    pass
+
 # Pre-compute tool schemas
 TOOLS = [
     get_json_schema(pc_control),
@@ -146,6 +155,7 @@ TOOLS = [
     get_json_schema(set_call_directive),
     get_json_schema(visual_agent),
     get_json_schema(research_web),
+    get_json_schema(recall_memory),
     get_json_schema(create_task),
     get_json_schema(list_tasks),
     get_json_schema(execute_task)
@@ -154,7 +164,7 @@ TOOLS = [
 # All valid function names
 VALID_FUNCTIONS = {
     "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website", 
-    "set_call_directive", "visual_agent", "research_web", "create_task", "list_tasks", "execute_task", "task_complete"
+    "set_call_directive", "visual_agent", "research_web", "recall_memory", "create_task", "list_tasks", "execute_task", "task_complete"
 }
 
 
@@ -255,6 +265,7 @@ class FunctionGemmaRouter:
         - set_call_directive(caller_name, instructions): Delegate an upcoming phone call.
         - visual_agent(task): Use visual AI to find and click elements on screen.
         - research_web(url): Deeply research a specific URL.
+        - recall_memory(query): Search past interactions and logs for information.
         - create_task(title, description): Create a new task with plain English description.
         - list_tasks(status): List tasks, optionally filtered by status.
         - execute_task(task_id, description): Execute a task by ID or description.

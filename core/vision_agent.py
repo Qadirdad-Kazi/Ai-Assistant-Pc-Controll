@@ -111,11 +111,22 @@ class VisionAgent:
                 if tid is not None and self.last_parse_result and 0 <= tid < len(self.last_parse_result): # type: ignore
                     target = self.last_parse_result[tid] # type: ignore
                     box = target.get("box", [0, 0, 0, 0])
-                    # Assuming box is [y1, x1, y2, x2] or [x1, y1, x2, y2] depends on parser
-                    # Usually [y1, x1, y2, x2] in YOLO/OmniParser
-                    action_data["x_percent"] = (box[1] + box[3]) / 2 / 1000 # scale 1000
-                    action_data["y_percent"] = (box[0] + box[2]) / 2 / 1000
-                    print(f"[VisionAgent] Grounded action to OmniParser element [{tid}]")
+                    
+                    # OmniParser V2 often returns coords in 0-1000 range, 
+                    # but some versions return 0.0-1.0. We detect and normalize.
+                    x_mid = (box[1] + box[3]) / 2
+                    y_mid = (box[0] + box[2]) / 2
+                    
+                    if x_mid > 1.0 or y_mid > 1.0:
+                        # Likely 0-1000 scale
+                        action_data["x_percent"] = x_mid / 1000.0
+                        action_data["y_percent"] = y_mid / 1000.0
+                    else:
+                        # Already ratio
+                        action_data["x_percent"] = x_mid
+                        action_data["y_percent"] = y_mid
+                        
+                    print(f"[VisionAgent] Grounded action to OmniParser element [{tid}] at {action_data['x_percent']:.2f}, {action_data['y_percent']:.2f}")
 
                 return action_data
             else:

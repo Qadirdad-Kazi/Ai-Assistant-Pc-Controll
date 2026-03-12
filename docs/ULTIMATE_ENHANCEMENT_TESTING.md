@@ -9,10 +9,17 @@ This guide covers the testing procedures for the latest high-performance modules
 Before testing, ensures you have the following "God-Mode" engines running:
 
 ### A. Vision Engine (Microsoft OmniParser)
-The Vision Agent now uses **OmniParser** for pixel-perfect grounding.
-1. **Clone & Run OmniParser**: Follow the [OmniParser GitHub](https://github.com/microsoft/OmniParser) instructions to run the REST server.
-2. **Default Port**: Ensure it is accessible at `http://localhost:8001`.
-3. **Ollama Model**: Run `ollama pull llava-phi3` to handle the visual reasoning.
+The Vision Agent now uses **OmniParser** for pixel-perfect grounding. We have integrated it directly into the codebase.
+1. **Weights Setup**: Run the download script to fetch the model files:
+   ```bash
+   python engines/omni_parser/download_weights.py
+   ```
+2. **Start the Server**: Run our custom REST API:
+   ```bash
+   python engines/omni_parser/omni_server.py
+   ```
+3. **Default Port**: Ensure it is accessible at `http://localhost:8001`.
+4. **Ollama Model**: Run `ollama pull llava-phi3` to handle the visual reasoning.
 
 ### B. Deep Research (Crawl4AI)
 1. **Hardware Setup**: Run `playwright install` in your terminal to ensure the research browser is ready.
@@ -39,7 +46,20 @@ This tests the assistant's ability to "see" and "click" specific UI elements usi
 
 ---
 
-## 🎵 3. Testing Neural Sonic (Kokoro TTS)
+## 🧠 3. Testing Memory Recall (Autonomous History)
+
+Verify the assistant's ability to browse its own past experiences.
+
+### Instructions:
+1. Issue a command: **"Wolf, remember that I like my habbit tracker apps in dark mode."**
+2. Then ask: **"Wolf, what are my style preferences for apps?"**
+3. **Expected Behavior**:
+   - Wolf will trigger the `recall_memory` tool.
+   - It will search past interaction logs and return: *"You previously mentioned that you prefer your habit tracker apps to have a dark mode UI."*
+
+---
+
+## 🎵 4. Testing Neural Sonic (Kokoro TTS)
 
 Verify the ultra-human, low-latency speech synthesis.
 
@@ -54,7 +74,7 @@ Verify the ultra-human, low-latency speech synthesis.
 
 ---
 
-## 🔍 4. Testing Deep Research & Web Intelligence
+## 🔍 5. Testing Deep Research & Web Intelligence
 
 Test the assistant's ability to browse the live web and extract deep knowledge.
 
@@ -69,7 +89,7 @@ Test the assistant's ability to browse the live web and extract deep knowledge.
 
 ---
 
-## 👁️‍🗨️ 5. Testing Proactive Vision (Bug Watcher)
+## 👁️‍🗨️ 6. Testing Proactive Vision (Bug Watcher)
 
 Test how the assistant uses Vision to analyze system errors autonomously.
 

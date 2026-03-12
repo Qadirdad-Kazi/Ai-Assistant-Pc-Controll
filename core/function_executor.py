@@ -8,6 +8,7 @@ from core.vision_agent import vision_agent  # type: ignore
 from core.dev_agent import dev_agent  # type: ignore
 from core.receptionist import receptionist  # type: ignore
 from core.router import FunctionGemmaRouter  # type: ignore
+from core.memory import memory_manager  # type: ignore
 from core.enhanced_thinking import enhanced_thinking_router  # type: ignore
 from config import OLLAMA_URL, RESPONDER_MODEL, SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI  # type: ignore
 import json
@@ -297,6 +298,8 @@ class FunctionExecutor:
                 return self._research_web(params)
             elif func_name == "web_search":
                 return self._web_search(params)
+            elif func_name == "recall_memory":
+                return self._recall_memory(params)
             elif func_name in ("thinking", "nonthinking"):
                 prompt = params.get("prompt", "")
                 # Check if this is a capability question
@@ -518,6 +521,50 @@ Say "stop" or "quit" at any time to interrupt me."""
             }
         else:
             return {"success": False, "message": f"No results found for '{query}'."}
+
+    def _recall_memory(self, params: Dict):
+        """Recall information from past interactions and logs."""
+        query = params.get("query", "")
+        if not query:
+            return {"success": False, "message": "No recall query provided."}
+            
+        print(f"[FunctionExecutor] Recalling memory for: {query}")
+        
+        # 1. Check reasoning logs
+        reasoning = memory_manager.get_similar_reasoning(query, limit=3)
+        
+        # 2. Check interaction history
+        # We need a search method for interaction history, but let's use recent context for now
+        # Or we can just build a summary
+        history = memory_manager.get_conversation_context(limit=10)
+        
+        # 3. Check patterns
+        patterns = memory_manager.get_learned_patterns()
+        relevant_patterns = []
+        for name, data in patterns.items():
+            if query.lower() in name.lower() or query.lower() in str(data).lower():
+                relevant_patterns.append({"name": name, "data": data})
+                
+        message = f"Memory recall for '{query}':\n"
+        if reasoning:
+            message += f"\nRelevant past reasoning:\n"
+            for r in reasoning:
+                message += f"- Query: {r.get('query')}\n  Action: {r.get('action_taken')}\n"
+        
+        if relevant_patterns:
+            message += f"\nLearned patterns:\n"
+            for p in relevant_patterns:
+                message += f"- {p['name']}: {p['data'].get('data', {}).get('description', 'N/A')}\n"
+                
+        return {
+            "success": True,
+            "message": message,
+            "data": {
+                "reasoning": reasoning,
+                "patterns": relevant_patterns,
+                "history": history
+            }
+        }
 
     def _play_music(self, params: Dict):
         """Handle music commands with source fallback: spotify -> local -> youtube."""
