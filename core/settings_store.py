@@ -25,7 +25,9 @@ DEFAULT_SETTINGS = {
         "top_p": 0.95
     },
     "tts": {
-        "voice": "en_GB-alba-medium"
+        "engine": "kokoro",
+        "voice": "af_heart",
+        "speed": 1.0
     },
     "wake_word": {
         "keyword": "wolf",

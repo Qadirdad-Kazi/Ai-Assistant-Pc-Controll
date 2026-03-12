@@ -2,7 +2,7 @@ import base64
 import json
 import io
 import time
-import requests
+import requests # type: ignore
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
@@ -14,8 +14,8 @@ except ImportError:
     GREEN = CYAN = YELLOW = GRAY = RESET = ""
 
 try:
-    import pyautogui
-    from PIL import Image
+    import pyautogui # type: ignore
+    from PIL import Image # type: ignore
     # PyAutoGUI safety setting
     pyautogui.FAILSAFE = True # type: ignore
     pyautogui.PAUSE = 1.0 # type: ignore
@@ -31,7 +31,7 @@ class VisionAgent:
     def __init__(self, model_name="llava-phi3"):
         self.model_name = model_name
         self.api_url = f"{OLLAMA_URL}/api/generate" # Fixed endpoint
-        self.last_parse_result = None
+        self.last_parse_result: Optional[List[Dict[str, Any]]] = None
         
     def _capture_screen_base64(self) -> str:
         """Capture current screen and convert to a base64 string."""
@@ -108,8 +108,8 @@ class VisionAgent:
                 
                 # Grounding logic
                 tid = action_data.get("target_id")
-                if tid is not None and self.last_parse_result and 0 <= tid < len(self.last_parse_result):
-                    target = self.last_parse_result[tid]
+                if tid is not None and self.last_parse_result and 0 <= tid < len(self.last_parse_result): # type: ignore
+                    target = self.last_parse_result[tid] # type: ignore
                     box = target.get("box", [0, 0, 0, 0])
                     # Assuming box is [y1, x1, y2, x2] or [x1, y1, x2, y2] depends on parser
                     # Usually [y1, x1, y2, x2] in YOLO/OmniParser
@@ -131,7 +131,7 @@ class VisionAgent:
             if not analysis.get("success"):
                 return analysis
 
-            screen_width, screen_height = pyautogui.size()
+            screen_width, screen_height = pyautogui.size() # type: ignore
             x = int(analysis.get("x_percent", 0.5) * screen_width)
             y = int(analysis.get("y_percent", 0.5) * screen_height)
             
@@ -151,7 +151,7 @@ class VisionAgent:
             if not analysis.get("success"):
                 return analysis
 
-            screen_width, screen_height = pyautogui.size()
+            screen_width, screen_height = pyautogui.size() # type: ignore
             x = int(analysis.get("x_percent", 0.5) * screen_width)
             y = int(analysis.get("y_percent", 0.5) * screen_height)
             text = analysis.get("text", "")

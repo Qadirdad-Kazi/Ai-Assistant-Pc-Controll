@@ -2,8 +2,8 @@ import os
 import time
 import threading
 import queue
-import numpy as np
-import sounddevice as sd
+import numpy as np # type: ignore
+import sounddevice as sd # type: ignore
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
@@ -25,7 +25,7 @@ class KokoroTTS:
         self.is_initialized = False
         self.speech_queue = queue.Queue()
         self.stop_event = threading.Event()
-        self.worker_thread = None
+        self.worker_thread: Optional[threading.Thread] = None
         
     def initialize(self):
         """Load the model and pipeline."""
@@ -45,19 +45,27 @@ class KokoroTTS:
             
             # Start worker thread
             self.worker_thread = threading.Thread(target=self._worker, daemon=True)
-            self.worker_thread.start()
+            if self.worker_thread:
+                self.worker_thread.start()
             return True
         except Exception as e:
             print(f"[KokoroTTS] Initialization failed: {e}")
             return False
 
-    def speak(self, text: str, voice: str = "af_heart"):
+    def speak(self, text: str):
         """Queue text for speech."""
         if not self.is_initialized:
             if not self.initialize():
                 return
-        
-        self.speech_queue.put({"text": text, "voice": voice})
+                
+        from core.settings_store import settings
+        v = settings.get("tts.voice", "af_heart")
+        s = settings.get("tts.speed", 1.0)
+        self.speech_queue.put({"text": text, "voice": v, "speed": s})
+
+    def wait_for_completion(self):
+        """Wait for queue to clear."""
+        self.speech_queue.join()
 
     def stop(self):
         """Stop current playback and clear queue."""
@@ -75,12 +83,13 @@ class KokoroTTS:
             try:
                 item = self.speech_queue.get(timeout=1)
                 text = item["text"]
-                voice = item["voice"]
+                voice = item.get("voice", "af_heart")
+                speed = item.get("speed", 1.0)
                 
-                print(f"[KokoroTTS] Generating: {text[:50]}...")
+                print(f"[KokoroTTS] Generating: {text[:50]}...") # type: ignore
                 
                 # Kokoro generation
-                generator = self.pipeline(text, voice=voice, speed=1.0)
+                generator = self.pipeline(text, voice=voice, speed=speed) # type: ignore
                 
                 for gs, ps, audio in generator:
                     if self.stop_event.is_set():
@@ -89,6 +98,8 @@ class KokoroTTS:
                     # Play audio using sounddevice
                     sd.play(audio, 24000) # Kokoro uses 24kHz
                     sd.wait()
+                
+                self.speech_queue.task_done()
                     
             except queue.Empty:
                 continue

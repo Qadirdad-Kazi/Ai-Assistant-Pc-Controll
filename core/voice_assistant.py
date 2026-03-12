@@ -5,37 +5,37 @@ Manages: STT → Function Gemma → Qwen → TTS pipeline.
 
 import threading
 import json
-import requests
+import requests # type: ignore
 import re
-from typing import Optional
-from PySide6.QtCore import QObject, Signal
+from typing import Optional, cast
+from PySide6.QtCore import QObject, Signal # type: ignore
 
-from config import (
+from config import ( # type: ignore
     RESPONDER_MODEL, OLLAMA_URL, MAX_HISTORY, GRAY, RESET, CYAN, GREEN, WAKE_WORD, YELLOW
 )
-from core.stt import STTListener
-from core.llm import route_query, should_bypass_router, http_session
-from core.model_persistence import ensure_llama_loaded, mark_llama_used, unload_llama
-from core.tts import tts, SentenceBuffer
-from core.function_executor import executor as function_executor
-from core.reasoning import reasoning_engine
-from core.self_reflection import self_reflection_engine
-from core.memory import memory_manager
-from core.multi_model import multi_model_reasoner
-from core.uncertainty import quantify_and_disclose_uncertainty, uncertainty_analyzer
-from core.emotional_intelligence import emotional_analyzer
-from core.intuition import intuition_engine
-from core.curiosity import curiosity_engine
-from core.personalization import adaptive_personalizer
-from core.attention import attention_manager
-from core.personality import personality_system
-from core.fatigue import energy_manager
-from core.metacognition import metacognition_engine
+from core.stt import STTListener # type: ignore
+from core.llm import route_query, should_bypass_router, http_session # type: ignore
+from core.model_persistence import ensure_llama_loaded, mark_llama_used, unload_llama # type: ignore
+from core.tts import tts, SentenceBuffer # type: ignore
+from core.function_executor import executor as function_executor # type: ignore
+from core.reasoning import reasoning_engine # type: ignore
+from core.self_reflection import self_reflection_engine # type: ignore
+from core.memory import memory_manager # type: ignore
+from core.multi_model import multi_model_reasoner # type: ignore
+from core.uncertainty import quantify_and_disclose_uncertainty, uncertainty_analyzer # type: ignore
+from core.emotional_intelligence import emotional_analyzer # type: ignore
+from core.intuition import intuition_engine # type: ignore
+from core.curiosity import curiosity_engine # type: ignore
+from core.personalization import adaptive_personalizer # type: ignore
+from core.attention import attention_manager # type: ignore
+from core.personality import personality_system # type: ignore
+from core.fatigue import energy_manager # type: ignore
+from core.metacognition import metacognition_engine # type: ignore
 
 # Functions that are actions (not passthrough)
 ACTION_FUNCTIONS = {
     "control_light", "set_timer", "set_alarm", 
-    "create_calendar_event", "add_task", "web_search", "pc_control",
+    "create_calendar_event", "add_task", "web_search", "research_web", "pc_control",
     "play_music", "scaffold_website", "set_call_directive", "visual_agent",
     "create_task", "list_tasks", "execute_task"
 }
@@ -87,7 +87,8 @@ class VoiceAssistant(QObject):
             print(f"{CYAN}[VoiceAssistant] ✓ STT listener created{RESET}")
             
             print(f"{CYAN}[VoiceAssistant] Initializing STT models...{RESET}")
-            if not self.stt_listener.initialize():
+            stt = cast(Any, self.stt_listener)
+            if not stt.initialize():
                 print(f"{GRAY}[VoiceAssistant] ✗ Failed to initialize STT.{RESET}")
                 return False
             print(f"{CYAN}[VoiceAssistant] ✓ STT initialized{RESET}")

@@ -69,16 +69,30 @@ class BugWatcher:
                         
                         if snippet != self.last_alerted_text:
                             self.last_alerted_text = snippet
-                            print(f"[Proactive Layer] 🔥 CRASH DETECTED ON SCREEN: {detected_error.upper()}")  # type: ignore
-                            print(f"Context: {snippet}")
+                            err_tag = str(detected_error).upper()
+                            print(f"[Proactive Layer] 🔥 CRASH SIGNATURE DETECTED: {err_tag}")
                             
-                            # Trigger HUD if initialized
-                            try:
-                                from gui.windows.hud_window import hud_window  # type: ignore
-                                if hud_window:
-                                    hud_window.show_alert(f"BUG DETECTED: {detected_error.upper()}")  # type: ignore
-                            except Exception:
-                                pass
+                            # Use VisionAgent for deeper analysis to confirm and describe the crash
+                            from core.vision_agent import vision_agent # type: ignore
+                            analysis = vision_agent._analyze_screen(f"A possible {detected_error} was detected. Describe exactly what the error message says and which application is crashing.")
+                            
+                            if analysis.get("success"):
+                                snippet = analysis.get("message", snippet)
+                            
+                            if snippet != self.last_alerted_text:
+                                self.last_alerted_text = snippet
+                                print(f"[Proactive Layer] 👁️ VISION CONFIRMED: {snippet}")
+                                
+                                # Trigger HUD if initialized
+                                try:
+                                    from gui.windows.hud_window import hud_window  # type: ignore
+                                    if hud_window:
+                                        hud_window.show_alert(f"BUG DETECTED: {detected_error.upper()}")  # type: ignore
+                                        # Also speak it if TTS is available
+                                        from core.tts import tts # type: ignore
+                                        tts.speak(f"Alert. I've detected a {detected_error} in an application window. {snippet}")
+                                except Exception:
+                                    pass
                             
                 except Exception as e:
                     # Might happen if Tesseract isn't installed properly in Windows

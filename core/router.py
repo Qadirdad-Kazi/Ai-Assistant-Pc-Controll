@@ -127,6 +127,15 @@ def execute_task(task_id: Optional[str] = None, description: Optional[str] = Non
     """
     pass
 
+def research_web(url: str):
+    """
+    Perform deep web research on a specific URL to extract clean markdown and detailed knowledge.
+    
+    Args:
+        url: The full URL to research.
+    """
+    pass
+
 # Pre-compute tool schemas
 TOOLS = [
     get_json_schema(pc_control),
@@ -136,6 +145,7 @@ TOOLS = [
     get_json_schema(scaffold_website),
     get_json_schema(set_call_directive),
     get_json_schema(visual_agent),
+    get_json_schema(research_web),
     get_json_schema(create_task),
     get_json_schema(list_tasks),
     get_json_schema(execute_task)
@@ -144,7 +154,7 @@ TOOLS = [
 # All valid function names
 VALID_FUNCTIONS = {
     "pc_control", "play_music", "thinking", "nonthinking", "scaffold_website", 
-    "set_call_directive", "visual_agent", "create_task", "list_tasks", "execute_task", "task_complete"
+    "set_call_directive", "visual_agent", "research_web", "create_task", "list_tasks", "execute_task", "task_complete"
 }
 
 
@@ -244,6 +254,7 @@ class FunctionGemmaRouter:
         - scaffold_website(prompt, framework): Build an entire website/app. [framework: 'react', 'nextjs', 'html', 'python']
         - set_call_directive(caller_name, instructions): Delegate an upcoming phone call.
         - visual_agent(task): Use visual AI to find and click elements on screen.
+        - research_web(url): Deeply research a specific URL.
         - create_task(title, description): Create a new task with plain English description.
         - list_tasks(status): List tasks, optionally filtered by status.
         - execute_task(task_id, description): Execute a task by ID or description.

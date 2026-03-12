@@ -9,7 +9,7 @@ from fastapi import HTTPException  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 from fastapi.responses import FileResponse  # type: ignore
 from pydantic import BaseModel  # type: ignore
-from typing import Optional
+from typing import Optional, Dict, List, Any, cast
 from core.voice_assistant import voice_assistant  # type: ignore
 from core.function_executor import executor as function_executor  # type: ignore
 from core.database import db  # type: ignore
@@ -221,6 +221,13 @@ async def websocket_system_status(websocket: WebSocket):
             # Sync the Voice Core status based on the boolean
             if VOICE_ASSISTANT_ENABLED:
                 system_status["Voice Core"] = "LISTENING" if system_status["isListening"] else "ACTIVE"
+            
+            # Real-time Neural Sonic Player status
+            m_state = function_executor.get_media_state()
+            if m_state.get("isPlaying"):
+                system_status["Neural Sonic"] = "PLAYING"
+            else:
+                system_status["Neural Sonic"] = "STANDBY"
                 
             await websocket.send_json(system_status)
             await asyncio.sleep(0.5) # Send updates twice a second
@@ -285,6 +292,10 @@ def _apply_runtime_setting(key_path: str, value):
                 bug_watcher.start()
             else:
                 bug_watcher.stop()
+        elif key_path == "tts.engine":
+            from core.tts import tts # type: ignore
+            tts.engine = str(value).lower()
+            tts.initialize()
     except Exception as e:
         print(f"[Settings Runtime Apply] Failed to apply {key_path}: {e}")
 
@@ -424,7 +435,8 @@ async def get_diagnostics():
 @app.post("/api/diagnostics/run")
 async def run_diagnostics(req: DiagnosticsRunRequest):
     if req.key and isinstance(req.key, str):
-        result = run_single_diagnostic(req.key)
+        key_val = cast(str, req.key)
+        result = run_single_diagnostic(key_val)
         return {"result": result, "diagnostics": list(diagnostics_state.values())}
 
     for key_str in diagnostics_state.keys():

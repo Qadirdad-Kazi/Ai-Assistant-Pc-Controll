@@ -1,7 +1,7 @@
 # 🐺 Wolf AI 2.0 — The "God-Mode" Agent
 
 <p align="center">
-  <img src="wolf_avatar.png" alt="Wolf AI Logo" width="120" height="120">
+  <img src="frontend\public\wolf_avatar.png" alt="Wolf AI Logo" width="120" height="120">
 </p>
 
 **Wolf AI 2.0** is the ultimate local, privacy-first AI agent designed to command your PC, handle your mobile phone calls via GSM, and master your developer workflow. Moving beyond a simple chatbot, Wolf is a high-performance modular system running entirely on YOUR machine.
