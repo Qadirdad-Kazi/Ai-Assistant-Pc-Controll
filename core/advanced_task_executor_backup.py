@@ -1,6 +1,6 @@
 """
 Advanced Task Executor
-Enables to voice assistant to understand and execute complex, multi-step tasks like a human.
+Enables the voice assistant to understand and execute complex, multi-step tasks like a human.
 """
 
 import os
@@ -132,8 +132,8 @@ class AdvancedTaskExecutor:
         
         # Path extraction
         path_patterns = [
-            r"(?:navigate to|go to|cd)\s+([a-zA-Z]:\\[^\\\s]+)",
-            r"(?:create|make)\s+(?:folder|directory)\s+(?:in\s+)?([a-zA-Z]:\\[^\\\s]+)"
+            r"(?:navigate to|go to|cd)\s+([a-zA-Z]:\\[^\\s]+)",
+            r"(?:create|make)\s+(?:folder|directory)\s+(?:in\s+)?([a-zA-Z]:\\[^\\s]+)"
         ]
         
         for pattern in path_patterns:
@@ -169,16 +169,16 @@ class AdvancedTaskExecutor:
         if "application_launch" in actions:
             app_name = entities.get("application", "vscode")
             plan.extend([
-                    {"step": 1, "action": "launch_application", "details": {"app": app_name}},
-                    {"step": 2, "action": "wait_for_ready", "details": {"timeout": 3}},
-                    {"step": 3, "action": "confirm_launch", "details": {"app": app_name}}
+                {"step": 1, "action": "launch_application", "details": {"app": app_name}},
+                {"step": 2, "action": "wait_for_ready", "details": {"timeout": 3}},
+                {"step": 3, "action": "confirm_launch", "details": {"app": app_name}}
             ])
         
         if "navigation" in actions:
             path = entities.get("path", "Desktop")
             plan.extend([
-                    {"step": 1, "action": "navigate_to_path", "details": {"path": path}},
-                    {"step": 2, "action": "confirm_navigation", "details": {"path": path}}
+                {"step": 1, "action": "navigate_to_path", "details": {"path": path}},
+                {"step": 2, "action": "confirm_navigation", "details": {"path": path}}
             ])
         
         if "multi_step" in actions:
@@ -187,8 +187,7 @@ class AdvancedTaskExecutor:
                 {"step": 2, "action": "setup_development_env", "details": {}},
                 {"step": 3, "action": "create_project_structure", "details": {}},
                 {"step": 4, "action": "install_dependencies", "details": {}},
-                {"step": 5, "action": "create_project_structure", "details": {}},
-                {"step": 6, "action": "confirm_setup", "details": {}}
+                {"step": 5, "action": "confirm_setup", "details": {}}
             ])
         
         return plan
@@ -284,7 +283,7 @@ class AdvancedTaskExecutor:
         return "<html><body><h1>Hello World</h1></body></html>"
     
     def execute_plan(self, plan: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Execute step-by-step plan with feedback."""
+        """Execute the step-by-step plan with feedback."""
         print(f"[AdvancedTask] ⚡ Executing plan with {len(plan)} steps")
         
         results = []
@@ -361,7 +360,7 @@ class AdvancedTaskExecutor:
             elif action in ["confirm_creation", "confirm_launch", "confirm_navigation"]:
                 return {"success": True, "message": f"Confirmed {action.replace('_', ' ')}"}
             
-            elif action in ["wait_for_ready", "analyze_workspace", "create_project_structure", "install_dependencies", "confirm_setup"]:
+            elif action in ["wait_for_ready", "analyze_workspace", "create_project_structure", "install_dependencies"]:
                 return {"success": True, "message": f"Processed {action}"}
             
             else:
