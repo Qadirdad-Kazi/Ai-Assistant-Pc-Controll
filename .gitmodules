@@ -1,0 +1,3 @@
+[submodule "engines/omni_parser"]
+	path = engines/omni_parser
+	url = https://github.com/microsoft/OmniParser.git
