@@ -37,7 +37,9 @@ system_status = {
     "Dev Agent": "IDLE"
 }
 
-diagnostics_state = {
+from typing import Optional, Dict, List, Any
+
+diagnostics_state: Dict[str, Dict[str, Any]] = {
     "router_api": {"key": "router_api", "title": "Router API", "desc": "Test local LLM and Ollama bindings", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
     "local_database": {"key": "local_database", "title": "Local Database", "desc": "Verify SQLite read/write access", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
     "tts_engine": {"key": "tts_engine", "title": "TTS Engine", "desc": "Check Piper speech synthesis binaries", "status": "READY", "ok": None, "detail": "Awaiting test run", "checked_at": None},
@@ -142,10 +144,10 @@ def run_single_diagnostic(key: str):
 
     diagnostics_state[key]["status"] = "RUNNING"
     ok, detail = diagnostic_checkers[key]()
-    diagnostics_state[key]["ok"] = ok
-    diagnostics_state[key]["detail"] = detail
+    diagnostics_state[key]["ok"] = bool(ok)
+    diagnostics_state[key]["detail"] = str(detail)
     diagnostics_state[key]["status"] = "PASS" if ok else "FAIL"
-    diagnostics_state[key]["checked_at"] = asyncio.get_event_loop().time()
+    diagnostics_state[key]["checked_at"] = float(asyncio.get_event_loop().time())
     return diagnostics_state[key]
 
 
@@ -330,9 +332,16 @@ async def websocket_chat(websocket: WebSocket):
             if m["role"] == "system": 
                 continue
             content = m["content"]
+            metadata = m.get("metadata", {})
+            
             if m["role"] == "user" and "User asked: " in content:
                 content = content.split("User asked: ")[-1].split("\n\nRespond naturally")[0].strip()
-            cleaned.append({"role": m["role"], "content": content})
+            
+            cleaned.append({
+                "role": m["role"], 
+                "content": content,
+                "metadata": metadata
+            })
             
         # Append active ongoing stream
         if getattr(voice_assistant, 'current_user_prompt', ""):
@@ -340,7 +349,11 @@ async def websocket_chat(websocket: WebSocket):
             
             stream_text = getattr(voice_assistant, 'current_stream', "")
             if stream_text:
-                cleaned.append({"role": "bot", "content": stream_text})
+                cleaned.append({
+                    "role": "bot", 
+                    "content": stream_text,
+                    "metadata": getattr(voice_assistant, 'current_metadata', {})
+                })
             else:
                 cleaned.append({"role": "bot", "content": "Processing..."})
                 
@@ -410,12 +423,12 @@ async def get_diagnostics():
 
 @app.post("/api/diagnostics/run")
 async def run_diagnostics(req: DiagnosticsRunRequest):
-    if req.key:
+    if req.key and isinstance(req.key, str):
         result = run_single_diagnostic(req.key)
         return {"result": result, "diagnostics": list(diagnostics_state.values())}
 
-    for key in diagnostics_state.keys():
-        run_single_diagnostic(key)
+    for key_str in diagnostics_state.keys():
+        run_single_diagnostic(key_str)
     return {"diagnostics": list(diagnostics_state.values())}
 
 

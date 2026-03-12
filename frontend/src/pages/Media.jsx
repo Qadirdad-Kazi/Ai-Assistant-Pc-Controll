@@ -1,5 +1,6 @@
 import { Play, Pause, SkipBack, SkipForward, Volume2, Music as MusicIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Visualizer from '../components/Visualizer';
 import './Media.css';
 
 export default function Media() {
@@ -121,6 +122,7 @@ export default function Media() {
               <MusicIcon size={64} opacity={0.2} />
               <div className="disc-spin"></div>
             </div>
+            <Visualizer audioRef={audioRef} isPlaying={state.isPlaying} />
           </div>
           
           <div className="track-info">

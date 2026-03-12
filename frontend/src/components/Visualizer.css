@@ -1,0 +1,29 @@
+.visualizer-wrapper {
+  width: 100%;
+  height: 120px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  margin-top: -100px;
+  margin-bottom: 20px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.frequency-canvas {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 15px rgba(255, 0, 123, 0.4));
+  opacity: 0.8;
+}
+
+.visualizer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to top, transparent, var(--glass-bg));
+  pointer-events: none;
+}

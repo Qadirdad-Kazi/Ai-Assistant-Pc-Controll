@@ -2,26 +2,36 @@ import base64
 import json
 import io
 import time
-from typing import Dict, Any
 import requests
-from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
+from typing import Dict, Any, List, Optional
+from pathlib import Path
+
+# Config and common logging imports
+try:
+    from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET # type: ignore
+except ImportError:
+    OLLAMA_URL = "http://localhost:11434"
+    GREEN = CYAN = YELLOW = GRAY = RESET = ""
 
 try:
     import pyautogui
     from PIL import Image
     # PyAutoGUI safety setting
-    pyautogui.FAILSAFE = True
-    pyautogui.PAUSE = 1.0
+    pyautogui.FAILSAFE = True # type: ignore
+    pyautogui.PAUSE = 1.0 # type: ignore
 except ImportError:
     pyautogui = None
     Image = None
 
+from core.omni_parser_client import omni_parser # type: ignore
+
 class VisionAgent:
-    """Local Vision Agent using LLaVA-phi3 via Ollama to control PC UI."""
+    """Enhanced Vision Agent using OmniParser + VLM for precise PC control."""
     
     def __init__(self, model_name="llava-phi3"):
         self.model_name = model_name
-        self.api_url = f"{OLLAMA_URL}/generate"
+        self.api_url = f"{OLLAMA_URL}/api/generate" # Fixed endpoint
+        self.last_parse_result = None
         
     def _capture_screen_base64(self) -> str:
         """Capture current screen and convert to a base64 string."""
@@ -29,209 +39,156 @@ class VisionAgent:
             raise ImportError("PyAutoGUI or Pillow is missing.")
             
         try:
-            # Capture screenshot
-            screenshot = pyautogui.screenshot()
-            
-            # Convert to base64
+            screenshot = pyautogui.screenshot() # type: ignore
             buffered = io.BytesIO()
-            screenshot.save(buffered, format="PNG")
-            img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-            
-            return img_base64
+            screenshot.save(buffered, format="PNG") # type: ignore
+            return base64.b64encode(buffered.getvalue()).decode("utf-8")
         except Exception as e:
-            return f"Error capturing screen: {str(e)}"
+            print(f"[VisionAgent] Capture error: {e}")
+            return ""
     
-    def _analyze_screen(self, task: str, img_base64: str) -> Dict[str, Any]:
-        """Analyze screen image and execute task using LLaVA-phi3."""
+    def _analyze_screen(self, task: str, img_base64: Optional[str] = None) -> Dict[str, Any]:
+        """Analyze screen image and execute task by leveraging OmniParser if available."""
+        if not img_base64:
+            img_base64 = self._capture_screen_base64()
+            if not img_base64:
+                return {"success": False, "message": "Failed to capture screen."}
+
+        # 1. Try OmniParser first for structural analysis
+        omni_result = omni_parser.parse_screen(img_base64)
+        elements_summary = ""
+        
+        if omni_result.get("success"):
+            elements = omni_result.get("elements", [])
+            self.last_parse_result = elements
+            elements_summary = "\nDetected UI Elements (Grounding):\n"
+            for i, el in enumerate(elements[:25]): # Show top 25
+                box = el.get("box", [0,0,0,0])
+                elements_summary += f"- [{i}] {el.get('label')}: '{el.get('text','')}' at {box}\n"
+        
         try:
-            # Create prompt for vision analysis
+            # 2. Formulate enriched prompt for vision analysis
             prompt = f"""
-            You are a visual AI assistant that can see and control the user's computer screen.
-            
+            You are a visual AI assistant with pixel-perfect precision.
+            Current Screen Size: {pyautogui.size() if pyautogui else "Unknown"} # type: ignore
             Task: {task}
+            {elements_summary}
             
-            Look at the screenshot carefully and identify:
-            - UI elements (buttons, text fields, icons, windows, etc.)
-            - Application interfaces and their current state
-            - Any relevant information displayed on screen
-            - Spatial relationships between elements
+            Based on the screenshot and detected elements:
+            1. Identify the target element. 
+            2. If it matches a detected element [N], use its ID.
+            3. Otherwise, estimate x_percent and y_percent (0.0 to 1.0).
             
-            Based on what you see, determine the best action to complete the task.
-            
-            If you're confused about what to do or can't find the required element:
-            1. Ask a clarifying question to the user
-            2. Wait for their response
-            3. Try again with their clarification
-            
-            Available actions:
-            - click: Click on a specific element
-            - type: Type text into a text field
-            - scroll: Scroll the screen
-            - wait: Wait for an element to appear
-            - describe: Describe what you see
-            
-            Examples:
-            - If user asks "Open Chrome and click Gmail profile", you should:
-              * Look for Chrome browser
-              * Look for Gmail profile option
-              * Click on the Gmail profile
-              * If successful, report completion
-            
-            - If you can't find something, say: "I can see the screen but I'm having trouble finding the element. Could you describe where it is or help me locate it?"
-            
-            Output format:
-            Always return a JSON object with these keys:
-            - action: The action to take (click, type, scroll, wait, describe)
-            - x_percent, y_percent: Coordinates (0-100%) for the action
-            - thought: Your reasoning process
-            - message: Human-readable description of what you did
-            - success: Boolean indicating if action was successful
-            - followup: Boolean indicating if user clarification is needed
-            
+            Output format: JSON ONLY
+            {{
+                "action": "click" | "type" | "scroll" | "wait" | "describe",
+                "x_percent": float,
+                "y_percent": float,
+                "target_id": int | null,
+                "text": "text to type if action is type",
+                "thought": "your reasoning",
+                "message": "User-facing status",
+                "success": bool
+            }}
             """
             
             payload = {
                 "model": self.model_name,
                 "prompt": prompt,
-                "images": [{"data": img_base64, "type": "image_url"}],
-                "stream": False
+                "images": [img_base64],
+                "stream": False,
+                "format": "json"
             }
             
-            response = requests.post(self.api_url, json=payload, timeout=30).json()
+            print(f"[VisionAgent] Sending request to {self.model_name}...")
+            response = requests.post(self.api_url, json=payload, timeout=60).json()
             
             if response.get("response"):
-                result = response["response"].strip()
-                print(f"[VisionAgent] Analysis result: {result}")
+                action_data = json.loads(response["response"])
                 
-                # Try to extract action from the response
-                action = None
-                thought = "I can see the screen but I'm not sure how to complete this task."
-                
-                # Look for action keywords in the response
-                if "click" in result.lower():
-                    action = "click"
-                    # Extract element description from task
-                    element_desc = task.split("click")[-1] if "click" in task else "element"
-                elif "type" in result.lower():
-                    action = "type"
-                    # Extract text to type from task
-                    text_to_type = task.split("type")[-1] if "type" in task else "text"
-                elif "scroll" in result.lower():
-                    action = "scroll"
-                    # Extract direction from task
-                    direction = task.split("scroll")[-1] if "scroll" in task else "down"
-                elif "wait" in result.lower():
-                    action = "wait"
-                    followup = True
-                elif "describe" in result.lower():
-                    action = "describe"
-                    thought = "I can see the screen and will describe what I observe."
-                    message = self._describe_screen()
-                else:
-                    thought = "I analyzed the screen but I'm not sure how to complete this task. I can see: " + self._describe_screen()
-                    followup = True
-                
-                return {
-                    "action": action,
-                    "thought": thought,
-                    "message": message,
-                    "followup": followup if action in ["click", "type", "scroll", "wait"] else False,
-                    "success": action in ["click", "type", "scroll"].index(action) != -1
-                }
+                # Grounding logic
+                tid = action_data.get("target_id")
+                if tid is not None and self.last_parse_result and 0 <= tid < len(self.last_parse_result):
+                    target = self.last_parse_result[tid]
+                    box = target.get("box", [0, 0, 0, 0])
+                    # Assuming box is [y1, x1, y2, x2] or [x1, y1, x2, y2] depends on parser
+                    # Usually [y1, x1, y2, x2] in YOLO/OmniParser
+                    action_data["x_percent"] = (box[1] + box[3]) / 2 / 1000 # scale 1000
+                    action_data["y_percent"] = (box[0] + box[2]) / 2 / 1000
+                    print(f"[VisionAgent] Grounded action to OmniParser element [{tid}]")
+
+                return action_data
             else:
                 return {"success": False, "message": "Failed to analyze screen."}
                 
         except Exception as e:
             return {"success": False, "message": f"Vision analysis error: {str(e)}"}
-    
+
     def _find_and_click_element(self, task: str) -> Dict[str, Any]:
         """Find a specific element on screen and click it."""
         try:
-            # Step 1: Capture screenshot
-            b64_image = self._capture_screen_base64()
+            analysis = self._analyze_screen(f"click on {task}")
+            if not analysis.get("success"):
+                return analysis
+
             screen_width, screen_height = pyautogui.size()
+            x = int(analysis.get("x_percent", 0.5) * screen_width)
+            y = int(analysis.get("y_percent", 0.5) * screen_height)
             
-            # Step 2: Formulate prompt for LLaVA
-            prompt = (
-                f"You are an AI controlling a graphical user interface. The user wants to: '{task}'.\n"
-                "Look at the provided screenshot of the PC screen.\n"
-                "To accomplish this task, you need to find the specific element on the screen to click on.\n"
-                "Identify the coordinates (in percentages from 0.0 to 1.0 where 0,0 is top-left and 1,1 is bottom-right) "
-                "of the exact center of this element.\n"
-                "Output ONLY a valid JSON object in this format, and absolutely nothing else: "
-                "{\"action\": \"click\", \"x_percent\": 0.5, \"y_percent\": 0.5, \"thought\": \"I see the element here.\"}"
-            )
+            print(f"[VisionAgent] Clicking at ({x}, {y}) - {analysis.get('thought')}")
+            pyautogui.moveTo(x, y, duration=0.8, tween=pyautogui.easeInOutQuad) # type: ignore
+            pyautogui.click() # type: ignore
+            time.sleep(0.5)
             
-            payload = {
-                "model": self.model_name,
-                "prompt": prompt,
-                "images": [b64_image],
-                "stream": False,
-                "format": "json"
-            }
-            
-            response = requests.post(self.api_url, json=payload, timeout=60)
-            response.raise_for_status()
-            ai_time = time.time() - start_time
-            
-            result_json = response.json().get("response", "{}")
-            print(f"{GRAY}[VisionAgent] ⏳ Analyzing screen with {self.model_name}...{RESET}")
-            start_time = time.time()
-            response = requests.post(self.api_url, json=payload, timeout=60)
-            response.raise_for_status()
-            ai_time = time.time() - start_time
-            
-            result_json = response.json().get("response", "{}")
-            print(f"{GREEN}[VisionAgent] ✓ AI analysis completed in {ai_time:.2f}s.{RESET}")
-            
-            # Step 3: Parse response and execute
-            try:
-                action_data = json.loads(result_json)
-                x_percent = float(action_data.get("x_percent", 0.5))
-                y_percent = float(action_data.get("y_percent", 0.5))
-                thought = action_data.get("thought", "No thought provided.")
-                
-                print(f"{CYAN}[VisionAgent] 🤔 AI Thought: {thought}{RESET}")
-                
-                # Scale from percentage mapping back to actual screen resolution
-                target_x = int(x_percent * screen_width)
-                target_y = int(y_percent * screen_height)
-                
-                # Constrain to screen boundaries
-                target_x = max(0, min(screen_width - 1, target_x))
-                target_y = max(0, min(screen_height - 1, target_y))
-                
-                print(f"{GREEN}[VisionAgent] 🖱️ Moving mouse to coordinates: ({target_x}, {target_y}){RESET}")
-                
-                # Smooth move and click
-                pyautogui.moveTo(target_x, target_y, duration=0.8, tween=pyautogui.easeInOutQuad)
-                pyautogui.click()
-                time.sleep(1)
-                
-                return {
-                    "success": True, 
-                    "message": f"I used my vision to locate the target and clicked on it. Thought: {thought}",
-                    "data": {"x": target_x, "y": target_y, "screen_size": [screen_width, screen_height]}
-                    }
-                
-            except (json.JSONDecodeError, ValueError) as e:
-                print(f"{YELLOW}[VisionAgent] AI failed to output valid JSON coordinates: {result_json}{RESET}")
-                return {"success": False, "message": "Failed to visually locate the target on the screen."}
-                
+            return {"success": True, "message": analysis.get("message", "Clicked successfully.")}
         except Exception as e:
-            return {"success": False, "message": f"Error clicking element: {str(e)}"}
-    
+            return {"success": False, "message": f"Click error: {e}"}
+
     def _find_and_type_text(self, task: str) -> Dict[str, Any]:
-        # TO DO: Implement typing functionality
-        pass
-    
+        """Find an input field and type text into it."""
+        try:
+            analysis = self._analyze_screen(f"type text into field: {task}")
+            if not analysis.get("success"):
+                return analysis
+
+            screen_width, screen_height = pyautogui.size()
+            x = int(analysis.get("x_percent", 0.5) * screen_width)
+            y = int(analysis.get("y_percent", 0.5) * screen_height)
+            text = analysis.get("text", "")
+            
+            print(f"[VisionAgent] Typing '{text}' at ({x}, {y})")
+            pyautogui.click(x, y) # type: ignore
+            time.sleep(0.3)
+            pyautogui.typewrite(text, interval=0.05) # type: ignore
+            
+            return {"success": True, "message": f"Typed '{text}' successfully."}
+        except Exception as e:
+            return {"success": False, "message": f"Typing error: {e}"}
+
     def _scroll_screen(self, task: str) -> Dict[str, Any]:
-        # TO DO: Implement scrolling functionality
-        pass
-    
+        """Scroll the screen in the specified direction."""
+        try:
+            direction = "down"
+            if "up" in task.lower(): direction = "up"
+            
+            amount = 500
+            if "little" in task.lower(): amount = 200
+            if "lot" in task.lower(): amount = 1000
+            
+            print(f"[VisionAgent] Scrolling {direction} by {amount}")
+            pyautogui.scroll(-amount if direction == "down" else amount) # type: ignore
+            
+            return {"success": True, "message": f"Scrolled {direction} successfully."}
+        except Exception as e:
+            return {"success": False, "message": f"Scroll error: {e}"}
+
     def _describe_screen(self) -> str:
-        # TO DO: Implement screen description functionality
-        pass
+        """Get a textual description of the current screen."""
+        try:
+            analysis = self._analyze_screen("describe exactly what you see on the screen in detail.")
+            return analysis.get("message", "I see a computer screen with various icons and windows.")
+        except Exception as e:
+            return f"Error describing screen: {e}"
 
 # Global instance
 vision_agent = VisionAgent()

@@ -1,5 +1,0 @@
-quit on voice not working 
-
-
-tasks not working
-

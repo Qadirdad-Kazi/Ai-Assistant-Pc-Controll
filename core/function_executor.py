@@ -24,6 +24,8 @@ from typing import Dict, Any, List
 
 from utilities.youtube_handler import YouTubeHandler  # type: ignore
 from utilities.spotify_handler import SpotifyHandler  # type: ignore
+from utilities.research_handler import research_handler  # type: ignore
+from utilities.search_handler import web_search_handler  # type: ignore
 
 class FunctionExecutor:
     """Central executor for simplified core functions."""
@@ -92,13 +94,13 @@ class FunctionExecutor:
 
             # Keep memory bounded.
             if len(self._execution_events) > 1000:
-                self._execution_events = self._execution_events[-1000:]
+                self._execution_events = list(self._execution_events[-1000:]) # type: ignore
 
     def get_execution_events(self, after_id: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
         """Return execution events newer than the provided event id."""
         with self._event_lock:
             new_events = [e for e in self._execution_events if e.get("id", 0) > after_id]
-            return new_events[:limit]
+            return new_events[:limit] # type: ignore
 
     def _reindex_local_songs(self) -> None:
         """Index local audio files from common folders for fallback playback."""
@@ -120,7 +122,7 @@ class FunctionExecutor:
                 for file in root.rglob("*"):
                     if not file.is_file() or file.suffix.lower() not in exts:
                         continue
-                    sid = hashlib.sha1(str(file).encode("utf-8")).hexdigest()[:16]
+                    sid = hashlib.sha1(str(file).encode("utf-8")).hexdigest()[:16] # type: ignore
                     title = file.stem.replace("_", " ").replace("-", " ").strip()
                     rec = {
                         "id": sid,
@@ -291,6 +293,10 @@ class FunctionExecutor:
                 return self._list_tasks(params)
             elif func_name == "execute_task":
                 return self._execute_task(params)
+            elif func_name == "research_web":
+                return self._research_web(params)
+            elif func_name == "web_search":
+                return self._web_search(params)
             elif func_name in ("thinking", "nonthinking"):
                 prompt = params.get("prompt", "")
                 # Check if this is a capability question
@@ -393,10 +399,18 @@ Say "stop" or "quit" at any time to interrupt me."""
                 "description": prompt,
                 "max_steps": params.get("max_steps", 15)
             })
-            data = delegated.get("data", {}) if isinstance(delegated, dict) else {}
-            data["type"] = "autonomous_execution"
-            data["routed_from"] = "thinking"
-            delegated["data"] = data
+            # Ensure we handle the result safely for type-checking
+            res_data: Dict[str, Any] = {}
+            if isinstance(delegated, dict):
+                inner_data = delegated.get("data")
+                if isinstance(inner_data, dict):
+                    res_data = inner_data
+            
+            res_data["type"] = "autonomous_execution"
+            res_data["routed_from"] = "thinking"
+            
+            if isinstance(delegated, dict):
+                delegated["data"] = res_data
             return delegated
         
         # Determine reasoning depth from params
@@ -470,6 +484,41 @@ Say "stop" or "quit" at any time to interrupt me."""
         except Exception as e:
             print(f"[FunctionExecutor] PC Control error: {e}")
             return {"success": False, "message": f"PC Control error: {str(e)}"}
+
+    def _research_web(self, params: Dict):
+        """Perform deep web research using Crawl4AI."""
+        url = params.get("url")
+        if not url:
+            return {"success": False, "message": "No URL provided for research."}
+        
+        self._emit_execution_event("research_start", f"Performing deep research on: {url}", url=url)
+        result = research_handler.scrape_url_sync(url)
+        
+        if result.get("success"):
+            self._emit_execution_event("research_complete", f"Successfully researched: {result.get('title')}", title=result.get("title"))
+        else:
+            self._emit_execution_event("research_error", f"Research failed: {result.get('message')}")
+            
+        return result
+
+    def _web_search(self, params: Dict):
+        """Perform a web search using DuckDuckGo."""
+        query = params.get("query")
+        if not query:
+            return {"success": False, "message": "No search query provided."}
+            
+        self._emit_execution_event("search_start", f"Searching web for: {query}", query=query)
+        results = web_search_handler.search(query, limit=params.get("limit", 5))
+        
+        if results:
+            self._emit_execution_event("search_complete", f"Found {len(results)} search results.", count=len(results))
+            return {
+                "success": True, 
+                "message": f"Found {len(results)} results for '{query}'.",
+                "data": {"results": results}
+            }
+        else:
+            return {"success": False, "message": f"No results found for '{query}'."}
 
     def _play_music(self, params: Dict):
         """Handle music commands with source fallback: spotify -> local -> youtube."""
@@ -630,7 +679,17 @@ Say "stop" or "quit" at any time to interrupt me."""
     def _visual_agent(self, params: Dict):
         """Handle visual UI interactions using VisionAgent."""
         task = params.get("task", "click on something")
-        return vision_agent._find_and_click_element(task)
+        action = params.get("action", "click")
+        
+        if action == "type":
+            return vision_agent._find_and_type_text(task)
+        elif action == "scroll":
+            return vision_agent._scroll_screen(task)
+        elif action == "describe":
+            msg = vision_agent._describe_screen()
+            return {"success": True, "message": msg}
+        else:
+            return vision_agent._find_and_click_element(task)
 
     def _load_tasks(self):
         """Load tasks from JSON file."""
@@ -743,7 +802,9 @@ Say "stop" or "quit" at any time to interrupt me."""
             Available functions:
             - pc_control(action, target): [action: 'open_app', 'close_app', 'volume', 'lock', 'shutdown', 'command'] -> 'command' runs Powershell code in target.
             - play_music(query, service): Search and play music.
-            - visual_agent(task): Use visual AI to find and click elements on screen.
+            - visual_agent(task, action): Use visual AI. action: 'click', 'type', 'scroll', 'describe'.
+            - web_search(query): Search the web for information or URLs.
+            - research_web(url): Deep research a website to get full markdown content for complex info.
             - task_complete(message): Call this EXACTLY when the goal is fully achieved!
             
             You MUST output EXACTLY ONE function call. After you output it, it will be executed and you will see the RESULT. 

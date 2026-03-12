@@ -71,6 +71,14 @@ huggingface-hub>=0.36.0        # Download models from Hugging Face
 # SQLite is included with Python - no additional packages needed
 
 # -----------------------------------------------------
+# Enhanced Features (Wolf AI 2.0)
+# -----------------------------------------------------
+crawl4ai>=0.4.0                # Deep web research and scraping
+kokoro>=0.1.0                  # Ultra-fast human-like local TTS
+langgraph>=0.0.10              # Stateful multi-agent workflows
+pydantic-ai>=0.0.10            # Type-safe agent framework
+
+# -----------------------------------------------------
 # Development (Optional)
 # -----------------------------------------------------
 # pytest>=7.0.0                 # Testing framework

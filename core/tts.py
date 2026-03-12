@@ -18,6 +18,7 @@ from typing import Dict, Any, Optional
 from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
 import requests
 import sounddevice as sd  # type: ignore
+from core.kokoro_tts import kokoro_tts # type: ignore
 
 # ANSI colors for console output
 GRAY = "\033[90m"
@@ -438,5 +439,43 @@ class PiperTTS:
         self.speech_queue.put(None)
 
 
+class UnifiedTTS:
+    """Unified engine that routes speech to selected backend (Piper or Kokoro)."""
+    
+    def __init__(self):
+        self.piper = PiperTTS()
+        self.kokoro = kokoro_tts
+        self.engine = "piper" # default
+
+    def initialize(self):
+        from core.settings_store import settings
+        self.engine = settings.get("tts.engine", "piper").lower()
+        if self.engine == "kokoro":
+            return self.kokoro.initialize()
+        return self.piper.initialize()
+
+    def speak(self, text: str):
+        if self.engine == "kokoro":
+            return self.kokoro.speak(text)
+        return self.piper.speak(text)
+
+    def queue_sentence(self, sentence: str):
+        if self.engine == "kokoro":
+            return self.kokoro.speak(sentence)
+        return self.piper.queue_sentence(sentence)
+
+    def stop(self):
+        self.piper.stop()
+        self.kokoro.stop()
+
+    def wait_for_completion(self):
+        if self.engine == "kokoro":
+            # Kokoro wait is impl via helper if needed, but for now:
+            return
+        self.piper.wait_for_completion()
+
+    def shutdown(self):
+        self.piper.shutdown()
+
 # Global TTS instance
-tts = PiperTTS()
+tts = UnifiedTTS()
