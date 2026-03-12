@@ -13,23 +13,33 @@ from PySide6.QtCore import QObject, Signal # type: ignore
 from config import ( # type: ignore
     RESPONDER_MODEL, OLLAMA_URL, MAX_HISTORY, GRAY, RESET, CYAN, GREEN, WAKE_WORD, YELLOW
 )
-from core.stt import STTListener # type: ignore
-from core.llm import route_query, should_bypass_router, http_session # type: ignore
-from core.model_persistence import ensure_llama_loaded, mark_llama_used, unload_llama # type: ignore
-from core.tts import tts, SentenceBuffer # type: ignore
-from core.function_executor import executor as function_executor # type: ignore
-from core.reasoning import reasoning_engine # type: ignore
-from core.self_reflection import self_reflection_engine # type: ignore
-from core.memory import memory_manager # type: ignore
-from core.multi_model import multi_model_reasoner # type: ignore
-from core.uncertainty import quantify_and_disclose_uncertainty, uncertainty_analyzer # type: ignore
-from core.emotional_intelligence import emotional_analyzer # type: ignore
-from core.intuition import intuition_engine # type: ignore
-from core.curiosity import curiosity_engine # type: ignore
-from core.personalization import adaptive_personalizer # type: ignore
-from core.attention import attention_manager # type: ignore
-from core.personality import personality_system # type: ignore
-from core.fatigue import energy_manager # type: ignore
+from core.router import FunctionGemmaRouter  # type: ignore
+from core.llm import route_query, should_bypass_router, http_session  # type: ignore
+from core.pc_control import pc_controller  # type: ignore
+from core.vision_agent import vision_agent  # type: ignore
+from core.dev_agent import dev_agent  # type: ignore
+from core.receptionist import receptionist  # type: ignore
+from core.memory import memory_manager  # type: ignore
+from core.enhanced_thinking import enhanced_thinking_router  # type: ignore
+from core.settings_store import settings  # type: ignore
+from core.tts import tts  # type: ignore
+from core.function_executor import function_executor  # type: ignore
+from config import OLLAMA_URL, RESPONDER_MODEL, SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI  # type: ignore
+import json
+import re
+import requests  # type: ignore
+import threading
+import time
+import os
+import hashlib
+import psutil  # type: ignore
+from datetime import datetime
+from typing import Dict, Any, List, Optional, cast
+from utilities.youtube_handler import YouTubeHandler  # type: ignore
+from utilities.spotify_handler import SpotifyHandler  # type: ignore
+from utilities.research_handler import research_handler  # type: ignore
+from utilities.search_handler import web_search_handler  # type: ignore
+from core.advanced_task_executor import advanced_executor  # type: ignore
 from core.metacognition import metacognition_engine # type: ignore
 
 # Functions that are actions (not passthrough)
@@ -227,12 +237,68 @@ class VoiceAssistant(QObject):
         has_complex_kw = any(k in txt for k in complex_keywords)
         return has_connectors or has_complex_kw or len(txt.split()) > 14
     
-    def _process_query(self, user_text: str, stop_event: threading.Event, request_id: int):
+    def _execute_advanced_task(self, user_text: str, stop_event: threading.Event, request_id: int):
+        """Execute complex task using AI reasoning and multi-step planning."""
+        print(f"[VoiceAssistant] 🧠 Processing advanced task: {user_text}")
+        
+        try:
+            # Understand the task using AI
+            task_understanding = advanced_executor.understand_task(user_text)
+            
+            if task_understanding["confidence"] < 0.3:
+                # Low confidence, fall back to regular processing
+                print(f"[VoiceAssistant] ⚠ Low confidence ({task_understanding['confidence']:.2f}), using regular processing")
+                return self._process_query_regular(user_text, stop_event, request_id)
+            
+            # Execute the plan
+            execution_plan = task_understanding["execution_plan"]
+            execution_result = advanced_executor.execute_plan(execution_plan)
+            
+            # Generate response based on execution results
+            if execution_result["success"]:
+                response = f"✅ Task completed successfully! {execution_result['summary']}"
+            else:
+                failed_steps = [r for r in execution_result["results"] if not r["success"]]
+                response = f"❌ Task partially completed. {execution_result['summary']}. Failed steps: {len(failed_steps)}"
+            
+            # Speak the response
+            tts.speak(response)
+            
+            # Log to memory
+            memory_manager.log_interaction(
+                user_text, 
+                response, 
+                f"advanced_task_{task_understanding['task_analysis']['intent']}"
+            )
+            
+            # Update messages
+            self.messages.append({'role': 'user', 'content': user_text})
+            self.messages.append({'role': 'assistant', 'content': response})
+            
+            print(f"[VoiceAssistant] 🎯 Advanced task execution completed")
+            self.processing_finished.emit()
+            
+        except Exception as e:
+            error_msg = f"Advanced task execution failed: {e}"
+            print(f"{GRAY}[VoiceAssistant] {error_msg}{RESET}")
+            
+            # Speak error message
+            tts.speak(f"Sorry, I encountered an error: {error_msg}")
+            
+            self.processing_finished.emit()
+    
+    def _process_query_regular(self, user_text: str, stop_event: threading.Event, request_id: int):
+        """Fallback to regular query processing for simple tasks."""
         """Process user query through the pipeline with Chain-of-Thought reasoning and human-like thinking."""
         try:
             if self._is_stale_request(request_id, stop_event):
                 return
-
+            
+            # Check if this is a complex task that needs advanced execution
+            if self._is_complex_request(user_text):
+                print(f"[VoiceAssistant] 🧠 Complex task detected, using advanced executor")
+                return self._execute_advanced_task(user_text, stop_event, request_id)
+            
             if self._is_pc_capability_query(user_text):
                 capability_answer = (
                     "Yes. I can control your PC directly when you ask commands like "
