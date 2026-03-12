@@ -9,6 +9,7 @@ from .vlm_client import VLMClient
 
 from core.model_manager import ensure_exclusive_qwen
 from core.model_persistence import unload_llama
+from config import WEB_AGENT_MODEL
 
 class BrowserAgent(QObject):
     """
@@ -21,7 +22,7 @@ class BrowserAgent(QObject):
     finished = Signal()
     error_occurred = Signal(str)
 
-    def __init__(self, model_name="qwen3-vl:4b"):
+    def __init__(self, model_name=WEB_AGENT_MODEL):
         super().__init__()
         self.controller = BrowserController(headless=True) # Headed for debugging/visibility
         self.client = VLMClient(

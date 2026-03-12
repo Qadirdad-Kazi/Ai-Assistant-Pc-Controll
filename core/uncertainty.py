@@ -6,7 +6,7 @@ Enables the AI to quantify and communicate confidence in responses.
 import json
 import re
 from typing import Dict, Any, List, Tuple, Optional
-from config import OLLAMA_URL, GRAY, RESET, CYAN, GREEN, YELLOW
+from config import OLLAMA_URL, GRAY, RESET, CYAN, GREEN, YELLOW, RESPONDER_MODEL
 import requests
 
 http_session = requests.Session()
@@ -182,7 +182,7 @@ class UncertaintyAnalyzer:
 class ConfidenceAdjuster:
     """Adjusts response based on confidence levels."""
     
-    def __init__(self, model_name: str = "qwen3-vl:4b"):
+    def __init__(self, model_name: str = RESPONDER_MODEL):
         self.model_name = model_name
         self.analyzer = UncertaintyAnalyzer()
     

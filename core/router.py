@@ -255,54 +255,22 @@ class FunctionGemmaRouter:
         print(f"[Router] Using Ollama fallback for: '{user_prompt}'")
         
         fallback_prompt = f"""
-        You are the neural mission router for Wolf AI.
-        Determine which holographic action to trigger for the user's prompt.
-        
-        Available functions:
-        - pc_control(action, target): Execute system commands. [action: 'open_app', 'close_app', 'volume', 'lock', 'shutdown', 'restart', 'sleep', 'empty_trash', 'minimize_all', 'screenshot', 'mute', 'media', 'command'] -> for 'command', set target to the exact terminal/powershell command to run.
-        - play_music(query, service): Search and play music. [service: 'youtube', 'spotify']
-        - scaffold_website(prompt, framework): Build an entire website/app. [framework: 'react', 'nextjs', 'html', 'python']
-        - set_call_directive(caller_name, instructions): Delegate an upcoming phone call.
-        - visual_agent(task): Use visual AI to find and click elements on screen.
-        - research_web(url): Deeply research a specific URL.
-        - recall_memory(query): Search past interactions and logs for information.
-        - create_task(title, description): Create a new task with plain English description.
-        - list_tasks(status): List tasks, optionally filtered by status.
-        - execute_task(task_id, description): Execute a task by ID or description.
-        - thinking(prompt): Multi-step reasoning, math, code, or complexity.
-        - nonthinking(prompt): Simple greetings, chitchat, or direct facts.
+        Your job is to routing user prompts to functional calls.
+        Output ONLY the function call in the format call:function_name{{arg:val}}. No explanation.
 
-        IMPORTANT ROUTING RULES:
-        1. ANY request to open/close applications, control volume, shutdown, restart, or system control -> use pc_control
-        2. App names like "visual studio", "chrome", "spotify", "notepad", "vs code", "visualstudio" -> use pc_control with action: 'open_app'. NEVER include the rest of the sentence in the target!
-        3. System commands like "volume up", "mute", "lock screen" -> use pc_control
-        4. Keywords "open", "launch", "start", "run" followed by app name -> use pc_control
-        5. Complex multi-step tasks -> OUTPUT MULTIPLE FUNCTION CALLS, one per line!
-        6. Task execution commands like "create a presentation", "organize my files", "research topic" -> use thinking
-        7. Questions about capabilities, "tell me about yourself", "what can you do", "who are you" -> use nonthinking with capability overview
-        8. Only use nonthinking for greetings, goodbyes, simple questions, and casual chat
-        9. Only use thinking for complex problems, math, coding, or multi-step reasoning
-        10. If the user asks you to create files, folders, or run system scripts, use pc_control with action: 'command' and target as the exact Powershell command to run!
+        - visual_agent(task): Use if user asks to see, look at, describe, find, or click anything on the screen, display, monitor, or desktop.
+        - pc_control(action, target): Use for opening/closing apps, volume, shutdown, lock. [action: open_app, volume, lock, shutdown, command].
+        - thinking(prompt): Complex reasoning, math, coding.
+        - nonthinking(prompt): Simple greetings, chitchat only.
+        - play_music(query, service): Music.
+        - scaffold_website(prompt): Build apps.
+        - recall_memory(query): Past information.
 
-        Output function calls in this syntax: call:function_name{{arg1:value1,arg2:value2}}
-        If the user asks multiple things, output MULTIPLE lines:
-        call:function1{{...}}
-        call:function2{{...}}
-        
-        Example 1: "open visual studio" -> call:pc_control{{action:open_app,target:visual studio}}
-        Example 2: "open visualstudio code" -> call:pc_control{{action:open_app,target:visual studio code}}
-        Example 3: "open chrome then create a react app" -> 
-        call:pc_control{{action:open_app,target:chrome}}
-        call:scaffold_website{{prompt:create a react app,framework:react}}
-        Example 4: "turn off pc" -> call:pc_control{{action:shutdown,target:}}
-        Example 5: "hello" -> call:nonthinking{{prompt:hello}}
-        Example 6: "calculate 2+2" -> call:thinking{{prompt:calculate 2+2}}
-        Example 7: "play music on spotify" -> call:play_music{{query:music,service:spotify}}
-        Example 8: "open chrome" -> call:pc_control{{action:open_app,target:chrome}}
-        Example 9: "open vs code then open desktop in it and make an html file" -> 
-        call:pc_control{{action:open_app,target:vs code}}
-        call:thinking{{prompt:open desktop in vs code and make an html file}}
-        Example 10: "create a presentation about marketing" -> call:thinking{{prompt:create a presentation about marketing}}
+        CRITICAL:
+        If query mentions "screen", "see", "look", "describe screen", "what's on screen" -> ALWAYS use visual_agent.
+
+        Example: "describe my screen" -> call:visual_agent{{task:describe what you see on my screen}}
+        Example: "open notepad" -> call:pc_control{{action:open_app,target:notepad}}
 
         User Prompt: {user_prompt}
         Decision:"""

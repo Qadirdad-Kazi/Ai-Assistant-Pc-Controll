@@ -4,6 +4,8 @@ Centralized configuration for Wolf AI.
 
 # --- Model Configuration ---
 RESPONDER_MODEL = "llama3.2:3b"
+VISUAL_MODEL = "llava-phi3"
+WEB_AGENT_MODEL = "llama3.2:3b" # Fallback since user lacks Qwen
 OLLAMA_URL = "http://localhost:11434/api"
 LOCAL_ROUTER_PATH = "./merged_model"
 HF_ROUTER_REPO = None  # Disabled to prevent 401 Auth errors

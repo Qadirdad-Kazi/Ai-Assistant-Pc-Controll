@@ -424,14 +424,11 @@ class PiperTTS:
 
     def toggle(self, enable):
         """Enable/disable TTS."""
-        if enable and not self.piper_exe:
-            if self.initialize():
-                self.enabled = True
-                return True
-            return False
+        if enable:
+            return self.initialize()
         self.enabled = enable
         return True
-    
+
     def shutdown(self):
         """Clean up resources."""
         self.running = False
@@ -446,6 +443,10 @@ class UnifiedTTS:
         self.piper = PiperTTS()
         self.kokoro = kokoro_tts
         self.engine = "piper" # default
+
+    @property
+    def piper_exe(self):
+        return self.piper.piper_exe
 
     def initialize(self):
         from core.settings_store import settings
@@ -468,14 +469,25 @@ class UnifiedTTS:
         self.piper.stop()
         self.kokoro.stop()
 
+    def set_completion_callback(self, callback):
+        self.piper.set_completion_callback(callback)
+        # For Kokoro we don't have a callback yet, but we could add it if needed
+
     def wait_for_completion(self):
         if self.engine == "kokoro":
             # Kokoro wait is impl via helper if needed, but for now:
             return
         self.piper.wait_for_completion()
 
+    def toggle(self, enable):
+        """Enable/disable TTS."""
+        self.piper.toggle(enable)
+        # Kokoro is always ready if initialized, but we respect the flag
+        return True
+
     def shutdown(self):
         self.piper.shutdown()
+        self.kokoro.stop()
 
 # Global TTS instance
 tts = UnifiedTTS()

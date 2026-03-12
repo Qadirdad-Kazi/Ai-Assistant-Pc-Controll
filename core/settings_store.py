@@ -17,7 +17,7 @@ DEFAULT_SETTINGS = {
     "ollama_url": "http://localhost:11434",
     "models": {
         "chat": "llama3.2:3b",
-        "web_agent": "qwen3-vl:4b",
+        "web_agent": "llama3.2:3b",
     },
     "web_agent_params": {
         "temperature": 1.0,

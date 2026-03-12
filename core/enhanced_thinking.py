@@ -43,7 +43,7 @@ class EnhancedThinkingRouter:
         }
     }
     
-    def __init__(self, model_name: str = "qwen3-vl:4b"):
+    def __init__(self, model_name: str = "llama3.2:3b"):
         self.model_name = model_name
         self.reasoning_cache = {}
     
@@ -346,7 +346,6 @@ Ask 'WHY?' to go one level deeper in understanding the root cause:"""
                 "model": self.model_name,
                 "prompt": prompt,
                 "stream": False,
-                "think": enable_thinking,
                 "keep_alive": "5m"
             }
             

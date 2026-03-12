@@ -5,7 +5,7 @@ Enables the AI to verify its own outputs and automatically correct mistakes.
 
 import json
 from typing import Dict, Any, Optional, List
-from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
+from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET, RESPONDER_MODEL
 import requests
 
 http_session = requests.Session()
@@ -14,7 +14,7 @@ http_session = requests.Session()
 class SelfReflectionEngine:
     """Handles verification and self-correction of AI responses."""
     
-    def __init__(self, model_name: str = "qwen3-vl:4b"):
+    def __init__(self, model_name: str = RESPONDER_MODEL):
         self.model_name = model_name
         self.correction_attempts = 0
         self.max_correction_attempts = 3
@@ -289,7 +289,6 @@ Provide individual scores and overall quality assessment:"""
                 "model": self.model_name,
                 "prompt": prompt,
                 "stream": False,
-                "think": enable_thinking,
                 "keep_alive": "5m"
             }
             

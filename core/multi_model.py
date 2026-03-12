@@ -115,19 +115,19 @@ class MultiModelReasoner:
             "reasoning_depth": "shallow"
         },
         "balanced": {
-            "name": "mistral:7b",
+            "name": RESPONDER_MODEL,
             "strengths": ["balanced analysis", "medium complexity", "general purpose"],
             "latency": "medium",
             "reasoning_depth": "medium"
         },
         "deep": {
-            "name": "qwen3-vl:4b",
+            "name": RESPONDER_MODEL,
             "strengths": ["complex reasoning", "detailed analysis", "vision capabilities"],
             "latency": "high",
             "reasoning_depth": "deep"
         },
         "specialized": {
-            "name": "neural-chat:7b",
+            "name": RESPONDER_MODEL,
             "strengths": ["creative content", "conversational", "nuanced understanding"],
             "latency": "medium",
             "reasoning_depth": "medium"
@@ -225,7 +225,7 @@ Provide structured analysis suitable for code generation or debugging."""
 Provide imaginative, nuanced reasoning that considers multiple perspectives."""
         
         elif focus_area == "logic":
-            model = "qwen3-vl:4b"
+            model = RESPONDER_MODEL
             prompt = f"""As a logic specialist, analyze this query:
 {query}
 

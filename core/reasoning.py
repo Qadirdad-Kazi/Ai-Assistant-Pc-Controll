@@ -16,7 +16,7 @@ http_session = requests.Session()
 class ChainOfThoughtReasoner:
     """Handles structured reasoning with multiple steps."""
     
-    def __init__(self, model_name: str = "qwen3-vl:4b"):
+    def __init__(self, model_name: str = RESPONDER_MODEL):
         self.model_name = model_name
         self.reasoning_steps = []
         self.current_thinking = ""
@@ -180,7 +180,6 @@ Provide detailed validation feedback."""
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-                "think": enable_thinking,
                 "keep_alive": "5m"
             }
             
@@ -199,7 +198,6 @@ Provide detailed validation feedback."""
                     "model": RESPONDER_MODEL,
                     "prompt": prompt,
                     "stream": False,
-                    "think": enable_thinking,
                     "keep_alive": "5m"
                 }
                 fallback_response = http_session.post(

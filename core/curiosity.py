@@ -5,7 +5,7 @@ Enables the AI to ask proactive clarifying questions and seek information.
 
 import json
 from typing import Dict, Any, List, Optional
-from config import OLLAMA_URL, GRAY, RESET, CYAN, GREEN, YELLOW
+from config import OLLAMA_URL, GRAY, RESET, CYAN, GREEN, YELLOW, RESPONDER_MODEL
 import requests
 
 http_session = requests.Session()
@@ -14,7 +14,7 @@ http_session = requests.Session()
 class CuriosityEngine:
     """Drives curiosity-based interactions and proactive questioning."""
     
-    def __init__(self, model_name: str = "qwen3-vl:4b"):
+    def __init__(self, model_name: str = RESPONDER_MODEL):
         self.model_name = model_name
         self.knowledge_gaps = []
         self.clarification_history = []
@@ -212,7 +212,7 @@ class KnowledgeGapDetector:
 class ProactiveQuestionGenerator:
     """Generates follow-up questions based on previous responses."""
     
-    def __init__(self, model_name: str = "qwen3-vl:4b"):
+    def __init__(self, model_name: str = RESPONDER_MODEL):
         self.model_name = model_name
     
     def generate_follow_up_questions(self, user_query: str, ai_response: str) -> List[str]:

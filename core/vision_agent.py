@@ -8,10 +8,11 @@ from pathlib import Path
 
 # Config and common logging imports
 try:
-    from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET # type: ignore
+    from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET, VISUAL_MODEL # type: ignore
 except ImportError:
     OLLAMA_URL = "http://localhost:11434"
     GREEN = CYAN = YELLOW = GRAY = RESET = ""
+    VISUAL_MODEL = "llava-phi3"
 
 try:
     import pyautogui # type: ignore
@@ -28,7 +29,7 @@ from core.omni_parser_client import omni_parser # type: ignore
 class VisionAgent:
     """Enhanced Vision Agent using OmniParser + VLM for precise PC control."""
     
-    def __init__(self, model_name="llava-phi3"):
+    def __init__(self, model_name=VISUAL_MODEL):
         self.model_name = model_name
         self.api_url = f"{OLLAMA_URL}/api/generate" # Fixed endpoint
         self.last_parse_result: Optional[List[Dict[str, Any]]] = None
@@ -104,29 +105,61 @@ class VisionAgent:
             response = requests.post(self.api_url, json=payload, timeout=60).json()
             
             if response.get("response"):
-                action_data = json.loads(response["response"])
+                raw_txt = response["response"].strip()
+                print(f"[VisionAgent] Model raw response: {raw_txt}")
                 
+                import re
+                parsed_dict: Dict[str, Any] = {}
+                
+                # Robust extraction: find all { } pairs non-greedily
+                try:
+                    candidates = []
+                    for match in re.finditer(r'\{.*?\}', raw_txt, re.DOTALL):
+                        candidates.append(match.group())
+                    
+                    # Also try greedy match
+                    greedy = re.search(r'\{.*\}', raw_txt, re.DOTALL)
+                    if greedy:
+                        candidates.append(greedy.group())
+                        
+                    for candidate in reversed(candidates):
+                        try:
+                            data = json.loads(candidate)
+                            if isinstance(data, dict):
+                                parsed_dict = data
+                                break
+                        except:
+                            continue
+                            
+                    if not parsed_dict:
+                        if "describe" in task.lower() or "look" in task.lower():
+                            parsed_dict = {"action": "describe", "message": raw_txt, "success": True}
+                        else:
+                            return {"success": False, "message": f"Parsing failed. Raw: {raw_txt[:100]}"}
+                except Exception as e:
+                    return {"success": False, "message": f"Parse error: {e}"}
+                
+                action_data: Dict[str, Any] = parsed_dict
+
                 # Grounding logic
                 tid = action_data.get("target_id")
                 if tid is not None and self.last_parse_result and 0 <= tid < len(self.last_parse_result): # type: ignore
                     target = self.last_parse_result[tid] # type: ignore
                     box = target.get("box", [0, 0, 0, 0])
                     
-                    # OmniParser V2 often returns coords in 0-1000 range, 
-                    # but some versions return 0.0-1.0. We detect and normalize.
-                    x_mid = (box[1] + box[3]) / 2
-                    y_mid = (box[0] + box[2]) / 2
+                    x_mid = float((box[1] + box[3]) / 2)
+                    y_mid = float((box[0] + box[2]) / 2)
                     
                     if x_mid > 1.0 or y_mid > 1.0:
                         # Likely 0-1000 scale
-                        action_data["x_percent"] = x_mid / 1000.0
-                        action_data["y_percent"] = y_mid / 1000.0
+                        action_data["x_percent"] = float(x_mid / 1000.0)
+                        action_data["y_percent"] = float(y_mid / 1000.0)
                     else:
                         # Already ratio
-                        action_data["x_percent"] = x_mid
-                        action_data["y_percent"] = y_mid
+                        action_data["x_percent"] = float(x_mid)
+                        action_data["y_percent"] = float(y_mid)
                         
-                    print(f"[VisionAgent] Grounded action to OmniParser element [{tid}] at {action_data['x_percent']:.2f}, {action_data['y_percent']:.2f}")
+                    print(f"[VisionAgent] Grounded action to OmniParser element [{tid}] at {action_data.get('x_percent', 0):.2f}, {action_data.get('y_percent', 0):.2f}")
 
                 return action_data
             else:

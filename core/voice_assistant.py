@@ -519,7 +519,6 @@ class VoiceAssistant(QObject):
                 "model": RESPONDER_MODEL,
                 "messages": self.messages,
                 "stream": True,
-                "think": enable_thinking,
                 "keep_alive": "5m"
             }
             
@@ -733,7 +732,6 @@ class VoiceAssistant(QObject):
                 "model": selected_model,
                 "messages": self.messages,
                 "stream": True,
-                "think": enable_thinking,
                 "keep_alive": "5m"
             }
             

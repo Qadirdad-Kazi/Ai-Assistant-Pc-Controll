@@ -59,7 +59,27 @@ class KokoroTTS:
                 return
                 
         from core.settings_store import settings
-        v = settings.get("tts.voice", "af_heart")
+        raw_v = settings.get("tts.voice", "af_heart")
+        
+        # Voice mapping: Map Piper/human-readable names to Kokoro internal names
+        voice_map = {
+            "Male (Northern)": "am_adam",   # Close enough male voice
+            "Female (Alba)": "af_heart",    # Close enough female voice
+            "af_heart": "af_heart",
+            "am_adam": "am_adam",
+            "af_sky": "af_sky",
+            "bf_emma": "bf_emma",
+            "bm_george": "bm_george"
+        }
+        
+        v = voice_map.get(raw_v, "af_heart")
+        
+        # Auto-switch pipeline language if voice starts with 'b' (British)
+        target_lang = 'b' if v.startswith('b') else 'a'
+        if self.pipeline and self.pipeline.lang_code != target_lang:
+            print(f"[KokoroTTS] Switching language to {target_lang}")
+            self.pipeline = KPipeline(lang_code=target_lang)
+            
         s = settings.get("tts.speed", 1.0)
         self.speech_queue.put({"text": text, "voice": v, "speed": s})
 

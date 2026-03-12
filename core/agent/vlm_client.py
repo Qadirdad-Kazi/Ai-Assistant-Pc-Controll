@@ -4,6 +4,7 @@ import requests
 from typing import List, Dict, Any, Generator
 
 from core.settings_store import settings as app_settings
+from config import WEB_AGENT_MODEL
 
 class VLMClient:
     """
@@ -12,7 +13,7 @@ class VLMClient:
     """
     def __init__(self, model_name: str = None, base_url: str = None, model_params: Dict[str, Any] = None):
         # Read from settings store, with fallbacks
-        self.model_name = model_name or app_settings.get("models.web_agent", "qwen3-vl:4b")
+        self.model_name = model_name or app_settings.get("models.web_agent", WEB_AGENT_MODEL)
         self.base_url = base_url or app_settings.get("ollama_url", "http://localhost:11434")
         self.model_params = model_params or app_settings.get("web_agent_params", {})
 
@@ -103,7 +104,6 @@ class VLMClient:
                     "model": self.model_name,
                     "messages": messages,
                     "stream": True,
-                    "think": True,
                     "options": self.model_params
                 },
                 stream=True
