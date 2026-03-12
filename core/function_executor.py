@@ -964,6 +964,9 @@ Say "stop" or "quit" at any time to interrupt me."""
             # Initialize variables for this execution
             success = False
             final_message = "Task completed successfully."
+            executed_funcs = []
+            results = []
+            history_str = ""
             
             # Execute each step with real-time feedback
             for i, step in enumerate(execution_result["results"], 1):

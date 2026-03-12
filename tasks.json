@@ -3,9 +3,9 @@
     "id": "task_20260312_221427",
     "title": "Create Test Document",
     "description": "Create a text file named notes.txt with content 'Meeting notes from AI assistant'",
-    "status": "pending",
+    "status": "failed",
     "created_at": "2026-03-12T22:14:27.452868",
-    "updated_at": "2026-03-12T22:14:27.452868"
+    "updated_at": "2026-03-12T22:37:31.497986"
   },
   {
     "id": "task_20260312_221441",

@@ -108,19 +108,20 @@ class AdvancedTaskExecutor:
         """Extract entities like file names, paths, applications."""
         entities = {}
         
-        # File name extraction
+        # File name extraction - more precise patterns
         file_patterns = [
-            r"(?:create|make|write|open|edit)\s+(?:a\s+)?(?:text\s+)?file\s+(?:named\s+)?[\"']?([^\"'\s]+)[\"']?",
-            r"(?:create|make|write|open|edit)\s+(?:a\s+)?(?:text\s+)?file\s+(?:called\s+)?[\"']?([^\"'\s]+)[\"']?",
-            r"(?:create|make|write|open|edit)\s+(?:a\s+)?(?:text\s+)?file\s+(?:with\s+content\s+)?[\"']?([^\"'\s]+)[\"']?",
-            r"(?:folder|directory)\s+(?:called\s+)?[\"']?([^\"'\s]+)[\"']?"
+            r"(?:create|make|write)\s+(?:a\s+)?(?:text\s+)?file\s+(?:named\s+)?[\"']([^\"'\"]+)[\"']",
+            r"(?:create|make|write)\s+(?:a\s+)?(?:text\s+)?file\s+(?:called\s+)?[\"']([^\"'\"]+)[\"']",
+            r"(?:create|make|write)\s+(?:a\s+)?(?:text\s+)?file\s+[\"']([^\"'\"]+)[\"'](?=\s+with|\s+and|$)",
+            r"(?:folder|directory)\s+(?:called\s+)?[\"']([^\"'\"]+)[\"']"
         ]
         
-        # Content extraction
+        # Content extraction - improved patterns
         content_patterns = [
             r"with\s+content\s+[\"']([^\"']+)[\"']",
             r"content\s+[\"']([^\"']+)[\"']",
-            r"named\s+[\"']([^\"']+)[\"']\s+with"
+            r"named\s+[\"']([^\"']+)[\"']\s+with",
+            r"file\s+[\"']([^\"']+)[\"']\s+with\s+content\s+[\"']([^\"']+)[\"']"
         ]
         
         for pattern in file_patterns:
