@@ -92,3 +92,9 @@ def disable_voice_assistant():
     """Temporarily disable voice assistant for testing."""
     with patch.dict(os.environ, {'VOICE_ASSISTANT_ENABLED': 'False'}):
         yield
+
+@pytest.fixture
+def bug_watcher():
+    """Bug watcher fixture for testing."""
+    from core.bug_watcher import BugWatcher
+    return BugWatcher()

@@ -71,7 +71,7 @@ class TestRunner:
             if markers:
                 for marker in markers:
                     pytest_args.extend(["-m", marker])
-            try:
+            
             # Try to use pytest-json-report if available, otherwise use basic exit code
             try:
                 import pytest_json_report
@@ -96,6 +96,10 @@ class TestRunner:
                     test_data = {"summary": {"total": 1, "passed": 1, "failed": 0, "skipped": 0}}
                 else:
                     test_data = {"summary": {"total": 1, "passed": 0, "failed": 1, "skipped": 0}}
+        except Exception as e:
+            print(f"Error running pytest: {e}")
+            exit_code = 1
+            test_data = {"summary": {"total": 0, "passed": 0, "failed": 1, "skipped": 0}}
             
             duration = time.time() - start_time
             

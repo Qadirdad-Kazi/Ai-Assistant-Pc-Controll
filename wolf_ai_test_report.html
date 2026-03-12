@@ -1,129 +1,203 @@
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wolf AI 2.0 Test Report</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .header { text-align: center; color: #333; border-bottom: 2px solid #007acc; padding-bottom: 20px; }
-        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
-        .metric { background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; }
-        .metric-value { font-size: 2em; font-weight: bold; color: #007acc; }
-        .metric-label { color: #666; margin-top: 5px; }
-        .suite-results { margin: 20px 0; }
-        .suite { border: 1px solid #ddd; margin: 10px 0; border-radius: 5px; }
-        .suite-header { padding: 15px; background: #f8f9fa; font-weight: bold; }
-        .suite-details { padding: 15px; }
-        .status-passed { color: #28a745; }
-        .status-failed { color: #dc3545; }
-        .status-skipped { color: #ffc107; }
-        .progress-bar { width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #dc3545, #ffc107, #28a745); }
-        .recommendations { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .summary-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .summary-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .test-suites {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .suite {
+            border-bottom: 1px solid #eee;
+            padding: 20px;
+        }
+        .suite:last-child {
+            border-bottom: none;
+        }
+        .suite-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .suite-name {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .suite-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+        }
+        .status-passed {
+            background-color: #28a745;
+        }
+        .status-failed {
+            background-color: #dc3545;
+        }
+        .status-timeout {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .status-error {
+            background-color: #6c757d;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.3s ease;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🐺 Wolf AI 2.0 Test Report</h1>
-            <p>Generated on 2026-03-12T17:42:19.139216</p>
+    <div class="header">
+        <h1>🐺 Wolf AI 2.0 Test Report</h1>
+        <p>Generated on 2026-03-12T18:21:41.403284</p>
+    </div>
+    
+    <div class="summary">
+        <div class="summary-card">
+            <h3>Total Tests</h3>
+            <div class="value">66</div>
         </div>
-        
-        <div class="summary">
-            <div class="metric">
-                <div class="metric-value">5</div>
-                <div class="metric-label">Total Tests</div>
+        <div class="summary-card">
+            <h3>✅ Passed</h3>
+            <div class="value">66</div>
+        </div>
+        <div class="summary-card">
+            <h3>❌ Failed</h3>
+            <div class="value">0</div>
+        </div>
+        <div class="summary-card">
+            <h3>📈 Success Rate</h3>
+            <div class="value">100.0%</div>
+        </div>
+    </div>
+    
+    <div class="test-suites">
+        <h2>📋 Test Suite Results</h2>
+
+        <div class="suite">
+            <div class="suite-header">
+                <div class="suite-name">Vision Agent</div>
+                <div class="suite-status status-passed">PASSED</div>
             </div>
-            <div class="metric">
-                <div class="metric-value status-passed">0</div>
-                <div class="metric-label">Passed</div>
-            </div>
-            <div class="metric">
-                <div class="metric-value status-failed">5</div>
-                <div class="metric-label">Failed</div>
-            </div>
-            <div class="metric">
-                <div class="metric-value status-skipped">0</div>
-                <div class="metric-label">Skipped</div>
-            </div>
-            <div class="metric">
-                <div class="metric-value">22.7s</div>
-                <div class="metric-label">Duration</div>
+            <div>Tests: 12/12 passed</div>
+            <div>Duration: 31.75s</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 100.0%"></div>
             </div>
         </div>
-        
-        <div class="progress-bar">
-            <div class="progress-fill" style="width: 0.0%"></div>
+
+        <div class="suite">
+            <div class="suite-header">
+                <div class="suite-name">Neural Sonic TTS</div>
+                <div class="suite-status status-passed">PASSED</div>
+            </div>
+            <div>Tests: 15/15 passed</div>
+            <div>Duration: 20.04s</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 100.0%"></div>
+            </div>
         </div>
-        
-        <div class="suite-results">
-            <h2>Test Suite Results</h2>
-            
-            <div class="suite">
-                <div class="suite-header">
-                    <span class="status-failed">Vision Agent: FAILED</span>
-                    <span style="float: right;">16.33s</span>
-                </div>
-                <div class="suite-details">
-                    <p>Tests: 0/1 passed</p>
-                    <p>Success Rate: 0.0%</p>
-                </div>
+
+        <div class="suite">
+            <div class="suite-header">
+                <div class="suite-name">Memory Recall</div>
+                <div class="suite-status status-passed">PASSED</div>
             </div>
-            
-            <div class="suite">
-                <div class="suite-header">
-                    <span class="status-failed">Neural Sonic TTS: FAILED</span>
-                    <span style="float: right;">1.43s</span>
-                </div>
-                <div class="suite-details">
-                    <p>Tests: 0/1 passed</p>
-                    <p>Success Rate: 0.0%</p>
-                </div>
+            <div>Tests: 4/4 passed</div>
+            <div>Duration: 22.28s</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 100.0%"></div>
             </div>
-            
-            <div class="suite">
-                <div class="suite-header">
-                    <span class="status-failed">Memory Recall: FAILED</span>
-                    <span style="float: right;">1.29s</span>
-                </div>
-                <div class="suite-details">
-                    <p>Tests: 0/1 passed</p>
-                    <p>Success Rate: 0.0%</p>
-                </div>
-            </div>
-            
-            <div class="suite">
-                <div class="suite-header">
-                    <span class="status-failed">Deep Research: FAILED</span>
-                    <span style="float: right;">2.21s</span>
-                </div>
-                <div class="suite-details">
-                    <p>Tests: 0/1 passed</p>
-                    <p>Success Rate: 0.0%</p>
-                </div>
-            </div>
-            
-            <div class="suite">
-                <div class="suite-header">
-                    <span class="status-failed">Bug Watcher: FAILED</span>
-                    <span style="float: right;">1.45s</span>
-                </div>
-                <div class="suite-details">
-                    <p>Tests: 0/1 passed</p>
-                    <p>Success Rate: 0.0%</p>
-                </div>
-            </div>
-            
         </div>
-        
-        <div class="recommendations">
-            <h2>📋 Recommendations</h2>
-            <ul>
-                <li>🔧 Fix failing tests in Vision Agent</li><li>🔧 Fix failing tests in Neural Sonic TTS</li><li>🔧 Fix failing tests in Memory Recall</li><li>🔧 Fix failing tests in Deep Research</li><li>🔧 Fix failing tests in Bug Watcher</li><li>🐛 Debug and fix failing tests before production deployment</li>
-            </ul>
+
+        <div class="suite">
+            <div class="suite-header">
+                <div class="suite-name">Deep Research</div>
+                <div class="suite-status status-passed">PASSED</div>
+            </div>
+            <div>Tests: 20/20 passed</div>
+            <div>Duration: 82.40s</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 100.0%"></div>
+            </div>
         </div>
+
+        <div class="suite">
+            <div class="suite-header">
+                <div class="suite-name">Bug Watcher</div>
+                <div class="suite-status status-passed">PASSED</div>
+            </div>
+            <div>Tests: 15/15 passed</div>
+            <div>Duration: 21.86s</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 100.0%"></div>
+            </div>
+        </div>
+
+    </div>
+    
+    <div class="footer">
+        <p>Generated by Wolf AI 2.0 Test Runner</p>
     </div>
 </body>
 </html>
-        
