@@ -3,6 +3,8 @@ Voice Assistant - Main orchestrator for Alexa-like voice interaction.
 Manages: STT → Function Gemma → Qwen → TTS pipeline.
 """
 
+from typing import Optional, cast, Any
+from PySide6.QtCore import QObject, Signal
 from core.llm import route_query, should_bypass_router, http_session  
 from core.pc_control import pc_controller  
 from core.vision_agent import vision_agent  
@@ -14,7 +16,9 @@ from core.settings_store import settings
 from core.tts import tts  
 from core.stt import STTListener
 from core.advanced_task_executor import advanced_executor  
-from config import OLLAMA_URL, RESPONDER_MODEL, SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI  
+from config import ( # type: ignore
+    RESPONDER_MODEL, OLLAMA_URL, MAX_HISTORY, GRAY, RESET, CYAN, GREEN, WAKE_WORD, YELLOW
+)
 import json
 import re
 import requests  
