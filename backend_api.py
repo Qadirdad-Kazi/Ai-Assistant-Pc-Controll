@@ -28,6 +28,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for startup script."""
+    return {"status": "healthy", "service": "Wolf AI Backend"}
+
+@app.get("/api/status")
+async def get_system_status():
+    """Get system status for startup script."""
+    return system_status
+
 # Global status tracking dictionary mimicking actual backend state
 system_status = {
     "isListening": False,
