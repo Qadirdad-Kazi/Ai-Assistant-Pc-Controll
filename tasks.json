@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "id": "task_20260312_221427",
+    "title": "Create Test Document",
+    "description": "Create a text file named notes.txt with content 'Meeting notes from AI assistant'",
+    "status": "pending",
+    "created_at": "2026-03-12T22:14:27.452868",
+    "updated_at": "2026-03-12T22:14:27.452868"
+  },
+  {
+    "id": "task_20260312_221441",
+    "title": "Project Folder",
+    "description": "Create a folder called my_project on my desktop",
+    "status": "pending",
+    "created_at": "2026-03-12T22:14:41.606870",
+    "updated_at": "2026-03-12T22:14:41.606870"
+  },
+  {
+    "id": "task_20260312_221459",
+    "title": "Open Code Editor",
+    "description": "Open Visual Studio Code for coding",
+    "status": "pending",
+    "created_at": "2026-03-12T22:14:59.187786",
+    "updated_at": "2026-03-12T22:14:59.187786"
+  },
+  {
+    "id": "task_20260312_221513",
+    "title": "Portfolio Website",
+    "description": "Build a portfolio website with HTML, CSS, and JavaScript, then open it in Visual Studio Code",
+    "status": "pending",
+    "created_at": "2026-03-12T22:15:13.953172",
+    "updated_at": "2026-03-12T22:15:13.953172"
+  },
+  {
+    "id": "task_20260312_221529",
+    "title": "Setup Python Workspace",
+    "description": "Setup my Python development environment with virtual environment and install required packages",
+    "status": "pending",
+    "created_at": "2026-03-12T22:15:29.637986",
+    "updated_at": "2026-03-12T22:15:29.637986"
+  },
+  {
+    "id": "task_20260312_221559",
+    "title": "Research & Code",
+    "description": "Open Chrome browser for research, then open VS Code to implement findings",
+    "status": "pending",
+    "created_at": "2026-03-12T22:15:59.552044",
+    "updated_at": "2026-03-12T22:15:59.552044"
+  }
+]

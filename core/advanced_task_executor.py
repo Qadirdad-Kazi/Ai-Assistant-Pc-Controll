@@ -50,7 +50,7 @@ class AdvancedTaskExecutor:
         # Task intent patterns
         intents = {
             "create_file": {
-                "patterns": [r"create\s+(?:a\s+)?(?:html|file|document|script)", r"make\s+(?:a\s+)?(?:html|file|document|script)", r"write\s+(?:a\s+)?(?:html|file|document|script)"],
+                "patterns": [r"create\s+(?:a\s+)?(?:text\s+)?file", r"make\s+(?:a\s+)?(?:text\s+)?file", r"write\s+(?:a\s+)?(?:text\s+)?file", r"build\s+(?:a\s+)?(?:text\s+)?file"],
                 "complexity": "medium",
                 "actions": ["file_operations", "text_generation"]
             },
@@ -110,14 +110,29 @@ class AdvancedTaskExecutor:
         
         # File name extraction
         file_patterns = [
-            r"(?:create|make|write|open|edit)\s+(?:a\s+)?(?:file|document|script|html)\s+(?:called\s+)?[\"']?([^\"'\s]+)[\"']?",
+            r"(?:create|make|write|open|edit)\s+(?:a\s+)?(?:text\s+)?file\s+(?:named\s+)?[\"']?([^\"'\s]+)[\"']?",
+            r"(?:create|make|write|open|edit)\s+(?:a\s+)?(?:text\s+)?file\s+(?:called\s+)?[\"']?([^\"'\s]+)[\"']?",
+            r"(?:create|make|write|open|edit)\s+(?:a\s+)?(?:text\s+)?file\s+(?:with\s+content\s+)?[\"']?([^\"'\s]+)[\"']?",
             r"(?:folder|directory)\s+(?:called\s+)?[\"']?([^\"'\s]+)[\"']?"
+        ]
+        
+        # Content extraction
+        content_patterns = [
+            r"with\s+content\s+[\"']([^\"']+)[\"']",
+            r"content\s+[\"']([^\"']+)[\"']",
+            r"named\s+[\"']([^\"']+)[\"']\s+with"
         ]
         
         for pattern in file_patterns:
             match = re.search(pattern, user_input, re.IGNORECASE)
             if match:
                 entities["file_name"] = match.group(1).strip()
+        
+        # Extract content
+        for pattern in content_patterns:
+            match = re.search(pattern, user_input, re.IGNORECASE)
+            if match:
+                entities["content"] = match.group(1).strip()
         
         # Application extraction
         app_patterns = [
@@ -152,11 +167,12 @@ class AdvancedTaskExecutor:
         
         if "file_operations" in actions:
             if intent == "create_file":
-                file_name = entities.get("file_name", "index.html")
+                file_name = entities.get("file_name", "notes.txt")
+                content = entities.get("content", "")
                 plan.extend([
                     {"step": 1, "action": "navigate_to_path", "details": {"path": entities.get("path", "Desktop")}},
-                    {"step": 2, "action": "create_file", "details": {"name": file_name, "content": self._generate_html_content(entities)}},
-                    {"step": 3, "action": "open_file", "details": {"app": "vscode", "file": file_name}}
+                    {"step": 2, "action": "create_file", "details": {"name": file_name, "content": content}},
+                    {"step": 3, "action": "confirm_creation", "details": {"item": file_name}}
                 ])
             elif intent == "create_folder":
                 folder_name = entities.get("file_name", "new_project")
@@ -400,15 +416,18 @@ class AdvancedTaskExecutor:
             desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
             file_path = os.path.join(desktop_path, filename)
             
+            # Use provided content or default
+            file_content = content if content else f"Created file: {filename}"
+            
             # Write file
             with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(content)
+                f.write(file_content)
             
             return {
                 "success": True,
                 "message": f"Created {filename}",
                 "file_path": file_path,
-                "size": len(content)
+                "size": len(file_content)
             }
         except Exception as e:
             return {"success": False, "message": f"File creation failed: {e}"}
