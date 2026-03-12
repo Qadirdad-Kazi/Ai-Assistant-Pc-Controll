@@ -961,6 +961,10 @@ Say "stop" or "quit" at any time to interrupt me."""
         try:
             print(f"[FunctionExecutor] Executing advanced task: '{description}'")
             
+            # Initialize variables for this execution
+            success = False
+            final_message = "Task completed successfully."
+            
             # Execute each step with real-time feedback
             for i, step in enumerate(execution_result["results"], 1):
                 step_num = step["step"]
