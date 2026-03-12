@@ -8,7 +8,7 @@ import threading
 from typing import Optional, Callable, Any
 
 try:
-    import serial  # type: ignore
+    import serial  
 except ImportError:
     serial = None
     print("[GSM Gateway] pyserial not found. Please pip install pyserial.")
@@ -43,7 +43,7 @@ class GSMGateway:
             # Start background listener
             self._running = True
             self._listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
-            self._listen_thread.start()  # type: ignore
+            self._listen_thread.start()  
             
             return True
         except Exception as e:
@@ -56,9 +56,9 @@ class GSMGateway:
         if not self.is_connected or not self.serial_conn:
             return ""
         try:
-            self.serial_conn.write((cmd + "\r\n").encode())  # type: ignore
+            self.serial_conn.write((cmd + "\r\n").encode())  
             time.sleep(0.2)
-            response = self.serial_conn.read_all().decode(errors="ignore")  # type: ignore
+            response = self.serial_conn.read_all().decode(errors="ignore")  
             return response.strip()
         except Exception as e:
             print(f"[GSM Gateway] Serial write error: {e}")
@@ -83,7 +83,7 @@ class GSMGateway:
         """Background loop to parse incoming serial data for RINGs or messages."""
         while self._running and self.serial_conn:
             try:
-                line = self.serial_conn.readline().decode(errors="ignore").strip()  # type: ignore
+                line = self.serial_conn.readline().decode(errors="ignore").strip()  
                 if line:
                     if "RING" in line:
                         print("[GSM Gateway] Incoming Call detected!")
@@ -92,7 +92,7 @@ class GSMGateway:
                         number = self._extract_caller_id(line)
                         print(f"[GSM Gateway] Caller ID: {number}")
                         if self.on_call_incoming:
-                            self.on_call_incoming(number)  # type: ignore
+                            self.on_call_incoming(number)  
             except Exception as e:
                 print(f"[GSM Gateway] Listener error: {e}")
                 time.sleep(1)
@@ -110,7 +110,7 @@ class GSMGateway:
     def disconnect(self):
         self._running = False
         if self.serial_conn and getattr(self.serial_conn, "is_open", False):
-            self.serial_conn.close()  # type: ignore
+            self.serial_conn.close()  
         self.is_connected = False
         print("[GSM Gateway] Disconnected.")
 

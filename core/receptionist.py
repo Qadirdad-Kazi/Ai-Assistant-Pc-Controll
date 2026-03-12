@@ -2,12 +2,12 @@
 Receptionist Module - Handles incoming GSM calls and expected directives.
 """
 from typing import Dict, Any, Optional
-import requests  # type: ignore
+import requests  
 import time
 import datetime
-from config import OLLAMA_URL, RESPONDER_MODEL  # type: ignore
-from core.tts import tts  # type: ignore
-from core.database import db  # type: ignore
+from config import OLLAMA_URL, RESPONDER_MODEL  
+from core.tts import tts  
+from core.database import db  
 
 class Receptionist:
     def __init__(self):
@@ -50,8 +50,8 @@ class Receptionist:
         if matched_instructions:
             print(f"[Receptionist] Found directive for {matched_caller}: {matched_instructions}")
             # Step 1: Answer Call (via gsm_gateway)
-            from core.gsm_gateway import gsm_gateway  # type: ignore
-            from core.audio_bridge import audio_bridge  # type: ignore
+            from core.gsm_gateway import gsm_gateway  
+            from core.audio_bridge import audio_bridge  
             
             gsm_gateway.answer_call()
             audio_bridge.link_call()
@@ -77,7 +77,7 @@ class Receptionist:
             transcript_log = f"Wolf: {greeting}\nCaller: {caller_speech}"
             user_response = ""
             
-            if "talk to qadirdad" in caller_speech.lower() or "speak to qadirdad" in caller_speech.lower():  # type: ignore
+            if "talk to qadirdad" in caller_speech.lower() or "speak to qadirdad" in caller_speech.lower():  
                 print("[Receptionist] Intent detected: Handover to Boss.")
                 handover_msg = "Please hold for a moment, I am putting Qadirdad on the line."
                 print(f"[Receptionist] Saying: {handover_msg}")
@@ -95,7 +95,7 @@ class Receptionist:
                 
                 # Use a background thread or a short wait to simulate user input if running headless
                 if mock_user_response is not None:
-                    user_response: str = mock_user_response.lower()  # type: ignore
+                    user_response: str = mock_user_response.lower()  
                     print(f"Qadirdad's response (ok/no): {user_response}")
                 else:
                     user_response = input("Qadirdad's response (ok/no): ").strip().lower()
@@ -128,7 +128,7 @@ class Receptionist:
                 "caller": matched_caller,
                 "instructions": matched_instructions,
                 "transcript": transcript_log,
-                "status": "Completed" if not ("talk to qadirdad" in caller_speech.lower() and user_response == 'ok') else "Handed Over",  # type: ignore
+                "status": "Completed" if not ("talk to qadirdad" in caller_speech.lower() and user_response == 'ok') else "Handed Over",  
                 "timestamp": datetime.datetime.now().isoformat(timespec="seconds")
             }
             self.call_logs.append(log_entry)
@@ -145,12 +145,12 @@ class Receptionist:
                 print(f"[Receptionist] Failed to persist call log: {e}")
             
             # Remove directive after processing
-            del self.expected_calls[matched_caller]  # type: ignore
+            del self.expected_calls[matched_caller]  
 
     def _generate_response(self, prompt: str) -> str:
         """Call Ollama locally to generate the dialogue."""
         try:
-            response = requests.post(f"{OLLAMA_URL}/generate", json={  # type: ignore
+            response = requests.post(f"{OLLAMA_URL}/generate", json={  
                 "model": RESPONDER_MODEL,
                 "prompt": prompt,
                 "stream": False

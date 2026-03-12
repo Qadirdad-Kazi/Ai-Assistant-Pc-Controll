@@ -176,7 +176,7 @@ class TestNeuralSonic:
         with patch.object(kokoro_tts, 'initialize', return_value=True):
             # Test with None input - should handle gracefully
             try:
-                kokoro_tts.speak(None)  # type: ignore
+                kokoro_tts.speak(None)  
                 assert True  # Should handle gracefully
             except (TypeError, ValueError):
                 assert True  # Should raise appropriate exception

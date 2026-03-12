@@ -5,42 +5,43 @@ Manages: STT → Function Gemma → Qwen → TTS pipeline.
 
 import threading
 import json
-import requests # type: ignore
+import requests 
 import re
 from typing import Optional, cast, Any
-from PySide6.QtCore import QObject, Signal # type: ignore
+from PySide6.QtCore import QObject, Signal 
 
-from config import ( # type: ignore
+from config import ( 
     RESPONDER_MODEL, OLLAMA_URL, MAX_HISTORY, GRAY, RESET, CYAN, GREEN, WAKE_WORD, YELLOW
 )
-from core.router import FunctionGemmaRouter  # type: ignore
-from core.llm import route_query, should_bypass_router, http_session  # type: ignore
-from core.pc_control import pc_controller  # type: ignore
-from core.vision_agent import vision_agent  # type: ignore
-from core.dev_agent import dev_agent  # type: ignore
-from core.receptionist import receptionist  # type: ignore
-from core.memory import memory_manager  # type: ignore
-from core.enhanced_thinking import enhanced_thinking_router  # type: ignore
-from core.settings_store import settings  # type: ignore
-from core.tts import tts  # type: ignore
-from core.function_executor import function_executor  # type: ignore
-from config import OLLAMA_URL, RESPONDER_MODEL, SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI  # type: ignore
+from core.router import FunctionGemmaRouter  
+from core.llm import route_query, should_bypass_router, http_session  
+from core.pc_control import pc_controller  
+from core.vision_agent import vision_agent  
+from core.dev_agent import dev_agent  
+from core.receptionist import receptionist  
+from core.memory import memory_manager  
+from core.enhanced_thinking import enhanced_thinking_router  
+from core.settings_store import settings  
+from core.tts import tts  
+from core.advanced_task_executor import advanced_executor  
+from core.function_executor import function_executor  
+from config import OLLAMA_URL, RESPONDER_MODEL, SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI  
 import json
 import re
-import requests  # type: ignore
+import requests  
 import threading
 import time
 import os
 import hashlib
-import psutil  # type: ignore
+import psutil  
 from datetime import datetime
 from typing import Dict, Any, List, Optional, cast
-from utilities.youtube_handler import YouTubeHandler  # type: ignore
-from utilities.spotify_handler import SpotifyHandler  # type: ignore
-from utilities.research_handler import research_handler  # type: ignore
-from utilities.search_handler import web_search_handler  # type: ignore
-from core.advanced_task_executor import advanced_executor  # type: ignore
-from core.metacognition import metacognition_engine # type: ignore
+from utilities.youtube_handler import YouTubeHandler  
+from utilities.spotify_handler import SpotifyHandler  
+from utilities.research_handler import research_handler  
+from utilities.search_handler import web_search_handler  
+from core.advanced_task_executor import advanced_executor  
+from core.metacognition import metacognition_engine 
 
 # Functions that are actions (not passthrough)
 ACTION_FUNCTIONS = {

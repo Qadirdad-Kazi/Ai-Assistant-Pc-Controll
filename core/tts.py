@@ -17,8 +17,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
 import requests
-import sounddevice as sd  # type: ignore
-from core.kokoro_tts import kokoro_tts # type: ignore
+import sounddevice as sd  
+from core.kokoro_tts import kokoro_tts 
 
 # ANSI colors for console output
 GRAY = "\033[90m"

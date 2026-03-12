@@ -2,31 +2,32 @@
 Simplified Function Executor for Wolf AI.
 """
 
-from core.llm import route_query, should_bypass_router, http_session  # type: ignore
-from core.pc_control import pc_controller  # type: ignore
-from core.vision_agent import vision_agent  # type: ignore
-from core.dev_agent import dev_agent  # type: ignore
-from core.receptionist import receptionist  # type: ignore
-from core.router import FunctionGemmaRouter  # type: ignore
-from core.memory import memory_manager  # type: ignore
-from core.enhanced_thinking import enhanced_thinking_router  # type: ignore
-from config import OLLAMA_URL, RESPONDER_MODEL, SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI  # type: ignore
+from core.llm import route_query, should_bypass_router, http_session  
+from core.pc_control import pc_controller  
+from core.vision_agent import vision_agent  
+from core.dev_agent import dev_agent  
+from core.receptionist import receptionist  
+from core.memory import memory_manager  
+from core.enhanced_thinking import enhanced_thinking_router  
+from core.settings_store import settings  
+from core.tts import tts  
+from config import OLLAMA_URL, RESPONDER_MODEL, SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI  
 import json
 import re
-import requests  # type: ignore
+import requests  
 import threading
 import time
 import os
 import hashlib
-import psutil  # type: ignore
+import psutil  
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
 
-from utilities.youtube_handler import YouTubeHandler  # type: ignore
-from utilities.spotify_handler import SpotifyHandler  # type: ignore
-from utilities.research_handler import research_handler  # type: ignore
-from utilities.search_handler import web_search_handler  # type: ignore
+from utilities.youtube_handler import YouTubeHandler  
+from utilities.spotify_handler import SpotifyHandler  
+from utilities.research_handler import research_handler  
+from utilities.search_handler import web_search_handler  
 
 class FunctionExecutor:
     """Central executor for simplified core functions."""
@@ -95,13 +96,13 @@ class FunctionExecutor:
 
             # Keep memory bounded.
             if len(self._execution_events) > 1000:
-                self._execution_events = list(self._execution_events[-1000:]) # type: ignore
+                self._execution_events = list(self._execution_events[-1000:]) 
 
     def get_execution_events(self, after_id: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
         """Return execution events newer than the provided event id."""
         with self._event_lock:
             new_events = [e for e in self._execution_events if e.get("id", 0) > after_id]
-            return new_events[:limit] # type: ignore
+            return new_events[:limit] 
 
     def _reindex_local_songs(self) -> None:
         """Index local audio files from common folders for fallback playback."""
@@ -123,7 +124,7 @@ class FunctionExecutor:
                 for file in root.rglob("*"):
                     if not file.is_file() or file.suffix.lower() not in exts:
                         continue
-                    sid = hashlib.sha1(str(file).encode("utf-8")).hexdigest()[:16] # type: ignore
+                    sid = hashlib.sha1(str(file).encode("utf-8")).hexdigest()[:16] 
                     title = file.stem.replace("_", " ").replace("-", " ").strip()
                     rec = {
                         "id": sid,
@@ -411,10 +412,10 @@ Say "stop" or "quit" at any time to interrupt me."""
                 inner_data = {}
             
             # Explicitly cast or use type ignore for Pyre2
-            inner_data["type"] = "autonomous_execution" # type: ignore
-            inner_data["routed_from"] = "thinking" # type: ignore
+            inner_data["type"] = "autonomous_execution" 
+            inner_data["routed_from"] = "thinking" 
             
-            final_res["data"] = inner_data # type: ignore
+            final_res["data"] = inner_data 
             return final_res
         
         # Determine reasoning depth from params
@@ -984,7 +985,7 @@ Say "stop" or "quit" at any time to interrupt me."""
                         if func_name == "task_complete":
                             final_message = route_params.get("message", "Task completed via agent logic.")
                             success = True
-                            self._emit_execution_event( # type: ignore
+                            self._emit_execution_event( 
                                 "task_complete",
                                 final_message,
                                 task_id=task_id,
@@ -993,7 +994,7 @@ Say "stop" or "quit" at any time to interrupt me."""
                             break
                             
                         print(f"[AgentLoop] Step {step+1}: Executing {func_name} with {route_params}")
-                        self._emit_execution_event( # type: ignore
+                        self._emit_execution_event( 
                             "step_execute",
                             f"Executing {func_name}",
                             task_id=task_id,
@@ -1004,12 +1005,12 @@ Say "stop" or "quit" at any time to interrupt me."""
                         executed_funcs.append(func_name)
                             
                         # Execute the function
-                        result = self.execute(func_name, route_params)  # type: ignore
+                        result = self.execute(func_name, route_params)  
                         results.append(result)
                         
                         # Update history
                         res_msg = result.get("message", "No message")
-                        self._emit_execution_event( # type: ignore
+                        self._emit_execution_event( 
                             "step_result",
                             res_msg,
                             task_id=task_id,
@@ -1025,7 +1026,7 @@ Say "stop" or "quit" at any time to interrupt me."""
                         print(f"[AgentLoop] Error in LLM step: {e}")
                         success = False
                         final_message = f"Error communicating with AI: {e}"
-                        self._emit_execution_event( # type: ignore
+                        self._emit_execution_event( 
                             "step_error",
                             final_message,
                             task_id=task_id,
@@ -1035,7 +1036,7 @@ Say "stop" or "quit" at any time to interrupt me."""
             
             if not success and final_message == "Task stopped.":
                 final_message = f"Reached maximum steps ({max_steps}) without calling task_complete."
-                self._emit_execution_event( # type: ignore
+                self._emit_execution_event( 
                     "task_timeout",
                     final_message,
                     task_id=task_id,

@@ -6,8 +6,8 @@ from pathlib import Path
 
 # Try to import crawl4ai, but provide a mock/fallback if not installed yet
 try:
-    from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode # type: ignore
-    from crawl4ai.extraction_strategy import LLMExtractionStrategy # type: ignore
+    from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode 
+    from crawl4ai.extraction_strategy import LLMExtractionStrategy 
     CRAWL4AI_AVAILABLE = True
 except ImportError:
     CRAWL4AI_AVAILABLE = False

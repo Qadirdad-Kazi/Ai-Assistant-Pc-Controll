@@ -5,25 +5,25 @@ Supports 9 functions: 6 actions, 1 context, 2 passthrough.
 
 import os
 import warnings
-import requests  # type: ignore
+import requests  
 
 # Suppress transformers warnings before importing
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 warnings.filterwarnings("ignore", message=".*generation flags are not valid.*")
 
-import torch  # type: ignore
-from transformers import AutoTokenizer, AutoModelForCausalLM, logging as transformers_logging  # type: ignore
-from transformers.utils import get_json_schema  # type: ignore
+import torch  
+from transformers import AutoTokenizer, AutoModelForCausalLM, logging as transformers_logging  
+from transformers.utils import get_json_schema  
 from typing import Literal, Tuple, Dict, Any, Optional
 import time
 import re
 import json
-from huggingface_hub import snapshot_download  # type: ignore
+from huggingface_hub import snapshot_download  
 
 # Suppress transformers logging
 transformers_logging.set_verbosity_error()
 
-from config import LOCAL_ROUTER_PATH, HF_ROUTER_REPO, OLLAMA_URL, RESPONDER_MODEL  # type: ignore
+from config import LOCAL_ROUTER_PATH, HF_ROUTER_REPO, OLLAMA_URL, RESPONDER_MODEL  
 
 # Debug flag - set to True to see Gemma's raw response
 DEBUG_ROUTER = False
@@ -208,7 +208,7 @@ def ensure_model_available(model_path: str = LOCAL_ROUTER_PATH) -> Optional[str]
     print(f"[Router] Attempting download from Hugging Face: {HF_ROUTER_REPO}...")
     
     try:
-        from huggingface_hub import snapshot_download  # type: ignore
+        from huggingface_hub import snapshot_download  
         downloaded_path = snapshot_download(
             repo_id=HF_ROUTER_REPO,
             local_dir=model_path,
@@ -524,13 +524,13 @@ if __name__ == "__main__":
         total_time += elapsed
         match = "✓" if func_name == expected else "✗"
         if func_name == expected:
-            correct += 1  # type: ignore
+            correct += 1  
         
         print(f"\n[{match}] {prompt}")
         print(f"    → {func_name}({args}) [{elapsed*1000:.0f}ms]")
     
     avg_time = total_time / len(test_prompts)
     print(f"\n{'='*70}")
-    print(f"Accuracy: {correct}/{len(test_prompts)} ({100*correct/len(test_prompts):.0f}%)")  # type: ignore
+    print(f"Accuracy: {correct}/{len(test_prompts)} ({100*correct/len(test_prompts):.0f}%)")  
     print(f"Average routing time: {avg_time*1000:.0f}ms per prompt")
     print(f"Total time: {total_time:.2f}s for {len(test_prompts)} prompts")

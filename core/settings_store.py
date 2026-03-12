@@ -8,7 +8,7 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from PySide6.QtCore import QObject, Signal  # type: ignore
+from PySide6.QtCore import QObject, Signal  
 
 
 # Default settings - used when no settings file exists
@@ -57,7 +57,7 @@ class SettingsStore(QObject):
     """
     
     # Emit when any setting changes: (key_path, new_value)
-    setting_changed = Signal(str, object)  # type: ignore
+    setting_changed = Signal(str, object)  
     
     def __init__(self):
         super().__init__()
@@ -127,15 +127,15 @@ class SettingsStore(QObject):
         with self._lock:
             keys = key_path.split('.')
             target: Any = self._settings
-            for k in keys[:-1]:  # type: ignore
+            for k in keys[:-1]:  
                 if k not in target:
-                    target[k] = {}  # type: ignore
+                    target[k] = {}  
                 target = target[k]
-            target[keys[-1]] = value  # type: ignore
+            target[keys[-1]] = value  
             self._save()
         
         # Emit signal (outside lock to prevent deadlock)
-        self.setting_changed.emit(key_path, value)  # type: ignore
+        self.setting_changed.emit(key_path, value)  
     
     def get_all(self) -> Dict[str, Any]:
         """Return a copy of all settings."""
@@ -147,7 +147,7 @@ class SettingsStore(QObject):
         with self._lock:
             self._settings = DEFAULT_SETTINGS.copy()
             self._save()
-        self.setting_changed.emit("*", None)  # type: ignore
+        self.setting_changed.emit("*", None)  
 
 
 # Global singleton instance

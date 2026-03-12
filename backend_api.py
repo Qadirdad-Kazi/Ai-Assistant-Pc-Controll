@@ -2,20 +2,20 @@ import asyncio
 import os
 import sqlite3
 import shutil
-import psutil  # type: ignore
-import requests  # type: ignore
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect  # type: ignore
-from fastapi import HTTPException  # type: ignore
-from fastapi.middleware.cors import CORSMiddleware  # type: ignore
-from fastapi.responses import FileResponse  # type: ignore
-from pydantic import BaseModel  # type: ignore
+import psutil  
+import requests  
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect  
+from fastapi import HTTPException  
+from fastapi.middleware.cors import CORSMiddleware  
+from fastapi.responses import FileResponse  
+from pydantic import BaseModel  
 from typing import Optional, Dict, List, Any, cast
-from core.voice_assistant import voice_assistant  # type: ignore
-from core.function_executor import executor as function_executor  # type: ignore
-from core.database import db  # type: ignore
-from core.receptionist import receptionist  # type: ignore
-from core.settings_store import settings as settings_store  # type: ignore
-from config import VOICE_ASSISTANT_ENABLED, OLLAMA_URL, LOCAL_ROUTER_PATH, CUSTOM_PPN_PATH  # type: ignore
+from core.voice_assistant import voice_assistant  
+from core.function_executor import executor as function_executor  
+from core.database import db  
+from core.receptionist import receptionist  
+from core.settings_store import settings as settings_store  
+from config import VOICE_ASSISTANT_ENABLED, OLLAMA_URL, LOCAL_ROUTER_PATH, CUSTOM_PPN_PATH  
 
 app = FastAPI(title="Wolf AI Backend API")
 
@@ -115,7 +115,7 @@ def _check_tts_engine():
 
 def _check_stt_engine():
     try:
-        from RealtimeSTT import AudioToTextRecorder  # type: ignore # noqa: F401
+        from RealtimeSTT import AudioToTextRecorder   # noqa: F401
         ppn_ok = os.path.exists(CUSTOM_PPN_PATH)
         suffix = "custom wakeword found" if ppn_ok else "custom wakeword file missing"
         return _diagnostic_result(True, f"RealtimeSTT import ok, {suffix}")
@@ -139,7 +139,7 @@ def _check_pc_control():
 
 def _check_phone_gateway():
     try:
-        from core.gsm_gateway import gsm_gateway  # type: ignore
+        from core.gsm_gateway import gsm_gateway  
         status = "connected" if gsm_gateway.is_connected else "not connected"
         return _diagnostic_result(True, f"GSM gateway loaded, current status: {status}")
     except Exception as e:
@@ -207,7 +207,7 @@ def _check_gpu_acceleration():
 def _check_voice_assistant():
     """Check voice assistant initialization."""
     try:
-        from core.voice_assistant import voice_assistant  # type: ignore
+        from core.voice_assistant import voice_assistant  
         if hasattr(voice_assistant, 'is_initialized') and voice_assistant.is_initialized:
             return _diagnostic_result(True, "Voice assistant initialized")
         else:
@@ -374,16 +374,16 @@ def _apply_runtime_setting(key_path: str, value):
     """Apply a subset of settings immediately to running modules when safe."""
     try:
         if key_path == "gsm.port":
-            from core.gsm_gateway import gsm_gateway  # type: ignore
+            from core.gsm_gateway import gsm_gateway  
             gsm_gateway.port = str(value)
         elif key_path == "bug_watcher.enabled":
-            from core.bug_watcher import bug_watcher  # type: ignore
+            from core.bug_watcher import bug_watcher  
             if bool(value):
                 bug_watcher.start()
             else:
                 bug_watcher.stop()
         elif key_path == "tts.engine":
-            from core.tts import tts # type: ignore
+            from core.tts import tts 
             tts.engine = str(value).lower()
             tts.initialize()
     except Exception as e:

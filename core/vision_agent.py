@@ -2,29 +2,29 @@ import base64
 import json
 import io
 import time
-import requests # type: ignore
+import requests 
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 # Config and common logging imports
 try:
-    from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET, VISUAL_MODEL # type: ignore
+    from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET, VISUAL_MODEL 
 except ImportError:
     OLLAMA_URL = "http://localhost:11434"
     GREEN = CYAN = YELLOW = GRAY = RESET = ""
     VISUAL_MODEL = "llava-phi3"
 
 try:
-    import pyautogui # type: ignore
-    from PIL import Image # type: ignore
+    import pyautogui 
+    from PIL import Image 
     # PyAutoGUI safety setting
-    pyautogui.FAILSAFE = True # type: ignore
-    pyautogui.PAUSE = 1.0 # type: ignore
+    pyautogui.FAILSAFE = True 
+    pyautogui.PAUSE = 1.0 
 except ImportError:
     pyautogui = None
     Image = None
 
-from core.omni_parser_client import omni_parser # type: ignore
+from core.omni_parser_client import omni_parser 
 
 class VisionAgent:
     """Enhanced Vision Agent using OmniParser + VLM for precise PC control."""
@@ -43,9 +43,9 @@ class VisionAgent:
             raise ImportError("PyAutoGUI or Pillow is missing.")
             
         try:
-            screenshot = pyautogui.screenshot() # type: ignore
+            screenshot = pyautogui.screenshot() 
             buffered = io.BytesIO()
-            screenshot.save(buffered, format="PNG") # type: ignore
+            screenshot.save(buffered, format="PNG") 
             return base64.b64encode(buffered.getvalue()).decode("utf-8")
         except Exception as e:
             print(f"[VisionAgent] Capture error: {e}")
@@ -189,8 +189,8 @@ Output format: JSON ONLY
 
                 # Grounding logic
                 tid = action_data.get("target_id")
-                if tid is not None and self.last_parse_result and 0 <= tid < len(self.last_parse_result): # type: ignore
-                    target = self.last_parse_result[tid] # type: ignore
+                if tid is not None and self.last_parse_result and 0 <= tid < len(self.last_parse_result): 
+                    target = self.last_parse_result[tid] 
                     box = target.get("box", [0, 0, 0, 0])
                     
                     x_mid = float((box[1] + box[3]) / 2)
@@ -221,13 +221,13 @@ Output format: JSON ONLY
             if not analysis.get("success"):
                 return analysis
 
-            screen_width, screen_height = pyautogui.size() # type: ignore
+            screen_width, screen_height = pyautogui.size() 
             x = int(analysis.get("x_percent", 0.5) * screen_width)
             y = int(analysis.get("y_percent", 0.5) * screen_height)
             
             print(f"[VisionAgent] Clicking at ({x}, {y}) - {analysis.get('thought')}")
-            pyautogui.moveTo(x, y, duration=0.8, tween=pyautogui.easeInOutQuad) # type: ignore
-            pyautogui.click() # type: ignore
+            pyautogui.moveTo(x, y, duration=0.8, tween=pyautogui.easeInOutQuad) 
+            pyautogui.click() 
             time.sleep(0.5)
             
             return {"success": True, "message": analysis.get("message", "Clicked successfully.")}
@@ -241,15 +241,15 @@ Output format: JSON ONLY
             if not analysis.get("success"):
                 return analysis
 
-            screen_width, screen_height = pyautogui.size() # type: ignore
+            screen_width, screen_height = pyautogui.size() 
             x = int(analysis.get("x_percent", 0.5) * screen_width)
             y = int(analysis.get("y_percent", 0.5) * screen_height)
             text = analysis.get("text", "")
             
             print(f"[VisionAgent] Typing '{text}' at ({x}, {y})")
-            pyautogui.click(x, y) # type: ignore
+            pyautogui.click(x, y) 
             time.sleep(0.3)
-            pyautogui.typewrite(text, interval=0.05) # type: ignore
+            pyautogui.typewrite(text, interval=0.05) 
             
             return {"success": True, "message": f"Typed '{text}' successfully."}
         except Exception as e:
@@ -266,7 +266,7 @@ Output format: JSON ONLY
             if "lot" in task.lower(): amount = 1000
             
             print(f"[VisionAgent] Scrolling {direction} by {amount}")
-            pyautogui.scroll(-amount if direction == "down" else amount) # type: ignore
+            pyautogui.scroll(-amount if direction == "down" else amount) 
             
             return {"success": True, "message": f"Scrolled {direction} successfully."}
         except Exception as e:

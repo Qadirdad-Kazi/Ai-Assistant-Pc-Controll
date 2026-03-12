@@ -6,12 +6,12 @@ import time
 import threading
 from typing import Optional
 try:
-    import pyautogui  # type: ignore
+    import pyautogui  
 except ImportError:
     pyautogui = None
 
 try:
-    import pytesseract  # type: ignore
+    import pytesseract  
     from PIL import Image
     # Windows default Tesseract path (user may need to install tesseract-ocr)
     pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
@@ -35,13 +35,13 @@ class BugWatcher:
         if not self.running:
             self.running = True
             self._thread = threading.Thread(target=self._scan_loop, daemon=True)
-            self._thread.start()  # type: ignore
+            self._thread.start()  
             print("[Proactive Layer] Bug Watcher started. Polling screen...")
 
     def stop(self):
         self.running = False
         if self._thread:
-            self._thread.join(timeout=2)  # type: ignore
+            self._thread.join(timeout=2)  
             print("[Proactive Layer] Bug Watcher stopped.")
 
     def _scan_loop(self):
@@ -73,7 +73,7 @@ class BugWatcher:
                             print(f"[Proactive Layer] 🔥 CRASH SIGNATURE DETECTED: {err_tag}")
                             
                             # Use VisionAgent for deeper analysis to confirm and describe the crash
-                            from core.vision_agent import vision_agent # type: ignore
+                            from core.vision_agent import vision_agent 
                             analysis = vision_agent._analyze_screen(f"A possible {detected_error} was detected. Describe exactly what the error message says and which application is crashing.")
                             
                             if analysis.get("success"):
@@ -85,11 +85,11 @@ class BugWatcher:
                                 
                                 # Trigger HUD if initialized
                                 try:
-                                    from gui.windows.hud_window import hud_window  # type: ignore
+                                    from gui.windows.hud_window import hud_window  
                                     if hud_window:
-                                        hud_window.show_alert(f"BUG DETECTED: {detected_error.upper()}")  # type: ignore
+                                        hud_window.show_alert(f"BUG DETECTED: {detected_error.upper()}")  
                                         # Also speak it if TTS is available
-                                        from core.tts import tts # type: ignore
+                                        from core.tts import tts 
                                         tts.speak(f"Alert. I've detected a {detected_error} in an application window. {snippet}")
                                 except Exception:
                                     pass

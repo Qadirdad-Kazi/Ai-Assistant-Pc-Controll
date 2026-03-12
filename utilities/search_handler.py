@@ -1,7 +1,7 @@
 import json
 from typing import List, Dict, Any
 try:
-    from duckduckgo_search import DDGS # type: ignore
+    from duckduckgo_search import DDGS 
     DDGS_AVAILABLE = True
 except ImportError:
     DDGS_AVAILABLE = False

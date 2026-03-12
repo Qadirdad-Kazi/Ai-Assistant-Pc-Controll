@@ -10,10 +10,10 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 try:
-    import pyautogui  # type: ignore
+    import pyautogui  
     from PIL import Image
-    import win32gui  # type: ignore
-    import win32con  # type: ignore
+    import win32gui  
+    import win32con  
     import winreg
 except ImportError as e:
     print(f"[Dynamic Discovery] Warning: Some dependencies missing: {e}")
@@ -80,16 +80,16 @@ class DynamicAppDiscovery:
         try:
             import winreg
             # Scan HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,  # type: ignore
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,  
                                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")
             
-            for i in range(winreg.QueryInfoKey(key)[0]):  # type: ignore
-                subkey_name = winreg.EnumKey(key, i)  # type: ignore
-                subkey = winreg.OpenKey(key, subkey_name)  # type: ignore
+            for i in range(winreg.QueryInfoKey(key)[0]):  
+                subkey_name = winreg.EnumKey(key, i)  
+                subkey = winreg.OpenKey(key, subkey_name)  
                 
                 try:
-                    display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]  # type: ignore
-                    install_location = winreg.QueryValueEx(subkey, "InstallLocation")[0]  # type: ignore
+                    display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]  
+                    install_location = winreg.QueryValueEx(subkey, "InstallLocation")[0]  
                     
                     if display_name and install_location:
                         exe_path = self._find_exe_in_directory(install_location)
@@ -98,8 +98,8 @@ class DynamicAppDiscovery:
                 except (FileNotFoundError, OSError):
                     pass
                     
-                winreg.CloseKey(subkey)  # type: ignore
-            winreg.CloseKey(key)  # type: ignore
+                winreg.CloseKey(subkey)  
+            winreg.CloseKey(key)  
         except (ImportError, OSError):
             pass  # Registry access not available
             
@@ -208,7 +208,7 @@ class DynamicAppDiscovery:
             if partial in app_name or app_name in partial:
                 suggestions.append(app_name)
         
-        return sorted(suggestions)[:10]  # type: ignore
+        return sorted(suggestions)[:10]  
 
 # Global instance
 dynamic_discovery = DynamicAppDiscovery()

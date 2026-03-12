@@ -1,7 +1,7 @@
 # core package
-from core.tts import PiperTTS, SentenceBuffer, tts  # type: ignore
-from core.router import FunctionGemmaRouter  # type: ignore
-from core.llm import route_query, execute_function, should_bypass_router, preload_models, http_session  # type: ignore
+from core.tts import PiperTTS, SentenceBuffer, tts  
+from core.router import FunctionGemmaRouter  
+from core.llm import route_query, execute_function, should_bypass_router, preload_models, http_session  
 
 __all__ = [
     "PiperTTS", "SentenceBuffer", "tts",

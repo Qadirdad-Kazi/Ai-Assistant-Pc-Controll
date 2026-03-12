@@ -2,13 +2,13 @@ import os
 import time
 import threading
 import queue
-import numpy as np # type: ignore
-import sounddevice as sd # type: ignore
+import numpy as np 
+import sounddevice as sd 
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 try:
-    from kokoro import KModel, KPipeline # type: ignore
+    from kokoro import KModel, KPipeline 
     KOKORO_AVAILABLE = True
 except ImportError:
     KOKORO_AVAILABLE = False
@@ -106,10 +106,10 @@ class KokoroTTS:
                 voice = item.get("voice", "af_heart")
                 speed = item.get("speed", 1.0)
                 
-                print(f"[KokoroTTS] Generating: {text[:50]}...") # type: ignore
+                print(f"[KokoroTTS] Generating: {text[:50]}...") 
                 
                 # Kokoro generation
-                generator = self.pipeline(text, voice=voice, speed=speed) # type: ignore
+                generator = self.pipeline(text, voice=voice, speed=speed) 
                 
                 for gs, ps, audio in generator:
                     if self.stop_event.is_set():

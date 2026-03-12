@@ -1,7 +1,7 @@
 import os
 import json
 from typing import Dict, Any
-from PySide6.QtCore import QObject, Signal  # type: ignore
+from PySide6.QtCore import QObject, Signal  
 
 class GamificationManager(QObject):
     """
@@ -40,7 +40,7 @@ class GamificationManager(QObject):
         next_xp = int(100 * ((self.stats["level"] + 1)**1.5))
         current_xp = self.stats["xp"]
         
-        self.stats_updated.emit({  # type: ignore
+        self.stats_updated.emit({  
             "xp": current_xp,
             "level": self.stats["level"],
             "xp_to_next": next_xp,
@@ -56,7 +56,7 @@ class GamificationManager(QObject):
             next_xp = int(100 * ((self.stats["level"] + 1)**1.5))
             if self.stats["xp"] >= next_xp:
                 self.stats["level"] += 1
-                self.level_up.emit(self.stats["level"])  # type: ignore
+                self.level_up.emit(self.stats["level"])  
                 print(f"[Leveling] LEVEL UP! Now Level {self.stats['level']}")
             else:
                 break

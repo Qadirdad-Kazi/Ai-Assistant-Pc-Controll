@@ -3,12 +3,12 @@ import json
 import io
 import time
 from typing import Dict, Any
-import requests  # type: ignore
-from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET  # type: ignore
+import requests  
+from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET  
 
 try:
-    import pyautogui  # type: ignore
-    from PIL import Image  # type: ignore
+    import pyautogui  
+    from PIL import Image  
     # PyAutoGUI safety setting
     pyautogui.FAILSAFE = True
     pyautogui.PAUSE = 1.0
@@ -30,7 +30,7 @@ class VisionAgent:
             
         try:
             # Capture screenshot
-            screenshot = pyautogui.screenshot()  # type: ignore
+            screenshot = pyautogui.screenshot()  
             
             # Convert to base64
             img_byte_arr = io.BytesIO()
@@ -150,7 +150,7 @@ class VisionAgent:
         try:
             # Step 1: Capture screenshot
             b64_image = self._capture_screen_base64()
-            screen_width, screen_height = pyautogui.size()  # type: ignore
+            screen_width, screen_height = pyautogui.size()  
             
             # Step 2: Formulate prompt for LLaVA
             prompt = (
@@ -197,8 +197,8 @@ class VisionAgent:
                 target_y = max(0, min(screen_height - 1, target_y))
                 
                 # Smooth move and click
-                pyautogui.moveTo(target_x, target_y, duration=0.8, tween=pyautogui.easeInOutQuad)  # type: ignore
-                pyautogui.click()  # type: ignore
+                pyautogui.moveTo(target_x, target_y, duration=0.8, tween=pyautogui.easeInOutQuad)  
+                pyautogui.click()  
                 time.sleep(1)
                 
                 return {
