@@ -841,11 +841,74 @@ Say "stop" or "quit" at any time to interrupt me."""
             filtered_tasks = self.tasks
         
         return {
-            "success": True,
             "message": f"Found {len(filtered_tasks)} tasks.",
             "data": {"tasks": filtered_tasks, "count": len(filtered_tasks)}
         }
 
+    def _create_simple_task(self, task_id: str, description: str, max_steps: int) -> Dict[str, Any]:
+        """Fallback to simple task execution for low confidence tasks."""
+        print(f"[FunctionExecutor] Using simple execution for: {description}")
+        
+        if "create" in description.lower():
+            return self._create_simple_file_task(task_id, description)
+        elif "open" in description.lower():
+            return self._open_simple_app_task(task_id, description)
+        else:
+            return {"success": False, "message": f"Simple task not supported: {description}"}
+    
+    def _create_simple_file_task(self, task_id: str, description: str) -> Dict[str, Any]:
+        """Create a simple file task."""
+        # Extract file name from description
+        import re
+        match = re.search(r"create(?: file)?\s+(?:called\s+)?[\"']?([^\"'\s]+)[\"']?", description, re.IGNORECASE)
+        if match:
+            filename = match.group(1).strip()
+        else:
+            filename = "new_file.txt"
+        
+        # Create file
+        try:
+            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+            file_path = os.path.join(desktop_path, filename)
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(f"Created file: {description}")
+            
+            # Update task status
+            task = next((t for t in self.tasks if t.get('id') == task_id), None)
+            if task:
+                task['status'] = 'completed'
+                task['result'] = f"Created {filename}"
+            
+            return {"success": True, "message": f"Created {filename}", "file_path": file_path}
+        except Exception as e:
+            return {"success": False, "message": f"File creation failed: {e}"}
+    
+    def _open_simple_app_task(self, task_id: str, description: str) -> Dict[str, Any]:
+        """Open a simple application task."""
+        # Extract app name from description
+        import re
+        match = re.search(r"open\s+(?:visual\s+studio\s+code|vs\s+code|chrome|firefox|notepad|calculator)", description, re.IGNORECASE)
+        if match:
+            app_name = match.group(0).strip()
+        else:
+            app_name = description.strip()
+        
+        # Launch application
+        try:
+            from core.pc_control import pc_controller
+            result = pc_controller._open_app(app_name)
+            
+            # Update task status
+            task = next((t for t in self.tasks if t.get('id') == task_id), None)
+            if task:
+                task['status'] = 'completed'
+                task['result'] = f"Opened {app_name}"
+            
+            return result
+        except Exception as e:
+            return {"success": False, "message": f"Application launch failed: {e}"}
+    
     def _execute_task(self, params: Dict):
         """Execute a task using AI intelligence to understand and complete it."""
         
@@ -862,146 +925,113 @@ Say "stop" or "quit" at any time to interrupt me."""
         if not description:
             return {"success": False, "message": "No task description provided."}
         
-        max_steps = int(params.get("max_steps", 10) or 10)
-        self._emit_execution_event( # type: ignore
+        max_steps = int(params.get("max_steps", 10)) or 10
+        
+        # Use advanced AI for task understanding and execution
+        from core.advanced_task_executor import advanced_executor
+        
+        # First, try to understand the task using AI
+        task_understanding = advanced_executor.understand_task(description)
+        
+        if task_understanding["confidence"] < 0.3:
+            # Low confidence, fall back to simple execution
+            return self._create_simple_task(task_id, description, max_steps)
+        
+        # High confidence, use advanced multi-step execution
+        execution_plan = task_understanding["execution_plan"]
+        execution_result = advanced_executor.execute_plan(execution_plan)
+        
+        # Generate response based on execution results
+        if execution_result["success"]:
+            response = f"Task completed successfully! {execution_result['summary']}"
+        else:
+            failed_steps = [r for r in execution_result["results"] if not r["success"]]
+            response = f"Task partially completed. {execution_result['summary']}. Failed steps: {len(failed_steps)}"
+        
+        # Emit execution events for real-time feedback
+        self._emit_execution_event(
             "task_start",
-            f"Starting autonomous task: {description}",
+            f"Starting advanced task: {description}",
             task_id=task_id,
             description=description,
             max_steps=max_steps,
         )
-
+        
         try:
-            print(f"[FunctionExecutor] Executing autonomous agent task: '{description}'")
+            print(f"[FunctionExecutor] Executing advanced task: '{description}'")
             
-            prompt = f"""You are an autonomous AI executing a multi-step task on the user's computer: '{description}'.
-            
-            Available functions:
-            - pc_control(action, target): [action: 'open_app', 'close_app', 'volume', 'lock', 'shutdown', 'command'] -> 'command' runs Powershell code in target.
-            - play_music(query, service): Search and play music.
-            - visual_agent(task, action): Use visual AI. action: 'click', 'type', 'scroll', 'describe'.
-            - web_search(query): Search the web for information or URLs.
-            - research_web(url): Deep research a website to get full markdown content for complex info.
-            - task_complete(message): Call this EXACTLY when the goal is fully achieved!
-            
-            You MUST output EXACTLY ONE function call. After you output it, it will be executed and you will see the RESULT. 
-            CRITICAL FORMAT RULE: You must use this exact syntax with curly braces, NO python syntax.
-            CRITICAL RULE 2: NEVER output any other text or reasoning. ONLY output the function call line!
-            call:function_name{{arg1:value1,arg2:value2}}
-            
-            Example 1 (Open App): call:pc_control{{action:open_app,target:Visual Studio Code}}
-            Example 2 (Run Script): call:pc_control{{action:command,target:mkdir C:\\temp}}
-            Example 3 (Finished): call:task_complete{{message:I finished everything.}}
-
-            EXECUTION QUALITY RULES:
-            1) Prefer deterministic commands for file/folder operations using pc_control(action=command).
-            2) For file and folder creation, verify success with a follow-up check command (e.g., Test-Path) before task_complete.
-            3) If a step fails, adapt and retry with a safer equivalent command.
-            4) Do not call task_complete until verification confirms the requested outcome.
-            
-            HISTORY OF EXECUTED STEPS:
-            """
-            
-            history_str = "No steps executed yet.\n"
-            success = False
-            final_message = "Task stopped."
-            executed_funcs = []
-            results = []
-            router = FunctionGemmaRouter()
-            
-            for step in range(max_steps):
-                # Ask LLM for next step based on history
-                try:
-                    self._emit_execution_event( # type: ignore
-                        "step_thinking",
-                        f"Planning step {step + 1}/{max_steps}",
-                        task_id=task_id,
-                        step=step + 1,
-                        max_steps=max_steps,
-                    )
-                    full_prompt = prompt + history_str + "\nBased on the history, what is the SINGLE next function call?"
-                    print(f"[AgentLoop] Step {step+1}: Thinking...")
-                    
-                    response = requests.post(f"{OLLAMA_URL}/generate", json={
-                        "model": RESPONDER_MODEL,
-                        "prompt": full_prompt,
-                        "stream": False,
-                        "options": {"num_predict": 150, "temperature": 0.1}
-                    }, timeout=15).json()
-                    
-                    raw_response = response.get("response", "").strip()
-                    self._emit_execution_event( # type: ignore
-                        "step_model_output",
-                        "Model produced next action",
-                        task_id=task_id,
-                        step=step + 1,
-                        raw_output=raw_response[:300],
-                    )
-                    calls = router._parse_function_call(raw_response, description)
-                    
-                    if not calls:
+            # Execute each step with real-time feedback
+            for i, step in enumerate(execution_result["results"], 1):
+                step_num = step["step"]
+                action = step["action"]
+                details = step["details"]
+                
+                self._emit_execution_event(
+                    "step_progress",
+                    f"Step {step_num}: {action}",
+                    task_id=task_id,
+                    step=step_num,
+                    action=action,
+                    details=details
+                )
+                
+                # Extract function call from step details
+                calls = step.get("calls", [])
+                if calls:
+                    try:
+                        func_name, route_params = calls[0] # Take strictly the first call
+                        
+                        if func_name == "task_complete":
+                            final_message = route_params.get("message", "Task completed via agent logic.")
+                            success = True
+                            self._emit_execution_event( # type: ignore
+                                "task_complete",
+                                final_message,
+                                task_id=task_id,
+                                step=step + 1,
+                            )
+                            break
+                            
+                        print(f"[AgentLoop] Step {step+1}: Executing {func_name} with {route_params}")
                         self._emit_execution_event( # type: ignore
-                            "step_error",
-                            "No valid function call found in model output.",
+                            "step_execute",
+                            f"Executing {func_name}",
                             task_id=task_id,
                             step=step + 1,
+                            function=func_name,
+                            params=route_params,
                         )
-                        history_str += f"\n- AI Output: '{raw_response}'\n- Result: ERROR - No valid function call found. Use call:function{{...}} syntax.\n"
-                        continue
+                        executed_funcs.append(func_name)
+                            
+                        # Execute the function
+                        result = self.execute(func_name, route_params)  # type: ignore
+                        results.append(result)
                         
-                    func_name, route_params = calls[0] # Take strictly the first call
-                    
-                    if func_name == "task_complete":
-                        final_message = route_params.get("message", "Task completed via agent logic.")
-                        success = True
+                        # Update history
+                        res_msg = result.get("message", "No message")
                         self._emit_execution_event( # type: ignore
-                            "task_complete",
+                            "step_result",
+                            res_msg,
+                            task_id=task_id,
+                            step=step + 1,
+                            function=func_name,
+                            success=result.get("success", False),
+                        )
+                        history_str += f"\n- Step: call:{func_name}{route_params}\n- Result: {res_msg}\n"
+                        
+                        print(f"[AgentLoop] Step {step+1} Result: {res_msg}")
+                            
+                    except Exception as e:
+                        print(f"[AgentLoop] Error in LLM step: {e}")
+                        success = False
+                        final_message = f"Error communicating with AI: {e}"
+                        self._emit_execution_event( # type: ignore
+                            "step_error",
                             final_message,
                             task_id=task_id,
                             step=step + 1,
                         )
                         break
-                        
-                    print(f"[AgentLoop] Step {step+1}: Executing {func_name} with {route_params}")
-                    self._emit_execution_event( # type: ignore
-                        "step_execute",
-                        f"Executing {func_name}",
-                        task_id=task_id,
-                        step=step + 1,
-                        function=func_name,
-                        params=route_params,
-                    )
-                    executed_funcs.append(func_name)
-                        
-                    # Execute the function
-                    result = self.execute(func_name, route_params)  # type: ignore
-                    results.append(result)
-                    
-                    # Update history
-                    res_msg = result.get("message", "No message")
-                    self._emit_execution_event( # type: ignore
-                        "step_result",
-                        res_msg,
-                        task_id=task_id,
-                        step=step + 1,
-                        function=func_name,
-                        success=result.get("success", False),
-                    )
-                    history_str += f"\n- Step: call:{func_name}{route_params}\n- Result: {res_msg}\n"
-                    
-                    print(f"[AgentLoop] Step {step+1} Result: {res_msg}")
-                        
-                except Exception as e:
-                    print(f"[AgentLoop] Error in LLM step: {e}")
-                    success = False
-                    final_message = f"Error communicating with AI: {e}"
-                    self._emit_execution_event( # type: ignore
-                        "step_error",
-                        final_message,
-                        task_id=task_id,
-                        step=step + 1,
-                    )
-                    break
             
             if not success and final_message == "Task stopped.":
                 final_message = f"Reached maximum steps ({max_steps}) without calling task_complete."
