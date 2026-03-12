@@ -45,13 +45,67 @@ class WolfAILauncher:
             result = subprocess.run(['npm', '--version'], 
                                   capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
+                print("✅ npm available")
+            else:
+                print("npm not found, checking for alternative...")
+                # Try alternative npm paths
+                npm_paths = [
+                    r"C:\Program Files\nodejs\npm.cmd",
+                    r"C:\Program Files (x86)\nodejs\npm.cmd"
+                ]
+                npm_found = False
+                for npm_path in npm_paths:
+                    if Path(npm_path).exists():
+                        print(f"✅ npm found at: {npm_path}")
+                        npm_found = True
+                        break
+                if not npm_found:
+                    raise Exception("npm not found")
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # Try alternative npm paths
+            npm_paths = [
+                r"C:\Program Files\nodejs\npm.cmd",
+                r"C:\Program Files (x86)\nodejs\npm.cmd"
+            ]
+            npm_found = False
+            for npm_path in npm_paths:
+                if Path(npm_path).exists():
+                    print(f"✅ npm found at: {npm_path}")
+                    npm_found = True
+                    break
+            
+            if not npm_found:
+                print("❌ npm not found")
+                return False
+        
+        # Check Node.js for frontend
+        try:
+            result = subprocess.run(['node', '--version'], 
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
                 print("✅ Node.js available")
             else:
-                raise Exception("npm not found")
+                raise Exception("node not found")
         except (subprocess.TimeoutExpired, FileNotFoundError):
-            print("❌ Node.js not found")
-            print("Please install Node.js from https://nodejs.org/")
-            return False
+            # Try alternative Node.js paths
+            node_paths = [
+                r"C:\Program Files\nodejs\node.exe",
+                r"C:\Program Files (x86)\nodejs\node.exe",
+                r"C:\Program Files\nodejs\node.cmd",
+                r"C:\Program Files (x86)\nodejs\node.cmd"
+            ]
+            
+            node_found = False
+            for node_path in node_paths:
+                if Path(node_path).exists():
+                    print(f"✅ Node.js found at: {node_path}")
+                    node_found = True
+                    break
+            
+            if not node_found:
+                print("❌ Node.js not found")
+                print("Please install Node.js from https://nodejs.org/")
+                return False
         
         return True
     
