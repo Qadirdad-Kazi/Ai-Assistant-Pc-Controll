@@ -142,6 +142,7 @@ BOLD = "\033[1m"
 CYAN = "\033[36m"
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
+RED = "\033[31m"
 
 # --- Spotify Configuration ---
 # Get these from https://developer.spotify.com/dashboard

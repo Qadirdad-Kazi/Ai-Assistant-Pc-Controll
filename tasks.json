@@ -1,35 +1,11 @@
 [
   {
-    "id": "task_20260312_221427",
-    "title": "Create Test Document",
-    "description": "Create a text file named notes.txt with content 'Meeting notes from AI assistant'",
-    "status": "failed",
-    "created_at": "2026-03-12T22:14:27.452868",
-    "updated_at": "2026-03-12T22:37:31.497986"
-  },
-  {
-    "id": "task_20260312_221441",
-    "title": "Project Folder",
-    "description": "Create a folder called my_project on my desktop",
-    "status": "pending",
-    "created_at": "2026-03-12T22:14:41.606870",
-    "updated_at": "2026-03-12T22:14:41.606870"
-  },
-  {
-    "id": "task_20260312_221459",
-    "title": "Open Code Editor",
-    "description": "Open Visual Studio Code for coding",
-    "status": "pending",
-    "created_at": "2026-03-12T22:14:59.187786",
-    "updated_at": "2026-03-12T22:14:59.187786"
-  },
-  {
     "id": "task_20260312_221513",
     "title": "Portfolio Website",
     "description": "Build a portfolio website with HTML, CSS, and JavaScript, then open it in Visual Studio Code",
-    "status": "pending",
+    "status": "failed",
     "created_at": "2026-03-12T22:15:13.953172",
-    "updated_at": "2026-03-12T22:15:13.953172"
+    "updated_at": "2026-03-12T22:53:07.978145"
   },
   {
     "id": "task_20260312_221529",

@@ -16,7 +16,7 @@ import os
 from typing import Optional, Callable, Any
 from config import (  
     WAKE_WORD, REALTIMESTT_MODEL, WAKE_WORD_SENSITIVITY,
-    CUSTOM_PPN_PATH, GRAY, RESET, CYAN, YELLOW, GREEN
+    CUSTOM_PPN_PATH, GRAY, RESET, CYAN, YELLOW, GREEN, RED
 )
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -153,16 +153,29 @@ class STTListener:
                 backend     = "none"
                 detect_word = ""
 
-            self.recorder = AudioToTextRecorder(
-                model=REALTIMESTT_MODEL,
-                language="en",
-                device="cuda" if cuda_available else "cpu",
-                spinner=False,
-                wakeword_backend=backend,
-                wake_words=detect_word,
-                wake_words_sensitivity=WAKE_WORD_SENSITIVITY,
-                on_wakeword_detected=self._on_wakeword_detected,
-            )
+            try:
+                self.recorder = AudioToTextRecorder(
+                    model=REALTIMESTT_MODEL,
+                    language="en",
+                    device="cuda" if cuda_available else "cpu",
+                    spinner=False,
+                    use_microphone=True
+                )
+            except Exception as e:
+                print(f"{RED}[STT] ✗ Failed to initialize main recorder: {e}{RESET}")
+                # Fallback to basic configuration
+                try:
+                    self.recorder = AudioToTextRecorder(
+                        model="tiny.en",
+                        language="en", 
+                        device="cpu",
+                        spinner=False,
+                        use_microphone=True
+                    )
+                    print(f"{GREEN}[STT] ✓ Using fallback configuration{RESET}")
+                except Exception as fallback_error:
+                    print(f"{RED}[STT] ✗ Complete STT failure: {fallback_error}{RESET}")
+                    raise
 
             # Dedicated recorder for conversation mode (wake word disabled).
             self.conversation_recorder = AudioToTextRecorder(

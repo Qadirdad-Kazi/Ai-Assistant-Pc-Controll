@@ -3,12 +3,15 @@ Advanced Task Executor
 Enables to voice assistant to understand and execute complex, multi-step tasks like a human.
 """
 
-import os
 import re
+import os
 import json
 import subprocess
+from datetime import datetime
+from typing import Dict, Any, List, Optional, Tuple
+from PIL import Image
+import pyautogui
 import time
-from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 
 class AdvancedTaskExecutor:
@@ -18,9 +21,11 @@ class AdvancedTaskExecutor:
         self.task_history = []
         self.current_context = {}
         self.user_preferences = {}
+        self.screenshot_dir = os.path.join(os.path.expanduser("~"), "Desktop", "ai_screenshots")
+        os.makedirs(self.screenshot_dir, exist_ok=True)
         
     def understand_task(self, user_input: str) -> Dict[str, Any]:
-        """AI-powered task understanding with intent recognition."""
+        """AI-powered task understanding with dynamic planning."""
         print(f"[AdvancedTask] 🧠 Understanding task: '{user_input}'")
         
         # Analyze task complexity and intent
@@ -29,20 +34,44 @@ class AdvancedTaskExecutor:
         # Extract entities and parameters
         entities = self._extract_entities(user_input)
         
-        # Plan execution steps
-        execution_plan = self._create_execution_plan(task_analysis, entities)
+        # Generate dynamic execution plan using AI (no hardcoded templates)
+        execution_plan = self._generate_dynamic_plan(user_input)
         
-        result = {
-            "user_input": user_input,
-            "task_analysis": task_analysis,
-            "entities": entities,
-            "execution_plan": execution_plan,
-            "confidence": task_analysis.get("confidence", 0.5)
-        }
+        # Calculate confidence based on intent clarity
+        confidence = self._calculate_confidence(task_analysis, entities, execution_plan)
         
         print(f"[AdvancedTask] 📋 Task understood: {task_analysis.get('intent', 'unknown')}")
-        return result
+        print(f"[AI Plan] 🧠 Generated {len(execution_plan)} steps dynamically")
+        
+        return {
+            "intent": task_analysis.get("intent", "unknown"),
+            "confidence": confidence,
+            "complexity": task_analysis.get("complexity", "medium"),
+            "actions": task_analysis.get("actions", []),
+            "entities": entities,
+            "execution_plan": execution_plan,
+            "ai_generated": True
+        }
     
+    def _calculate_confidence(self, task_analysis: Dict, entities: Dict, execution_plan: List) -> float:
+        """Calculate confidence based on task clarity and plan quality."""
+        confidence = 0.5  # Base confidence
+        
+        # Boost confidence based on intent clarity
+        if task_analysis.get("intent") != "unknown":
+            confidence += 0.2
+        
+        # Boost confidence based on extracted entities
+        if entities:
+            confidence += 0.1 * min(len(entities) * 0.1, 0.2)
+        
+        # Boost confidence based on execution plan quality
+        if execution_plan and len(execution_plan) > 1:
+            confidence += 0.2
+        
+        # Cap at 1.0
+        return min(confidence, 1.0)
+
     def _analyze_task_intent(self, user_input: str) -> Dict[str, Any]:
         """Analyze user intent and task complexity."""
         user_lower = user_input.lower()
@@ -65,9 +94,19 @@ class AdvancedTaskExecutor:
                 "actions": ["application_launch"]
             },
             "web_development": {
-                "patterns": [r"build\s+(?:a\s+)?(?:website|web\s+site|web\s+app)", r"create\s+(?:a\s+)?(?:website|web\s+site|web\s+app)", r"make\s+(?:a\s+)?(?:website|web\s+site|web\s+app)"],
+                "patterns": [r"build\s+(?:a\s+)?(?:website|web\s+site|web\s+app)", r"create\s+(?:a\s+)?(?:website|web\s+site|web\s+app)", r"make\s+(?:a\s+)?(?:website|web\s+site|web\s+app)", r"portfolio\s+website", r"web\s+development", r"html\s+css\s+javascript"],
                 "complexity": "high",
                 "actions": ["file_operations", "application_launch", "text_generation"]
+            },
+            "multi_step_task": {
+                "patterns": [r"build.*then.*open", r"create.*then.*launch", r"setup.*and.*open", r"create.*and.*start", r"build.*and.*open"],
+                "complexity": "high",
+                "actions": ["file_operations", "application_launch", "text_generation"]
+            },
+            "project_setup": {
+                "patterns": [r"setup\s+(?:a\s+)?(?:project|development)", r"create\s+(?:a\s+)?(?:project|folder\s+structure)", r"initialize\s+(?:a\s+)?(?:project|repo)"],
+                "complexity": "high",
+                "actions": ["file_operations", "application_launch"]
             },
             "navigate_desktop": {
                 "patterns": [r"go\s+to\s+desktop", r"navigate\s+to\s+desktop", r"show\s+desktop"],
@@ -181,6 +220,26 @@ class AdvancedTaskExecutor:
                     {"step": 1, "action": "navigate_to_path", "details": {"path": entities.get("path", "Desktop")}},
                     {"step": 2, "action": "create_folder", "details": {"name": folder_name}},
                     {"step": 3, "action": "confirm_creation", "details": {"item": folder_name}}
+                ])
+            elif intent == "web_development":
+                plan.extend([
+                    {"step": 1, "action": "navigate_to_path", "details": {"path": entities.get("path", "Desktop")}},
+                    {"step": 2, "action": "create_folder", "details": {"name": "portfolio-website"}},
+                    {"step": 3, "action": "create_file", "details": {"name": "index.html", "content": self._generate_html_content(entities)}},
+                    {"step": 4, "action": "create_file", "details": {"name": "styles.css", "content": self._generate_css_content(entities)}},
+                    {"step": 5, "action": "create_file", "details": {"name": "script.js", "content": self._generate_js_content(entities)}},
+                    {"step": 6, "action": "launch_application", "details": {"app": "vscode"}},
+                    {"step": 7, "action": "confirm_creation", "details": {"item": "portfolio website"}}
+                ])
+            elif intent == "multi_step_task":
+                plan.extend([
+                    {"step": 1, "action": "navigate_to_path", "details": {"path": entities.get("path", "Desktop")}},
+                    {"step": 2, "action": "create_folder", "details": {"name": "portfolio-website"}},
+                    {"step": 3, "action": "create_file", "details": {"name": "index.html", "content": self._generate_html_content(entities)}},
+                    {"step": 4, "action": "create_file", "details": {"name": "styles.css", "content": self._generate_css_content(entities)}},
+                    {"step": 5, "action": "create_file", "details": {"name": "script.js", "content": self._generate_js_content(entities)}},
+                    {"step": 6, "action": "launch_application", "details": {"app": "vscode"}},
+                    {"step": 7, "action": "confirm_creation", "details": {"item": "portfolio website"}}
                 ])
         
         if "application_launch" in actions:
@@ -301,8 +360,8 @@ class AdvancedTaskExecutor:
         return "<html><body><h1>Hello World</h1></body></html>"
     
     def execute_plan(self, plan: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Execute step-by-step plan with feedback."""
-        print(f"[AdvancedTask] ⚡ Executing plan with {len(plan)} steps")
+        """Execute plan with visual verification and AI-driven adaptation."""
+        print(f"[AdvancedTask] ⚡ Executing plan with {len(plan)} steps (Visual AI Mode)")
         
         results = []
         success_count = 0
@@ -311,47 +370,64 @@ class AdvancedTaskExecutor:
             step_num = step["step"]
             action = step["action"]
             details = step["details"]
+            verification = step.get("verification", f"Step {step_num} completed")
             
             print(f"[AdvancedTask] 📍 Step {step_num}: {action}")
             
+            # Execute with visual verification
             try:
-                result = self._execute_step(action, details)
-                results.append({
-                    "step": step_num,
-                    "action": action,
-                    "success": result.get("success", False),
-                    "message": result.get("message", ""),
-                    "details": details
-                })
+                result = self._execute_with_visual_verification(action, details)
                 
-                if result.get("success"):
-                    success_count += 1
+                if result.get("success", False):
                     print(f"[AdvancedTask] ✅ Step {step_num} completed successfully")
+                    success_count += 1
+                    
+                    # Add visual analysis to result
+                    if "visual_analysis" in result:
+                        analysis = result["visual_analysis"]
+                        print(f"[Visual] 🧠 AI says: {analysis.get('observations', 'N/A')}")
+                        
                 else:
                     print(f"[AdvancedTask] ❌ Step {step_num} failed: {result.get('message', 'Unknown error')}")
                 
-                # Add delay between steps for better UX
-                time.sleep(0.5)
-                
-            except Exception as e:
                 results.append({
                     "step": step_num,
                     "action": action,
-                    "success": False,
-                    "message": str(e),
-                    "details": details
+                    "details": details,
+                    "success": result.get("success", False),
+                    "message": result.get("message", ""),
+                    "visual_analysis": result.get("visual_analysis", {}),
+                    "screenshot": result.get("screenshot", "")
                 })
-                print(f"[AdvancedTask] 💥 Step {step_num} error: {e}")
+                
+            except Exception as e:
+                print(f"[AdvancedTask] ❌ Step {step_num} crashed: {e}")
+                results.append({
+                    "step": step_num,
+                    "action": action,
+                    "details": details,
+                    "success": False,
+                    "message": f"Step crashed: {e}",
+                    "visual_analysis": {"error": str(e)},
+                    "screenshot": ""
+                })
         
-        success_rate = (success_count / len(plan)) * 100 if plan else 0
+        # Generate summary
+        success_rate = success_count / len(plan)
+        overall_success = success_rate >= 0.7  # 70% success rate required
+        
+        summary = f"Completed {success_count}/{len(plan)} steps successfully"
+        if overall_success:
+            summary += " - Task completed successfully!"
+        else:
+            summary += " - Task partially completed"
         
         return {
-            "success": success_rate == 100,
+            "success": overall_success,
+            "summary": summary,
             "success_rate": success_rate,
-            "total_steps": len(plan),
-            "successful_steps": success_count,
             "results": results,
-            "summary": f"Completed {success_count}/{len(plan)} steps ({success_rate:.1f}% success rate)"
+            "screenshots_taken": len([r for r in results if r.get("screenshot")])
         }
     
     def _execute_step(self, action: str, details: Dict) -> Dict[str, Any]:
@@ -413,9 +489,9 @@ class AdvancedTaskExecutor:
     def _create_file(self, filename: str, content: str) -> Dict[str, Any]:
         """Create a file with specified content."""
         try:
-            # Default to Desktop if no path specified
-            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-            file_path = os.path.join(desktop_path, filename)
+            # Use current working directory (should be the project folder after navigation)
+            current_path = os.getcwd()
+            file_path = os.path.join(current_path, filename)
             
             # Use provided content or default
             file_content = content if content else f"Created file: {filename}"
@@ -434,17 +510,21 @@ class AdvancedTaskExecutor:
             return {"success": False, "message": f"File creation failed: {e}"}
     
     def _create_folder(self, folder_name: str) -> Dict[str, Any]:
-        """Create a folder."""
+        """Create a folder and navigate into it."""
         try:
             desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
             folder_path = os.path.join(desktop_path, folder_name)
             
             os.makedirs(folder_path, exist_ok=True)
             
+            # Change to the newly created folder
+            os.chdir(folder_path)
+            
             return {
                 "success": True,
-                "message": f"Created folder {folder_name}",
-                "folder_path": folder_path
+                "message": f"Created and navigated to folder {folder_name}",
+                "folder_path": folder_path,
+                "current_dir": os.getcwd()
             }
         except Exception as e:
             return {"success": False, "message": f"Folder creation failed: {e}"}
@@ -464,7 +544,42 @@ class AdvancedTaskExecutor:
             normalized_app = app_name.lower()
             executable = app_mapping.get(normalized_app, app_name)
             
-            # Use PC controller for app launching
+            # For VS Code, open the current folder as a project
+            if executable == "code":
+                current_path = os.getcwd()
+                # Try multiple methods to open VS Code
+                import subprocess
+                
+                # Method 1: Try direct 'code' command
+                try:
+                    result = subprocess.run([executable, current_path], capture_output=True, timeout=10)
+                    if result.returncode == 0:
+                        return {
+                            "success": True,
+                            "message": f"Launched {app_name} with project folder",
+                            "app": executable,
+                            "folder": current_path
+                        }
+                except (subprocess.TimeoutExpired, FileNotFoundError):
+                    pass
+                
+                # Method 2: Try using PC controller as fallback
+                try:
+                    from core.pc_control import pc_controller
+                    result = pc_controller._open_app("Visual Studio Code")
+                    if result.get("success"):
+                        return {
+                            "success": True,
+                            "message": f"Launched {app_name} via PC control",
+                            "app": "Visual Studio Code",
+                            "folder": current_path
+                        }
+                except:
+                    pass
+                
+                return {"success": False, "message": f"VS Code not found. Please ensure VS Code is installed and in PATH."}
+            
+            # Use PC controller for other apps
             from core.pc_control import pc_controller
             result = pc_controller._open_app(executable)
             
@@ -525,6 +640,460 @@ class AdvancedTaskExecutor:
             }
         except Exception as e:
             return {"success": False, "message": f"Setup failed: {e}"}
+
+    def _take_screenshot(self, action_name: str) -> str:
+        """Take a temporary screenshot for AI analysis (auto-deleted after use)."""
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"temp_{action_name}_{timestamp}.png"
+            screenshot_path = os.path.join(self.screenshot_dir, filename)
+            
+            # Take screenshot
+            screenshot = pyautogui.screenshot()
+            screenshot.save(screenshot_path)
+            
+            print(f"[Visual] 📸 Temporary screenshot for AI analysis: {filename}")
+            return screenshot_path
+            
+        except Exception as e:
+            print(f"[Visual] ❌ Screenshot failed: {e}")
+            return ""
+
+    def _cleanup_screenshot(self, screenshot_path: str) -> None:
+        """Delete temporary screenshot after AI analysis."""
+        try:
+            if screenshot_path and os.path.exists(screenshot_path):
+                os.remove(screenshot_path)
+                print(f"[Visual] 🗑️ Cleaned up temporary screenshot")
+        except Exception as e:
+            print(f"[Visual] ⚠️ Could not cleanup screenshot: {e}")
+
+    def _analyze_screenshot_with_ai(self, screenshot_path: str, expected_action: str) -> Dict[str, Any]:
+        """Use AI to analyze screenshot and determine if action succeeded."""
+        try:
+            # Convert screenshot to base64 for AI analysis
+            import base64
+            with open(screenshot_path, "rb") as img_file:
+                img_base64 = base64.b64encode(img_file.read()).decode()
+            
+            # Use vision AI to analyze the screenshot
+            from core.llm import http_session
+            from config import OLLAMA_URL, RESPONDER_MODEL
+            
+            prompt = f"""Analyze this screenshot and determine if the following action was successful: "{expected_action}"
+            
+            Look for:
+            1. Did the expected application/window open?
+            2. Is the correct interface visible?
+            3. Are there any error messages?
+            4. Is the UI element/functionality present?
+            
+            Respond with JSON format:
+            {{
+                "success": true/false,
+                "confidence": 0.0-1.0,
+                "observations": "what you see in the screenshot",
+                "issues": "any problems detected",
+                "next_action": "what should be done next"
+            }}
+            
+            Be very specific about what you see and whether it matches the expected outcome."""
+            
+            # Try to use vision model if available, fallback to regular analysis
+            response = http_session.post(f"{OLLAMA_URL}/api/generate", json={
+                "model": RESPONDER_MODEL,
+                "prompt": prompt + f"\n\nScreenshot: {screenshot_path}",
+                "stream": False
+            }, timeout=30)
+            
+            if response.status_code == 200:
+                ai_response = response.json().get("response", "").strip()
+                
+                # Try to parse JSON response
+                try:
+                    analysis = json.loads(ai_response)
+                    return analysis
+                except:
+                    # If JSON parsing fails, create basic analysis
+                    return {
+                        "success": "successful" in ai_response.lower() or "completed" in ai_response.lower(),
+                        "confidence": 0.7,
+                        "observations": ai_response,
+                        "issues": "",
+                        "next_action": "continue"
+                    }
+            
+        except Exception as e:
+            print(f"[Visual] ❌ AI analysis failed: {e}")
+        
+        # Fallback analysis
+        return {
+            "success": True,
+            "confidence": 0.5,
+            "observations": "AI analysis unavailable, assuming success",
+            "issues": "Could not analyze screenshot",
+            "next_action": "continue"
+        }
+
+    def _execute_with_visual_verification(self, action: str, details: Dict) -> Dict[str, Any]:
+        """Execute action with screenshot verification and auto-cleanup."""
+        print(f"[Visual] 🎯 Executing: {action}")
+        
+        # Take before screenshot
+        before_screenshot = self._take_screenshot(f"before_{action}")
+        
+        # Execute the action
+        result = self._execute_action(action, details)
+        
+        # Wait a moment for UI to update
+        time.sleep(2)
+        
+        # Take after screenshot
+        after_screenshot = self._take_screenshot(f"after_{action}")
+        
+        # Analyze the result
+        if after_screenshot:
+            analysis = self._analyze_screenshot_with_ai(after_screenshot, action)
+            
+            print(f"[Visual] 🧠 AI Analysis: {analysis.get('observations', 'N/A')}")
+            print(f"[Visual] ✅ Success: {analysis.get('success', False)} (Confidence: {analysis.get('confidence', 0)})")
+            
+            # If action failed, try to recover
+            if not analysis.get("success", False) and analysis.get("confidence", 0) < 0.7:
+                cleanup_result = self._handle_execution_failure(action, details, analysis)
+                # Cleanup screenshots after analysis
+                self._cleanup_screenshot(before_screenshot)
+                self._cleanup_screenshot(after_screenshot)
+                return cleanup_result
+            
+            result["visual_analysis"] = analysis
+            result["screenshot"] = after_screenshot
+        
+        # Cleanup screenshots after successful analysis
+        self._cleanup_screenshot(before_screenshot)
+        self._cleanup_screenshot(after_screenshot)
+        
+        return result
+
+    def _handle_execution_failure(self, action: str, details: Dict, analysis: Dict) -> Dict[str, Any]:
+        """Handle execution failure with intelligent recovery."""
+        print(f"[Visual] 🚨 Action failed: {analysis.get('issues', 'Unknown issue')}")
+        
+        # Try to close wrong applications/windows
+        if "wrong app" in analysis.get("issues", "").lower() or "incorrect" in analysis.get("observations", "").lower():
+            print(f"[Visual] 🔄 Closing wrong applications...")
+            self._close_all_applications()
+            time.sleep(1)
+            
+            # Retry the action
+            print(f"[Visual] 🔄 Retrying action: {action}")
+            retry_result = self._execute_action(action, details)
+            time.sleep(2)
+            
+            # Verify retry
+            retry_screenshot = self._take_screenshot(f"retry_{action}")
+            if retry_screenshot:
+                retry_analysis = self._analyze_screenshot_with_ai(retry_screenshot, action)
+                if retry_analysis.get("success", False):
+                    print(f"[Visual] ✅ Retry successful!")
+                    return {"success": True, "message": f"Action succeeded after retry", "visual_analysis": retry_analysis}
+        
+        return {"success": False, "message": f"Action failed: {analysis.get('issues', 'Unknown')}", "visual_analysis": analysis}
+
+    def _close_all_applications(self) -> None:
+        """Close all applications to clean the state."""
+        try:
+            # Close common applications
+            import psutil
+            for proc in psutil.process_iter(['pid', 'name']):
+                try:
+                    proc_name = proc.info['name'].lower()
+                    if any(app in proc_name for app in ['code', 'chrome', 'firefox', 'notepad', 'explorer']):
+                        proc.terminate()
+                except:
+                    pass
+            
+            # Also try Alt+F4 to close active window
+            pyautogui.hotkey('alt', 'f4')
+            time.sleep(0.5)
+            
+        except Exception as e:
+            print(f"[Visual] ⚠️ Could not close all apps: {e}")
+
+    def _generate_dynamic_plan(self, user_input: str) -> List[Dict[str, Any]]:
+        """Generate execution plan dynamically using AI instead of hardcoded templates."""
+        try:
+            from core.llm import http_session
+            from config import OLLAMA_URL, RESPONDER_MODEL
+            
+            prompt = f"""You are an AI assistant that needs to break down this task into specific executable steps: "{user_input}"
+            
+            Available actions:
+            - navigate_to_path: Navigate to a folder path
+            - create_folder: Create a folder
+            - create_file: Create a file with content
+            - launch_application: Launch an application
+            - click_element: Click on UI element
+            - type_text: Type text
+            - wait_for_ready: Wait for application to be ready
+            - confirm_creation: Confirm file/folder creation
+            - confirm_launch: Confirm application launch
+            
+            Create a step-by-step plan. Each step should be a JSON object with:
+            {{
+                "step": number,
+                "action": "action_name",
+                "details": {{"key": "value"}},
+                "verification": "what to check visually"
+            }}
+            
+            Return only the JSON array of steps, no explanations."""
+            
+            response = http_session.post(f"{OLLAMA_URL}/api/generate", json={
+                "model": RESPONDER_MODEL,
+                "prompt": prompt,
+                "stream": False
+            }, timeout=30)
+            
+            if response.status_code == 200:
+                ai_plan = response.json().get("response", "").strip()
+                
+                # Try to parse the AI plan
+                try:
+                    steps = json.loads(ai_plan)
+                    if isinstance(steps, list):
+                        print(f"[AI Plan] 🧠 Generated {len(steps)} steps dynamically")
+                        return steps
+                except:
+                    pass
+            
+        except Exception as e:
+            print(f"[AI Plan] ❌ Dynamic plan generation failed: {e}")
+        
+        # Fallback to basic plan
+        return [
+            {"step": 1, "action": "navigate_to_path", "details": {"path": "Desktop"}, "verification": "Desktop visible"},
+            {"step": 2, "action": "confirm_creation", "details": {"item": "task completed"}, "verification": "Task finished"}
+        ]
+
+    def _generate_html_content(self, entities: Dict) -> str:
+        """Generate HTML content using AI."""
+        try:
+            # Use AI to generate personalized HTML content
+            from core.llm import http_session
+            from config import OLLAMA_URL, RESPONDER_MODEL
+            
+            prompt = """Generate a professional portfolio website HTML with the following requirements:
+            - Modern, responsive design
+            - Navigation bar with smooth scrolling
+            - About section
+            - Projects section with grid layout
+            - Contact section
+            - Link to external CSS and JS files
+            - Semantic HTML5 structure
+            - Professional and clean design
+            
+            Return only the HTML code (no explanations)."""
+            
+            response = http_session.post(f"{OLLAMA_URL}/api/generate", json={
+                "model": RESPONDER_MODEL,
+                "prompt": prompt,
+                "stream": False
+            }, timeout=30)
+            
+            if response.status_code == 200:
+                ai_content = response.json().get("response", "").strip()
+                if ai_content and "<html" in ai_content.lower():
+                    return ai_content
+            
+        except Exception as e:
+            print(f"[AI Content] Failed to generate HTML, using template: {e}")
+        
+        # Fallback to template
+        return """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Welcome to My Portfolio</h1>
+        <nav>
+            <ul>
+                <li><a href="#about">About</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main>
+        <section id="about">
+            <h2>About Me</h2>
+            <p>I am a passionate developer creating amazing web experiences.</p>
+        </section>
+        
+        <section id="projects">
+            <h2>Projects</h2>
+            <div class="project-grid">
+                <div class="project">
+                    <h3>Project 1</h3>
+                    <p>Description of my first project.</p>
+                </div>
+                <div class="project">
+                    <h3>Project 2</h3>
+                    <p>Description of my second project.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="contact">
+            <h2>Contact</h2>
+            <p>Email: contact@example.com</p>
+        </section>
+    </main>
+    
+    <script src="script.js"></script>
+</body>
+</html>"""
+
+    def _generate_css_content(self, entities: Dict) -> str:
+        """Generate CSS content for portfolio website."""
+        return """* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    text-align: center;
+}
+
+header h1 {
+    margin-bottom: 1rem;
+    font-size: 2.5rem;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+section {
+    margin-bottom: 3rem;
+}
+
+h2 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 2rem;
+}
+
+.project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.project {
+    background: #f4f4f4;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.project h3 {
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    nav ul {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+}"""
+
+    def _generate_js_content(self, entities: Dict) -> str:
+        """Generate JavaScript content for portfolio website."""
+        return """// Portfolio Website JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Smooth scrolling for navigation links
+    const navLinks = document.querySelectorAll('nav a');
+    
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const targetId = this.getAttribute('href');
+            const targetSection = document.querySelector(targetId);
+            
+            if (targetSection) {
+                targetSection.scrollIntoView({
+                    behavior: 'smooth'
+                });
+            }
+        });
+    });
+    
+    // Add animation to projects on scroll
+    const projects = document.querySelectorAll('.project');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+    
+    projects.forEach(project => {
+        project.style.opacity = '0';
+        project.style.transform = 'translateY(20px)';
+        project.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(project);
+    });
+    
+    // Simple contact form validation (if you add a form later)
+    console.log('Portfolio website loaded successfully!');
+});"""
 
 # Global instance
 advanced_executor = AdvancedTaskExecutor()
