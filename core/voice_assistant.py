@@ -36,12 +36,11 @@ from utilities.search_handler import web_search_handler
 from core.advanced_task_executor import advanced_executor  
 from core.metacognition import metacognition_engine 
 
-# Functions that are actions (not passthrough)
 ACTION_FUNCTIONS = {
     "control_light", "set_timer", "set_alarm", 
     "create_calendar_event", "add_task", "web_search", "research_web", "pc_control",
     "play_music", "scaffold_website", "set_call_directive", "visual_agent",
-    "create_task", "list_tasks", "execute_task"
+    "create_task", "list_tasks", "execute_task", "learned_heuristic"
 }
 
 
@@ -244,9 +243,9 @@ class VoiceAssistant(QObject):
                 print(f"[VoiceAssistant] ⚠ Low confidence ({task_understanding['confidence']:.2f}), using regular processing")
                 return self._process_query_regular(user_text, stop_event, request_id)
             
-            # Execute the plan
+            # Execute the plan - pass user_text to enable learning loop
             execution_plan = task_understanding["execution_plan"]
-            execution_result = advanced_executor.execute_plan(execution_plan)
+            execution_result = advanced_executor.execute_plan(execution_plan, original_query=user_text)
             
             # Generate response based on execution results
             if execution_result["success"]:
@@ -460,6 +459,30 @@ class VoiceAssistant(QObject):
                     if failed_action:
                         break # Stop pipeline if an action fails
                         
+                elif func_name == "learned_heuristic":
+                    # Execute a previously learned personalized workflow
+                    plan = params.get("plan", [])
+                    query = params.get("query", "")
+                    tts.speak(f"Applying my learned approach for '{query}'...")
+                    result = advanced_executor.execute_plan(plan, original_query=query)
+                    
+                    if result.get("success"):
+                        from core.database import db
+                        db.increment_heuristic_success(query)
+                        
+                    if is_last_action or not result.get("success"):
+                        self._generate_response_with_context(
+                            func_name,
+                            result,
+                            user_text,
+                            stop_event,
+                            enable_thinking=False,
+                            request_id=request_id,
+                            detected_emotion=detected_emotion,
+                            emotion_intensity=emotion_intensity,
+                            reasoning_steps=reasoning_steps,
+                        )
+
                 elif func_name == "visual_agent":
                     # Handle visual tasks specifically (so the AI announces what it's doing)
                     tts.speak("Looking at your screen right now...")

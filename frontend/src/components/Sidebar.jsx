@@ -31,6 +31,9 @@ export default function Sidebar() {
         <NavLink to="/activity" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
           <Activity size={20} /> <span>Activity</span>
         </NavLink>
+        <NavLink to="/knowledge" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+          <Brain size={20} /> <span>Knowledge</span>
+        </NavLink>
         <NavLink to="/diagnostics" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
           <Activity size={20} /> <span>Diagnostics</span>
         </NavLink>

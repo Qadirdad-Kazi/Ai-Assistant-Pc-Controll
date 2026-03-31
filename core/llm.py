@@ -11,6 +11,7 @@ from config import (
     OLLAMA_URL, LOCAL_ROUTER_PATH, GREEN, CYAN, YELLOW, GRAY, RESET, RESPONDER_MODEL
 )
 from core.privacy_tracker import privacy_tracker
+from core.database import db
 
 # Persistent Session for faster HTTP
 http_session = requests.Session()
@@ -32,10 +33,16 @@ def should_bypass_router(text):
 
 
 def route_query(user_input):
-    """Route user query using local FunctionGemmaRouter. Lazy loads the router on first use."""
+    """Route user query using local FunctionGemmaRouter. Checks learned heuristics first."""
     global router
     
-    # Lazy Initialization
+    # Check for learned heuristics (Personalized corrections)
+    learned_plan = db.get_learned_heuristic(user_input)
+    if learned_plan:
+        print(f"{CYAN}[System] Using learned heuristic for: '{user_input}'{RESET}")
+        return [("learned_heuristic", {"plan": learned_plan, "query": user_input})]
+
+    # Lazy Initialization of Router
     if not router:
         try:
             from core.router import FunctionGemmaRouter  

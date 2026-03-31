@@ -844,6 +844,19 @@ async def get_tasks(status: str = "pending"):
 async def get_action_logs(limit: int = 50):
     return {"logs": db.get_action_logs(limit)}
 
+@app.get("/api/knowledge")
+async def get_knowledge():
+    from core.database import db
+    try:
+        with sqlite3.connect(db.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM learned_heuristics ORDER BY timestamp DESC')
+            rows = cursor.fetchall()
+            return {"heuristics": [dict(row) for row in rows]}
+    except Exception as e:
+        return {"heuristics": [], "error": str(e)}
+
 @app.get("/api/analytics/summary")
 async def get_analytics_summary():
     try:

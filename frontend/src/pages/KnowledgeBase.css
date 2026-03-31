@@ -1,0 +1,135 @@
+.knowledge-base-page {
+    padding: 2.5rem;
+    height: 100vh;
+    overflow-y: auto;
+    background: radial-gradient(circle at top left, rgba(0, 243, 255, 0.05), transparent 40%);
+}
+
+.brain-container {
+    position: relative;
+    width: 36px;
+    height: 36px;
+}
+
+.neural-pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background: #00f3ff;
+    border-radius: 50%;
+    filter: blur(8px);
+    opacity: 0.5;
+    animation: brainPulse 2s ease-in-out infinite;
+}
+
+.knowledge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    max-width: 1100px;
+}
+
+.heuristic-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.heuristic-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(0, 243, 255, 0.3);
+    transform: translateY(-5px);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.query-pill {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.delete-btn {
+    background: rgba(255, 75, 75, 0.1);
+    border: none;
+    color: #ff4b4b;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delete-btn:hover {
+    background: #ff4b4b;
+    color: #fff;
+}
+
+.card-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.execution-preview {
+    margin-top: auto;
+}
+
+.preview-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #00f3ff;
+    margin-bottom: 0.5rem;
+}
+
+.preview-bar {
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #00f3ff, transparent);
+    border-radius: 2px;
+}
+
+@keyframes brainPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+    50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.6; }
+}
+
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 6rem 2rem;
+    color: #555;
+    border: 2px dashed rgba(255,255,255,0.05);
+    border-radius: 24px;
+}
+
+.empty-state h3 {
+    margin: 1.5rem 0 0.5rem;
+    color: #aaa;
+}

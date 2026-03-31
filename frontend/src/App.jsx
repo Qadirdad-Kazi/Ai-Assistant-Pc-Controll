@@ -9,6 +9,8 @@ import CallLogs from './pages/CallLogs'
 import Diagnostics from './pages/Diagnostics'
 import Privacy from './pages/Privacy'
 import ActivityPage from './pages/Activity'
+import KnowledgeBase from './pages/KnowledgeBase'
+import './pages/KnowledgeBase.css'
 import Analytics from './pages/Analytics'
 import SafetyPrompt from './components/SafetyPrompt'
 import ClarificationPrompt from './components/ClarificationPrompt'
@@ -37,6 +39,7 @@ function App() {
             <Route path="/media" element={<Media />} />
             <Route path="/call-logs" element={<CallLogs />} />
             <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/knowledge" element={<KnowledgeBase />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/diagnostics" element={<Diagnostics />} />
             <Route path="/privacy" element={<Privacy />} />

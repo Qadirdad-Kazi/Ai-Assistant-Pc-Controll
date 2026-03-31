@@ -23,6 +23,9 @@ class AdvancedTaskExecutor:
         self.user_preferences = {}
         self.screenshot_dir = os.path.join(os.path.expanduser("~"), "Desktop", "ai_screenshots")
         os.makedirs(self.screenshot_dir, exist_ok=True)
+        # Learning Loop State
+        self.last_failed_query = None
+        self.recorded_steps_since_failure = []
         
     def understand_task(self, user_input: str) -> Dict[str, Any]:
         """AI-powered task understanding with dynamic planning."""
@@ -359,10 +362,18 @@ class AdvancedTaskExecutor:
         
         return "<html><body><h1>Hello World</h1></body></html>"
     
-    def execute_plan(self, plan: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Execute plan with visual verification and AI-driven adaptation."""
+    def execute_plan(self, plan: List[Dict[str, Any]], original_query: Optional[str] = None) -> Dict[str, Any]:
+        """Execute plan with visual verification and autonomous learning loop."""
         print(f"[AdvancedTask] ⚡ Executing plan with {len(plan)} steps (Visual AI Mode)")
         
+        # If this is a correction of a previous failure, trigger learning
+        is_learning_correction = False
+        if original_query and self.last_failed_query and original_query != self.last_failed_query:
+            # Simple heuristic: if we have a failure on record and the user is giving a new multi-step plan,
+            # it might be the correction.
+            is_learning_correction = True
+            print(f"[LearningLoop] 🧠 Detected potential correction for: '{self.last_failed_query}'")
+
         results = []
         success_count = 0
         
@@ -426,6 +437,22 @@ class AdvancedTaskExecutor:
         success_rate = success_count / len(plan)
         overall_success = success_rate >= 0.7  # 70% success rate required
         
+        # Handle Learning Loop
+        if overall_success:
+            if is_learning_correction and self.last_failed_query:
+                # We successfully executed a plan after a failure. 
+                # Save this plan as the new HEURISTIC for the failed query!
+                from core.database import db
+                from core.tts import tts
+                db.save_experience(self.last_failed_query, plan)
+                tts.speak(f"I have successfully learned how to handle '{self.last_failed_query}' for next time.")
+                self.last_failed_query = None
+        else:
+            # If the task FAILED, record it so we can learn from the next correction
+            if original_query:
+                self.last_failed_query = original_query
+                print(f"[LearningLoop] 📍 Recorded failure for: '{original_query}'")
+
         summary = f"Completed {success_count}/{len(plan)} steps successfully"
         if overall_success:
             summary += " - Task completed successfully!"

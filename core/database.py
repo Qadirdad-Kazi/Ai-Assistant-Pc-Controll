@@ -77,6 +77,15 @@ class WolfCoreDatabase:
                 details TEXT,
                 timestamp TEXT
             )''')
+
+            # Learned Heuristics (Synaptic Layer)
+            conn.execute('''CREATE TABLE IF NOT EXISTS learned_heuristics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                query TEXT UNIQUE,
+                learned_plan TEXT,
+                success_count INTEGER DEFAULT 0,
+                timestamp TEXT
+            )''')
             
             # ---------------------------------------------------------
             # TABLE 4: ACTION TASKS (Trello/Notion Inbox)
@@ -211,13 +220,49 @@ class WolfCoreDatabase:
         except Exception as e:
             print(f"[Database] Failed to log action: {e}")
 
-    def get_action_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
-        """Retrieve recent system activity."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM action_logs ORDER BY timestamp DESC LIMIT ?', (limit,))
-            return [dict(row) for row in cursor.fetchall()]
+    def save_experience(self, query: str, plan: List[Dict[str, Any]]):
+        """Save a learned correction workflow for a specific query."""
+        now = datetime.datetime.now().isoformat(timespec="seconds")
+        plan_json = json.dumps(plan)
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute(
+                    '''INSERT OR REPLACE INTO learned_heuristics (query, learned_plan, timestamp) 
+                       VALUES (?, ?, ?)''',
+                    (query.lower().strip(), plan_json, now)
+                )
+                conn.commit()
+                print(f"[Database] ✓ Learned new heuristic for: '{query}'")
+        except Exception as e:
+            print(f"[Database] Failed to save experience: {e}")
+
+    def get_learned_heuristic(self, query: str) -> Optional[List[Dict[str, Any]]]:
+        """Check if we have a learned approaching for this query."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                # Simple exact match for now - could be fuzzy later
+                cursor.execute('SELECT learned_plan FROM learned_heuristics WHERE query = ?', (query.lower().strip(),))
+                row = cursor.fetchone()
+                if row:
+                    return json.loads(row['learned_plan'])
+                return None
+        except Exception as e:
+            print(f"[Database] Error retrieving heuristic: {e}")
+            return None
+
+    def increment_heuristic_success(self, query: str):
+        """Reinforce a learned behavior."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute(
+                    'UPDATE learned_heuristics SET success_count = success_count + 1 WHERE query = ?',
+                    (query.lower().strip(),)
+                )
+                conn.commit()
+        except Exception as e:
+            print(f"[Database] Failed to increment heuristic success: {e}")
 
     def get_tasks(self, status: str = 'pending', limit: int = 50) -> List[Dict[str, Any]]:
         with sqlite3.connect(self.db_path) as conn:

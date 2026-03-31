@@ -96,3 +96,12 @@ When a call comes in over the cellular network:
 6. **Converse:** Wolf speaks the LLaMA-generated greeting, waits for the caller's response via the line-in STT pipeline, logs it, and hangs up using the `ATH` command.
 
 If the "Handover Protocol" is triggered (the caller asks for you), the audio bridge simply cross-routes your personal Headset Mic/Speakers to the Modem's Mic/Speakers so you can finish the call manually.
+
+---
+
+## 📊 5. Autonomous Business Intelligence (New in 2.0)
+
+Wolf AI doesn't just answer calls; it acts as a **Financial Analyst**:
+1. **Financial Extraction**: During the conversation, Wolf listens for project values or dollar amounts. If detected, it automatically updates your **Total Pipeline** metric in the [Strategy Dashboard](file:///Users/qadirdadkazi/Desktop/Github%20Clones/Ai-Assistant-Pc-Controll/frontend/src/pages/Analytics.jsx).
+2. **Sentiment Analysis**: Post-call, the AI categorizes the caller's mood (e.g., *Interested, Frustrated, Neutral*) based on the transcript.
+3. **Automated Follow-up**: Wolf can autonomously draft a "Thank You" or "Follow-up" email using the [Productivity Suite](file:///Users/qadirdadkazi/Desktop/Github%20Clones/Ai-Assistant-Pc-Controll/docs/testing/productivity_suite_test.md).
