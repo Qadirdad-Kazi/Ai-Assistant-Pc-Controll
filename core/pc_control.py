@@ -39,8 +39,9 @@ class PCController:
         self._discovery_lock = threading.Lock()
         self._discovery_started = False
         
-        # Safety Sandbox Callback
+        # Safety Sandbox & Clarification Callbacks
         self.confirmation_callback = None
+        self.clarification_callback = None
         
         # Keep some common mappings as fallback
         self.app_map = {
@@ -129,6 +130,8 @@ class PCController:
                 return self._mute_volume()
             elif action == "media":
                 return self._media_control(target)
+            elif action == "tile_windows":
+                return self._tile_windows_macos(target)
             elif action == "command":
                 return self._run_command(target)
             else:
@@ -146,6 +149,15 @@ class PCController:
 
         print(f"[PC Control] [SAFETY] Awaiting confirmation for: {action_name}")
         return self.confirmation_callback(action_name, details)
+
+    def _request_clarification(self, question: str, screenshot_base64: str) -> Dict[str, Any]:
+        """Helper to request visual clarification from the user."""
+        if not self.clarification_callback:
+            print(f"[PC Control] [VISION] Clarification required but no callback set: {question}")
+            return {"success": False, "message": "Clarification required"}
+            
+        print(f"[PC Control] [VISION] Awaiting user clarification: {question}")
+        return self.clarification_callback(question, screenshot_base64)
 
     def _get_screen_elements_via_omni(self) -> List[Dict[str, Any]]:
         """Capture screen and parse UI elements using OmniParser."""
@@ -172,32 +184,32 @@ class PCController:
             return []
 
     def _click_element_visually(self, query: str) -> bool:
-        """Try to find and click an element using Vision (OmniParser)."""
-        elements = self._get_screen_elements_via_omni()
-        if not elements:
-            return False
-            
-        element = omni_parser.find_element_by_description(elements, query)
-        if element:
-            box = element.get("box") # [x, y, w, h] - normalized or pixel? OmniParser typically returns normalized [ymin, xmin, ymax, xmax] or [x, y, w, h]
-            if box:
-                # Assuming standard [x, y, w, h] for demonstration, or adjusting based on OmniParser output
-                # OmniParser (Microsoft) usually returns [xmin, ymin, xmax, ymax]
-                x_min, y_min, x_max, y_max = box
-                
-                # Get screen size for scaling
-                import pyautogui
-                sw, sh = pyautogui.size()
-                
-                # Calculate center point
-                # If OmniParser coords are normalized 0-1000
-                target_x = ((x_min + x_max) / 2) * sw / 1000
-                target_y = ((y_min + y_max) / 2) * sh / 1000
-                
-                print(f"[PC Control] [Vision] Found '{query}' at {target_x}, {target_y}. Clicking...")
-                pyautogui.moveTo(target_x, target_y, duration=0.8)
-                pyautogui.click()
+        """Try to find and click an element using Vision (OmniParser) with human-like verification."""
+        from core.vision_agent import vision_agent
+        
+        # 1. Capture and analyze
+        import pyautogui
+        sw, sh = pyautogui.size()
+        
+        # We'll use the vision_agent's built-in click method which handles OmniParser grounding
+        result = vision_agent._find_and_click_element(query)
+        
+        if result.get("success"):
+            # 2. Verify
+            verify = vision_agent.verify_action_result(f"after clicking {query}")
+            if verify.get("success"):
                 return True
+            else:
+                print(f"[PC Control] [Vision] Click performed but verification failed. Confidence: {verify.get('confidence')}")
+                # This is where we might ask for clarification if we are unsure
+                if verify.get("confidence", 0) < 0.4:
+                    screenshot = vision_agent._capture_screen_base64()
+                    clarification = self._request_clarification(f"I clicked on what I thought was '{query}', but the screen didn't change as expected. Could you show me the correct spot?", screenshot)
+                    if clarification.get("success") and clarification.get("mode") == "point":
+                         x = int(clarification.get("x_percent", 0.5) * sw)
+                         y = int(clarification.get("y_percent", 0.5) * sh)
+                         pyautogui.click(x, y)
+                         return True
         return False
 
     def _open_app_intelligent(self, target: str) -> Dict[str, Any]:
@@ -381,15 +393,37 @@ class PCController:
         
         print(f"[PC Control] Searching for app: '{app_name}'")
 
-        # Method 0: VISION PRIORITY (Professional Standard)
-        print(f"[PC Control] Attempting to find '{app_name}' via Vision (OmniParser)...")
-        if self._click_element_visually(app_name):
-            return {"success": True, "message": f"I used visual recognition to find and click {app_name} on your screen."}
-
-        if not self.discovered_apps and not self._discovery_started:
-            self._start_discovery_background()
+        # Method 0: PROFESSIONAL HUMAN-LIKE VISION FLOW (PRIORITY)
+        print(f"[PC Control] Attempting professional human-like launch for: '{app_name}'")
+        from core.vision_agent import vision_agent
         
-        # Method 1: Try dynamic discovery first (works with ANY app)
+        # Use the human launch flow: Start -> Type -> Click -> Verify
+        visual_result = vision_agent.human_launch_app(app_name)
+        
+        if visual_result.get("success"):
+            return {"success": True, "message": f"I have successfully recognized and launched {app_name} as a human would."}
+        else:
+            print(f"[PC Control] [Vision] Human launch failed or was ambiguous. Confidence: {visual_result.get('confidence', 0)}")
+            # Handle ambiguity/low confidence
+            if visual_result.get('confidence', 1.0) < 0.5:
+                # Take a fresh screenshot for the user
+                screenshot = vision_agent._capture_screen_base64()
+                clarification = self._request_clarification(f"I'm trying to open '{app_name}' but I see multiple options or I'm not sure which icon to click. Could you point it out for me?", screenshot)
+                
+                if clarification.get("success"):
+                    if clarification.get("mode") == "point":
+                         import pyautogui
+                         sw, sh = pyautogui.size()
+                         x = int(clarification.get("x_percent", 0.5) * sw)
+                         y = int(clarification.get("y_percent", 0.5) * sh)
+                         pyautogui.click(x, y)
+                         return {"success": True, "message": f"I have opened {app_name} with your guidance."}
+                    elif clarification.get("mode") == "confirm":
+                         # User just said yes to a general query
+                         pyautogui.press("enter")
+                         return {"success": True, "message": f"I used your confirmation to proceed with opening {app_name}."}
+
+        # Method 1: Try dynamic discovery as fallback (if vision fails)
         app_path = dynamic_discovery.find_app_by_name(app_name)
         if app_path:
             try:
@@ -604,6 +638,55 @@ class PCController:
             return {"success": True, "message": f"Saved screenshot to {os.path.abspath(out_file)}."}
         except Exception as e:
             return {"success": False, "message": f"Could not take screenshot: {e}"}
+
+    def _tile_windows_macos(self, layout: str = "dev") -> Dict[str, Any]:
+        """Proportional window tiling for macOS using AppleScript."""
+        print(f"[PC Control] Tiling windows for layout: {layout}")
+        
+        # Standard Dev Layout: VS Code (Left 60%), Finder (Top Right 40%), Browser (Bottom Right 40%)
+        # Bounds format: {x, y, width, height} or {left, top, right, bottom}
+        script = '''
+        tell application "Finder"
+            set screen_bounds to bounds of window of desktop
+            set screen_width to item 3 of screen_bounds
+            set screen_height to item 4 of screen_bounds
+        end tell
+
+        -- 1. VS Code: Left 60%
+        if application "Visual Studio Code" is running then
+            tell application "Visual Studio Code"
+                set bounds of window 1 to {0, 0, screen_width * 0.6, screen_height}
+                activate
+            end tell
+        end if
+
+        -- 2. Finder (Project Folder): Top Right 40%
+        if application "Finder" is running then
+            tell application "Finder"
+                set bounds of window 1 to {screen_width * 0.6, 0, screen_width, screen_height * 0.5}
+                activate
+            end tell
+        end if
+
+        -- 3. Browser (Chrome/Safari): Bottom Right 40%
+        if application "Google Chrome" is running then
+            tell application "Google Chrome"
+                set bounds of window 1 to {screen_width * 0.6, screen_height * 0.5, screen_width, screen_height}
+                activate
+            end tell
+        else if application "Safari" is running then
+            tell application "Safari"
+                set bounds of window 1 to {screen_width * 0.6, screen_height * 0.5, screen_width, screen_height}
+                activate
+            end tell
+        end if
+        '''
+        
+        try:
+            subprocess.run(['osascript', '-e', script], check=True)
+            return {"success": True, "message": f"I have organized your workspace into a {layout} layout."}
+        except Exception as e:
+            return {"success": False, "message": f"Failed to tile windows: {e}"}
 
 class _LazyPCController:
     """Lazy proxy to avoid heavy startup work during module import."""

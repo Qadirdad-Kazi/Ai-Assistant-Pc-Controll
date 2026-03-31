@@ -374,12 +374,22 @@ class AdvancedTaskExecutor:
             
             print(f"[AdvancedTask] 📍 Step {step_num}: {action}")
             
+            # 1. Announce start of step
+            step_desc = details.get("name", details.get("app", details.get("path", action)))
+            from core.tts import tts
+            tts.speak(f"Starting step {step_num}: {action.replace('_', ' ')} {step_desc}")
+            db.log_action_step(action, "started", f"Step {step_num}: {details}")
+
             # Execute with visual verification
             try:
                 result = self._execute_with_visual_verification(action, details)
                 
+                status = "success" if result.get("success", False) else "failed"
+                db.log_action_step(action, status, str(result.get("message", "")))
+
                 if result.get("success", False):
                     print(f"[AdvancedTask] ✅ Step {step_num} completed successfully")
+                    tts.speak(f"Completed {action.replace('_', ' ')}")
                     success_count += 1
                     
                     # Add visual analysis to result
@@ -451,6 +461,14 @@ class AdvancedTaskExecutor:
             elif action == "setup_development_env":
                 return self._setup_development_environment()
             
+            elif action == "scaffold_creative":
+                from core.dev_agent import dev_agent
+                return dev_agent.scaffold_project(details.get("prompt", ""), framework="html")
+            
+            elif action == "tile_windows":
+                from core.pc_control import pc_controller
+                return pc_controller.execute("tile_windows", details.get("layout", "dev"))
+
             elif action in ["confirm_creation", "confirm_launch", "confirm_navigation"]:
                 return {"success": True, "message": f"Confirmed {action.replace('_', ' ')}"}
             

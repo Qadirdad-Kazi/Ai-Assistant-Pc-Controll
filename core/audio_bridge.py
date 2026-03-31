@@ -8,44 +8,65 @@ when a call is active.
 """
 
 import threading
+import sounddevice as sd
+import numpy as np
 
 class GSMAudioBridge:
     def __init__(self):
         self.call_active = False
         
-        # Audio device indexes (0 implies default system device)
-        # In a real scenario, you'd use sounddevice to list devices and find
-        # the specific "Line-In" and "Line-Out" wired to the GSM modem.
-        self.modem_input_device_index = None  
-        self.modem_output_device_index = None
+        # Audio device indexes (None implies default system device)
+        self.modem_input_device_index = None  # SIM800L Output -> PC Line-In
+        self.modem_output_device_index = None # PC Line-Out -> SIM800L Input
         
-        # Backup default indexes for normal operation
-        self.system_input_device_index = None
-        self.system_output_device_index = None
+        # System defaults
+        self.system_input_device_index = 1 # Usually built-in mic
+        self.system_output_device_index = 3 # Usually speakers
         
+        self._find_modem_devices()
+
+    def _find_modem_devices(self):
+        """Automatically find audio devices by name for the GSM Modem."""
+        devices = sd.query_devices()
+        print(f"[Audio Bridge] Scanning {len(devices)} audio devices...")
+        
+        for i, dev in enumerate(devices):
+            name = dev.get('name', '').lower()
+            # We look for "Line In" or specific hardware names for the modem link
+            if "line" in name and dev.get('max_input_channels') > 0:
+                self.modem_input_device_index = i
+                print(f"[Audio Bridge] ✓ Assigned Modem Input: {name} (Index {i})")
+            
+            if ("line" in name or "speaker" in name) and dev.get('max_output_channels') > 0:
+                # This logic may need refinement based on exact hardware strings
+                if "modem" in name or "link" in name:
+                     self.modem_output_device_index = i
+                     print(f"[Audio Bridge] ✓ Assigned Modem Output: {name} (Index {i})")
+
     def link_call(self):
-        """
-        Locks the STT and TTS to the GSM modem audio devices.
-        Starts listening on the caller audio stream.
-        """
+        """Locks the STT and TTS to the GSM modem audio devices."""
         print("[Audio Bridge] Establishing GSM Audio Link...")
         self.call_active = True
         
-        # Switch STT input to modem's output (Line-In)
-        # Switch TTS output to modem's input (Line-Out)
-        print("[Audio Bridge] Routing STT -> Modem Line-In")
-        print("[Audio Bridge] Routing TTS -> Modem Line-Out")
+        # In a production environment, we call sd.default.device = [input, output]
+        if self.modem_input_device_index is not None and self.modem_output_device_index is not None:
+             sd.default.device = [self.modem_input_device_index, self.modem_output_device_index]
+             print(f"[Audio Bridge] ✓ Switched default devices to [{self.modem_input_device_index}, {self.modem_output_device_index}]")
+        
+        print("[Audio Bridge] Routing STT -> Modem Link")
+        print("[Audio Bridge] Routing TTS -> Modem Link")
         
         # We would notify RealTimeSTT and PiperTTS to recreate their streams 
         # using self.modem_input_device_index and self.modem_output_device_index
         # e.g., STT.change_input_device(self.modem_input_device_index)
 
     def sever_call(self):
-        """
-        Breaks the link to the GSM modem, returning standard control to desktop users.
-        """
+        """Breaks the link, returning standard control to desktop users."""
         print("[Audio Bridge] Severing GSM Audio Link...")
         self.call_active = False
+        
+        # Revert to defaults
+        sd.default.device = [self.system_input_device_index, self.system_output_device_index]
         
         print("[Audio Bridge] Reverting STT -> System Default Microphone")
         print("[Audio Bridge] Reverting TTS -> System Default Speakers")

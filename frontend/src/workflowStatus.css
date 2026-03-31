@@ -1,0 +1,123 @@
+.workflow-status-hud {
+  position: absolute;
+  top: 80px;
+  right: 24px;
+  width: 320px;
+  background: rgba(13, 13, 15, 0.8);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  animation: slideInRight 0.5s ease-out;
+}
+
+.workflow-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.pulse-icon {
+  width: 36px;
+  height: 36px;
+  background: rgba(0, 243, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00f3ff;
+}
+
+.spin {
+  animation: spin 2s linear infinite;
+}
+
+.workflow-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.workflow-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+}
+
+.workflow-task {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.workflow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s;
+}
+
+.step-indicator {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #333;
+  border-radius: 50%;
+}
+
+.step-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #777;
+}
+
+/* Step States */
+.workflow-step.completed .step-indicator { color: #00ff9d; }
+.workflow-step.completed .step-name { color: #00ff9d; }
+
+.workflow-step.active .dot { background: #00f3ff; box-shadow: 0 0 8px #00f3ff; }
+.workflow-step.active .step-name { color: #fff; transform: translateX(8px); }
+
+.workflow-progress-bg {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.workflow-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00f3ff, #ff00ff);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

@@ -62,7 +62,35 @@ class WolfCoreDatabase:
                 status TEXT,
                 intent_executed TEXT,
                 transcript TEXT,
+                sentiment_score INTEGER,
+                client_mood TEXT,
+                estimated_deal_size REAL DEFAULT 0.0,
+                document_path TEXT,
                 timestamp TEXT
+            )''')
+            
+            # Action Logs
+            conn.execute('''CREATE TABLE IF NOT EXISTS action_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action_name TEXT,
+                status TEXT,
+                details TEXT,
+                timestamp TEXT
+            )''')
+            
+            # ---------------------------------------------------------
+            # TABLE 4: ACTION TASKS (Trello/Notion Inbox)
+            # ---------------------------------------------------------
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT,
+                description TEXT,
+                priority TEXT,
+                status TEXT DEFAULT 'pending',
+                related_call_id INTEGER,
+                created_at TEXT,
+                FOREIGN KEY(related_call_id) REFERENCES call_logs(id) ON DELETE SET NULL
             )''')
             
             # ---------------------------------------------------------
@@ -150,13 +178,55 @@ class WolfCoreDatabase:
     # RECEPTIONIST CALL LOGS API
     # =========================================================================
 
-    def log_call(self, caller_id: str, status: str, intent: str, transcript: str):
+    def log_call(self, caller_id: str, status: str, intent: str, transcript: str, 
+                 sentiment_score: int = 5, client_mood: str = "Neutral", estimated_deal_size: float = 0.0, document_path: str = None):
+        now = datetime.datetime.now().isoformat(timespec="seconds")
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute(
-                'INSERT INTO call_logs (caller_id, status, intent_executed, transcript, timestamp) VALUES (?, ?, ?, ?, ?)',
-                (caller_id, status, intent, transcript, datetime.datetime.now().isoformat())
+            cursor = conn.execute(
+                'INSERT INTO call_logs (caller_id, status, intent_executed, transcript, sentiment_score, client_mood, estimated_deal_size, document_path, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (caller_id, status, intent, transcript, sentiment_score, client_mood, estimated_deal_size, document_path, now)
             )
             conn.commit()
+            return cursor.lastrowid
+
+    def add_task(self, title: str, description: str, priority: str = "Medium", related_call_id: int = None):
+        now = datetime.datetime.now().isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                'INSERT INTO tasks (title, description, priority, related_call_id, created_at) VALUES (?, ?, ?, ?, ?)',
+                (title, description, priority, related_call_id, now)
+            )
+            conn.commit()
+
+    def log_action_step(self, action_name: str, status: str, details: str = ""):
+        """Audit trail for system actions (opening apps, file ops, etc)."""
+        now = datetime.datetime.now().isoformat(timespec="seconds")
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute(
+                    'INSERT INTO action_logs (action_name, status, details, timestamp) VALUES (?, ?, ?, ?)',
+                    (action_name, status, details, now)
+                )
+                conn.commit()
+        except Exception as e:
+            print(f"[Database] Failed to log action: {e}")
+
+    def get_action_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Retrieve recent system activity."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM action_logs ORDER BY timestamp DESC LIMIT ?', (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_tasks(self, status: str = 'pending', limit: int = 50) -> List[Dict[str, Any]]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                'SELECT * FROM tasks WHERE status = ? ORDER BY created_at DESC LIMIT ?',
+                (status, limit)
+            )
+            return [dict(row) for row in cursor.fetchall()]
 
     def get_call_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
         with sqlite3.connect(self.db_path) as conn:

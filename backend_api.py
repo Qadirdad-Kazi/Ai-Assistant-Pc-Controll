@@ -12,6 +12,9 @@ from pydantic import BaseModel
 from typing import Optional, Dict, List, Any, cast
 from core.voice_assistant import voice_assistant  
 from core.function_executor import executor as function_executor  
+from core.productivity_suite import productivity_suite
+from core.analytics_engine import analytics_engine
+from core.model_manager import model_manager
 from core.database import db  
 from core.receptionist import receptionist  
 from core.settings_store import settings as settings_store  
@@ -56,7 +59,8 @@ system_status = {
     "Voice Core": "ACTIVE" if VOICE_ASSISTANT_ENABLED else "OFFLINE",
     "System Control": "READY",
     "Neural Sonic": "STANDBY",
-    "Dev Agent": "IDLE"
+    "Dev Agent": "IDLE",
+    "Call Status": "IDLE"
 }
 
 from typing import Optional, Dict, List, Any
@@ -270,9 +274,28 @@ def sync_request_confirmation(action_name: str, details: str = "") -> bool:
         print(f"[Safety Bridge] Error: {e}")
         return False
 
-# Set the callback in pc_controller
+# Set the callbacks in pc_controller
 from core.pc_control import pc_controller
 pc_controller.confirmation_callback = sync_request_confirmation
+
+def sync_request_clarification(question: str, screenshot_base64: str) -> Dict[str, Any]:
+    """Sync wrapper to call the async clarification from pc_control."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+            future = asyncio.run_coroutine_threadsafe(
+                request_visual_clarification(question, screenshot_base64), 
+                loop
+            )
+            return future.result(timeout=65.0)
+        else:
+            return {"success": False}
+    except Exception as e:
+        print(f"[Clarification Bridge] Error: {e}")
+        return {"success": False}
+
+pc_controller.clarification_callback = sync_request_clarification
 
 # Connect to the voice assistant's signals to dynamically update state
 if VOICE_ASSISTANT_ENABLED:
@@ -283,6 +306,21 @@ if VOICE_ASSISTANT_ENABLED:
 
     voice_assistant.wake_word_detected.connect(on_wake_word)
     voice_assistant.processing_finished.connect(on_processing_finished)
+
+# --- Phone Gateway Integration ---
+try:
+    from core.gsm_gateway import gsm_gateway
+    def on_gsm_incoming(number: str):
+        # Trigger the receptionist in a background thread to avoid blocking the serial listener
+        import threading
+        threading.Thread(target=receptionist.handle_incoming_call, args=(number,), daemon=True).start()
+    
+    gsm_gateway.on_call_incoming = on_gsm_incoming
+    # Note: connect() should be called based on user settings or on demand to avoid COM port conflicts
+    if settings_store.get("gsm.enabled", False):
+        gsm_gateway.connect()
+except Exception as e:
+    print(f"[Backend API] Failed to wire GSM Gateway: {e}")
 
 # Track previous network stats for bandwidth calculation
 last_net_io = psutil.net_io_counters()
@@ -405,7 +443,7 @@ async def request_user_confirmation(action_name: str, details: str = "") -> bool
         confirmation_results.pop(conf_id, None)
 
 @app.websocket("/ws/safety")
-async def websocket_safety_confirmation(websocket: WebSocket):
+async def websocket_safety_sandbox(websocket: WebSocket):
     """Safety sandbox confirmation stream."""
     await safety_manager.connect(websocket)
     try:
@@ -421,6 +459,78 @@ async def websocket_safety_confirmation(websocket: WebSocket):
         safety_manager.disconnect(websocket)
     except Exception:
         safety_manager.disconnect(websocket)
+
+# --- Visual Clarification Bridge ---
+class ClarificationConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                pass
+
+clarification_manager = ClarificationConnectionManager()
+pending_clarifications: Dict[str, asyncio.Event] = {}
+clarification_results: Dict[str, Any] = {}
+
+async def request_visual_clarification(question: str, screenshot_base64: str) -> Dict[str, Any]:
+    """Ask the user to clarify a visual ambiguity."""
+    import uuid
+    conf_id = str(uuid.uuid4())
+    
+    event = asyncio.Event()
+    pending_clarifications[conf_id] = event
+    
+    # Notify frontend
+    await clarification_manager.broadcast({
+        "type": "CLARIFICATION_REQUIRED",
+        "id": conf_id,
+        "question": question,
+        "screenshot": screenshot_base64
+    })
+    
+    print(f"[Visual Proxy] Awaiting clarification for: '{question}' (ID: {conf_id})...")
+    
+    try:
+        # Wait up to 60 seconds for visual clarification
+        await asyncio.wait_for(event.wait(), timeout=60.0)
+        result = clarification_results.get(conf_id, {"success": False})
+        return result
+    except asyncio.TimeoutError:
+        print(f"[Visual Proxy] Clarification timed out for {conf_id}.")
+        return {"success": False, "message": "Timed out"}
+    finally:
+        pending_clarifications.pop(conf_id, None)
+        clarification_results.pop(conf_id, None)
+
+@app.websocket("/ws/clarification")
+async def websocket_visual_clarification(websocket: WebSocket):
+    """Visual clarification stream."""
+    await clarification_manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            conf_id = data.get("id")
+            result = data.get("result", {})
+            
+            if conf_id in pending_clarifications:
+                clarification_results[conf_id] = result
+                pending_clarifications[conf_id].set()
+    except WebSocketDisconnect:
+        clarification_manager.disconnect(websocket)
+    except Exception:
+        clarification_manager.disconnect(websocket)
 
 @app.get("/api/privacy/logs")
 async def get_privacy_logs():
@@ -721,6 +831,50 @@ async def validate_settings():
 async def get_call_logs(limit: int = 100):
     safe_limit = max(1, min(limit, 500))
     return {"logs": _get_call_logs(limit=safe_limit), "count": safe_limit}
+
+@app.get("/api/tasks")
+async def get_tasks(status: str = "pending"):
+    try:
+        tasks = db.get_tasks(status=status)
+        return {"tasks": tasks}
+    except Exception as e:
+        return {"tasks": [], "error": str(e)}
+
+@app.get("/api/action-logs")
+async def get_action_logs(limit: int = 50):
+    return {"logs": db.get_action_logs(limit)}
+
+@app.get("/api/analytics/summary")
+async def get_analytics_summary():
+    try:
+        metrics = analytics_engine.get_summary_metrics()
+        top_clients = analytics_engine.get_top_clients()
+        heatmap = analytics_engine.get_deal_heatmap()
+        return {
+            "metrics": metrics,
+            "top_clients": top_clients,
+            "heatmap": heatmap
+        }
+    except Exception as e:
+        return {"error": str(e), "metrics": {}, "top_clients": [], "heatmap": []}
+
+@app.get("/api/documents/proposals")
+async def get_proposals():
+    try:
+        doc_dir = Path("data/documents/proposals")
+        if not doc_dir.exists():
+            return {"proposals": []}
+        
+        files = []
+        for f in doc_dir.glob("*.md"):
+            files.append({
+                "name": f.name,
+                "path": str(f),
+                "created_at": datetime.datetime.fromtimestamp(f.stat().st_mtime).isoformat()
+            })
+        return {"proposals": sorted(files, key=lambda x: x['created_at'], reverse=True)}
+    except Exception as e:
+        return {"proposals": [], "error": str(e)}
 
 @app.post("/api/media/control")
 async def control_media(req: MediaControlRequest):

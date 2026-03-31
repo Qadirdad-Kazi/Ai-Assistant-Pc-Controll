@@ -3,7 +3,7 @@ import GreetingsHeader from './GreetingsHeader'
 import StatusCard from './StatusCard'
 import SystemMonitor from './SystemMonitor'
 import { useState, useEffect } from 'react'
-import { Mic, Monitor, Music, Code } from 'lucide-react'
+import { Mic, Monitor, Music, Code, Phone } from 'lucide-react'
 
 export default function Dashboard() {
   const [isListening, setIsListening] = useState(false);
@@ -13,7 +13,8 @@ export default function Dashboard() {
     "Voice Core": "OFFLINE",
     "System Control": "READY",
     "Neural Sonic": "STANDBY",
-    "Dev Agent": "IDLE"
+    "Dev Agent": "IDLE",
+    "Call Status": "IDLE"
   });
 
   useEffect(() => {
@@ -93,6 +94,7 @@ export default function Dashboard() {
         <div className="status-grid">
           <StatusCard icon={<Mic size={28} />} title="Voice Core" status={statuses["Voice Core"]} color={isListening ? "var(--accent-pink)" : "var(--accent-cyan)"} />
           <StatusCard icon={<Monitor size={28} />} title="System Control" status={statuses["System Control"]} color="#00ff9d" />
+          <StatusCard icon={<Phone size={28} />} title="Phone Gateway" status={statuses["Call Status"]} color={statuses["Call Status"] !== "IDLE" ? "var(--accent-pink)" : "var(--accent-cyan)"} />
           <StatusCard icon={<Music size={28} />} title="Neural Sonic" status={statuses["Neural Sonic"]} color="var(--accent-pink)" />
           <StatusCard icon={<Code size={28} />} title="Dev Agent" status={statuses["Dev Agent"]} color="var(--accent-purple)" />
         </div>

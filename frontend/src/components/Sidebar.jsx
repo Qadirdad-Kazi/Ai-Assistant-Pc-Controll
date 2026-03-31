@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, MessageSquare, Settings, Music, Activity, FileText, CheckSquare, PhoneCall, ShieldCheck } from 'lucide-react';
+import { Home, MessageSquare, Settings, Music, Activity, FileText, CheckSquare, PhoneCall, ShieldCheck, TrendingUp } from 'lucide-react';
 import './Sidebar.css';
 
 export default function Sidebar() {
@@ -24,6 +24,12 @@ export default function Sidebar() {
         </NavLink>
         <NavLink to="/call-logs" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
           <PhoneCall size={20} /> <span>Call Logs</span>
+        </NavLink>
+        <NavLink to="/analytics" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+          <TrendingUp size={20} /> <span>Strategy</span>
+        </NavLink>
+        <NavLink to="/activity" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+          <Activity size={20} /> <span>Activity</span>
         </NavLink>
         <NavLink to="/diagnostics" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
           <Activity size={20} /> <span>Diagnostics</span>

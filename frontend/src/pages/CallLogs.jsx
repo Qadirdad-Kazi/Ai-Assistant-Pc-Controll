@@ -108,6 +108,16 @@ export default function CallLogs() {
               <div className="log-meta-row">
                 <span className={`status-chip status-${String(log.status || 'unknown').toLowerCase().replace(/\s+/g, '-')}`}>{log.status}</span>
                 <span className="log-meta">Intent: {log.instructions || 'No instructions'}</span>
+                {log.client_mood && (
+                  <span className={`mood-chip mood-${String(log.client_mood).toLowerCase()}`}>
+                    Mood: {log.client_mood}
+                  </span>
+                )}
+                {log.document_path && (
+                  <a href={`http://localhost:8000/api/documents/proposals/${log.document_path.split('/').pop()}`} target="_blank" className="proposal-link">
+                    View Proposal
+                  </a>
+                )}
               </div>
               <div className="log-transcript">
                 <strong>Transcript:</strong><br/>

@@ -1,0 +1,209 @@
+.analytics-container {
+  padding: 32px;
+  animation: fadeIn 0.8s ease-out;
+}
+
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.analytics-header h2 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #fff;
+  margin: 0;
+}
+
+.analytics-header .subtitle {
+  font-size: 11px;
+  color: var(--accent-cyan);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+/* Metric Cards */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.metric-card {
+  background: rgba(16, 16, 24, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s;
+}
+
+.metric-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+.metric-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Priority Card Colors */
+.gold .metric-icon { background: rgba(255, 215, 0, 0.1); color: #ffd700; }
+.cyan .metric-icon { background: rgba(0, 243, 255, 0.1); color: #00f3ff; }
+.pink .metric-icon { background: rgba(255, 0, 255, 0.1); color: #ff00ff; }
+.green .metric-icon { background: rgba(0, 255, 157, 0.1); color: #00ff9d; }
+
+.metric-details .label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-details .value {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 4px 0 0 0;
+  color: #fff;
+}
+
+/* Secondary Grid */
+.analytics-grid-secondary {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 32px;
+}
+
+.analytics-panel {
+  background: rgba(16, 16, 24, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 24px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #888;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.panel-header h4 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+/* Table Design */
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaderboard-table th {
+  text-align: left;
+  font-size: 11px;
+  color: #555;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.leaderboard-table td {
+  padding: 16px 12px;
+  font-size: 14px;
+  color: #ccc;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.client-name {
+  color: #fff;
+  font-weight: 600;
+}
+
+.value-cell {
+  color: #ffd700;
+  font-weight: 700;
+}
+
+.sentiment-bar-bg {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.sentiment-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff00ff, #00f3ff);
+  border-radius: 2px;
+}
+
+/* Heatmap Design */
+.heatmap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.heatmap-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mood-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #777;
+}
+
+.mood-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.heatmap-progress-bg {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.heatmap-progress-bar {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.heatmap-progress-bar.positive { background: #00ff9d; box-shadow: 0 0 15px rgba(0, 255, 157, 0.3); }
+.heatmap-progress-bar.frustrated { background: #ff4d4d; box-shadow: 0 0 15px rgba(255, 77, 77, 0.3); }
+.heatmap-progress-bar.neutral { background: #888; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

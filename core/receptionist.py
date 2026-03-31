@@ -3,11 +3,13 @@ Receptionist Module - Handles incoming GSM calls and expected directives.
 """
 from typing import Dict, Any, Optional
 import requests  
+import json
 import time
 import datetime
 from config import OLLAMA_URL, RESPONDER_MODEL  
 from core.tts import tts  
 from core.database import db  
+from backend_api import sync_request_confirmation
 
 class Receptionist:
     def __init__(self):
@@ -34,6 +36,12 @@ class Receptionist:
         """Called by GSM Gateway when a call comes in."""
         print(f"[Receptionist] Incoming call from {caller_id}")
         
+        try:
+            from backend_api import system_status
+            system_status["Call Status"] = "RINGING"
+        except ImportError:
+            system_status = None
+            
         # Check if we have a directive that matches this caller
         # For a full implementation, this should fuzzy match or use a contacts database.
         # For now, we do a simple substring match on keys.
@@ -53,6 +61,9 @@ class Receptionist:
             from core.gsm_gateway import gsm_gateway  
             from core.audio_bridge import audio_bridge  
             
+            if system_status:
+                system_status["Call Status"] = f"ACTIVE ({matched_caller})"
+            
             gsm_gateway.answer_call()
             audio_bridge.link_call()
             
@@ -66,62 +77,69 @@ class Receptionist:
             tts.toggle(True)
             tts.queue_sentence(greeting)
             
-            # Step 4: Simulate STT Listening
-            print("[Receptionist] Listening to caller... (STT pipeline placeholder)")
-            # In full dev mode, here is where RealTimeSTT listens via linked bridge.
+            # Step 4: Real-Time Interaction Loop
+            print("[Receptionist] Monitoring call audio...")
+            from core.voice_assistant import voice_assistant
+            stt = voice_assistant.stt_listener
             
-            # Let's mock the caller's response
-            caller_speech = mock_caller_speech if mock_caller_speech else "(silence)"
-            print(f"[Caller]: {caller_speech}")
+            transcript_log = ""
             
-            transcript_log = f"Wolf: {greeting}\nCaller: {caller_speech}"
-            user_response = ""
+            # Use a slightly longer timeout for phone responses
+            call_timeout = 300 # 5 minutes max
+            start_time = time.time()
             
-            if "talk to qadirdad" in caller_speech.lower() or "speak to qadirdad" in caller_speech.lower():  
-                print("[Receptionist] Intent detected: Handover to Boss.")
-                handover_msg = "Please hold for a moment, I am putting Qadirdad on the line."
-                print(f"[Receptionist] Saying: {handover_msg}")
-                tts.queue_sentence(handover_msg)
+            # Initial Greeting already done. Now listen for caller.
+            while time.time() - start_time < call_timeout:
+                if not gsm_gateway.is_connected:
+                    break
                 
-                # Wait for TTS to finish (mocked by sleep)
-                time.sleep(2)
+                # Listen for speech from the caller
+                caller_speech = stt.recorder.text() if stt and stt.recorder else "(silence)"
+                if not caller_speech or caller_speech.strip() == "":
+                    time.sleep(0.5)
+                    continue
                 
-                audio_bridge.hold_call()
-                audio_bridge.announce_to_user(f"Qadirdad, {matched_caller} wants to talk to you.")
+                print(f"[Caller]: {caller_speech}")
+                transcript_log += f"Caller: {caller_speech}\n"
                 
-                # Mock user interaction in console for demonstration
-                # In full GUI, this would be a prompt on the HUD or verbal wake word command
-                print("[Proactive Layer] Waiting for user approval... (Type 'ok' or 'no' in terminal)")
-                
-                # Use a background thread or a short wait to simulate user input if running headless
-                if mock_user_response is not None:
-                    user_response: str = mock_user_response.lower()  
-                    print(f"Qadirdad's response (ok/no): {user_response}")
-                else:
-                    user_response = input("Qadirdad's response (ok/no): ").strip().lower()
-                
-                if user_response == 'ok':
-                    audio_bridge.handover_to_user()
-                    transcript_log += f"\n[Handover accepted by user. Agent sleeping.]"
-                    print("[Receptionist] Call handed over. Exiting AI loop.")
+                # Check for Handover Intent
+                if any(phrase in caller_speech.lower() for phrase in ["talk to", "speak to", "with qadirdad", "boss"]):
+                    print("[Receptionist] Handover requested.")
+                    tts.queue_sentence("One moment please, I'll see if he's available.")
                     
-                    # We leave the call active. The user hangs up mechanically.
+                    audio_bridge.hold_call()
+                    audio_bridge.announce_to_user(f"{matched_caller} is asking to speak with you on the GSM line.")
+                    
+                    # USE SAFETY BRIDGE INSTEAD OF TERMINAL INPUT
+                    approved = sync_request_confirmation(
+                        action=f"Incoming Call Handover: {matched_caller}",
+                        details=f"Caller said: '{caller_speech}'\nDo you want to take over the call?"
+                    )
+                    
+                    if approved:
+                        if system_status: system_status["Call Status"] = "USER ACTIVE"
+                        audio_bridge.handover_to_user()
+                        transcript_log += "[Call Handed Over to User]\n"
+                        # Exit loop, call is active but AI is disengaged
+                        return
+                    else:
+                        audio_bridge.link_call() # Return audio to AI
+                        if system_status: system_status["Call Status"] = f"ACTIVE ({matched_caller})"
+                        reject = "I'm sorry, he's unable to take the call right now. Can I take a message?"
+                        tts.queue_sentence(reject)
+                        transcript_log += f"Wolf: {reject}\n"
                 else:
-                    audio_bridge.link_call() # Un-hold
-                    rejection_msg = "I'm sorry, he is currently unavailable. I will let him know you called."
-                    print(f"[Receptionist] Saying: {rejection_msg}")
-                    tts.queue_sentence(rejection_msg)
-                    time.sleep(2)
-                    gsm_gateway.hangup_call()
-                    audio_bridge.sever_call()
-                    transcript_log += f"\nWolf: {rejection_msg}\n[Call Terminated]"
-            else:
-                # No handover needed
-                time.sleep(2) 
-                # Step 5: Hangup and unbridge
-                print("[Receptionist] Call ended.")
-                gsm_gateway.hangup_call()
-                audio_bridge.sever_call()
+                    # Generate autonomous LLM response
+                    prompt = f"Caller said: '{caller_speech}'. Your instructions: {matched_instructions}. Respond naturally as Wolf AI."
+                    ai_reply = self._generate_response(prompt)
+                    print(f"Wolf: {ai_reply}")
+                    tts.queue_sentence(ai_reply)
+                    transcript_log += f"Wolf: {ai_reply}\n"
+                    
+                # Check for hangup in next loop
+                time.sleep(0.2)
+            
+            if system_status: system_status["Call Status"] = "IDLE"
 
             # Step 6: Log transcript
             log_entry = {
@@ -135,14 +153,25 @@ class Receptionist:
 
             # Persist to sqlite so logs survive restarts and are available via backend APIs.
             try:
-                db.log_call(
+                call_id = db.log_call(
                     caller_id=matched_caller,
                     status=log_entry["status"],
                     intent=matched_instructions,
                     transcript=transcript_log,
                 )
+                
+                # TRIGGER PRODUCTIVITY SUITE
+                # Run in a background thread to avoid blocking the caller's disconnection
+                from core.productivity_suite import productivity_suite
+                import threading
+                threading.Thread(
+                    target=productivity_suite.process_call_outcome, 
+                    args=(call_id, matched_caller, transcript_log), 
+                    daemon=True
+                ).start()
+                
             except Exception as e:
-                print(f"[Receptionist] Failed to persist call log: {e}")
+                print(f"[Receptionist] Failed to persist call log or trigger productivity: {e}")
             
             # Remove directive after processing
             del self.expected_calls[matched_caller]  

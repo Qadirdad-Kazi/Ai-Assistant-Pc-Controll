@@ -18,6 +18,7 @@ from core.tts import tts
 from core.settings_store import settings
 from config import VOICE_ASSISTANT_ENABLED, GREEN, RESET
 from core.model_manager import unload_all_models
+from core.calendar_manager import calendar_manager
 
 class BackendServer:
     def __init__(self):
@@ -67,6 +68,9 @@ class BackendServer:
             self._init_god_mode()
             self._init_voice_assistant()
             
+            # Start calendar manager locally
+            calendar_manager.start()
+            print("[System] Calendar manager started")
             # Start FastAPI backend server using Uvicorn
             import uvicorn
             print(f"{GREEN}[System] Booting FastAPI WebSocket Server on ws://localhost:8000{RESET}")

@@ -129,7 +129,8 @@ Output format: JSON ONLY
     "y_percent": float,
     "target_id": int | null,
     "text": "text to type if action is type",
-    "thought": "your reasoning",
+    "thought": "your reasoning for this action",
+    "confidence": float (0.0 to 1.0),
     "message": "User-facing status",
     "success": bool
 }}"""
@@ -279,6 +280,43 @@ Output format: JSON ONLY
             return analysis.get("message", "I see a computer screen with various icons and windows.")
         except Exception as e:
             return f"Error describing screen: {e}"
+
+    def verify_action_result(self, expected_change: str) -> Dict[str, Any]:
+        """Verify if the last action resulted in the expected UI change."""
+        print(f"[VisionAgent] Verifying change: {expected_change}")
+        time.sleep(1.0) # wait for animations
+        analysis = self._analyze_screen(f"Verify if {expected_change} happened. Look at the screen specifically for visual confirmation.")
+        confidence = analysis.get("confidence", 0.0)
+        success = analysis.get("success", False) and confidence > 0.6
+        return {"success": success, "confidence": confidence, "observation": analysis.get("message")}
+
+    def human_launch_app(self, app_name: str) -> Dict[str, Any]:
+        """Launch an app using the human workflow: Start -> Type -> Click."""
+        print(f"[VisionAgent] Human-like launch for '{app_name}'")
+        try:
+            # 1. Click Start (assumed at bottom left or mid)
+            # We use a visual task for this to be robust
+            start_click = self._find_and_click_element("the Start button or Windows icon on the taskbar")
+            if not start_click.get("success"):
+                 # Fallback to key if visual fails
+                 pyautogui.press("win")
+                 time.sleep(0.5)
+
+            # 2. Type App Name
+            pyautogui.write(app_name, interval=0.05)
+            time.sleep(1.5) # wait for search results
+
+            # 3. Find and click the app in search results
+            click_result = self._find_and_click_element(f"the {app_name} application icon in the search results")
+            if not click_result.get("success"):
+                # One more try: just press enter if we can't find it visually
+                pyautogui.press("enter")
+                time.sleep(2.0)
+            
+            # 4. Verify launch
+            return self.verify_action_result(f"the {app_name} application window is now open and visible")
+        except Exception as e:
+            return {"success": False, "message": f"Human launch error: {e}"}
 
 # Global instance
 vision_agent = VisionAgent()

@@ -163,6 +163,37 @@
 
 .transcript-toggle {
   margin-top: 8px;
+  .status-handover { background: rgba(168, 85, 247, 0.2); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+/* Mood Chips */
+.mood-chip {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.mood-positive { background: rgba(0, 255, 157, 0.15); color: #00ff9d; }
+.mood-negative { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.mood-neutral { background: rgba(255, 255, 255, 0.1); color: #ccc; }
+.mood-frustrated { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+
+.proposal-link {
+  font-size: 11px;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 4px 10px;
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.proposal-link:hover {
+  background: rgba(0, 243, 255, 0.1);
+  transform: translateY(-1px);
+}
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--accent-cyan);

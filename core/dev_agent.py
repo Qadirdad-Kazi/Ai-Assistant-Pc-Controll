@@ -23,9 +23,15 @@ class DevAgent:
         """
         Interactively scaffolds a project. Asks questions if details are sparse.
         """
+        # Ensure project name is extracted from prompt if possible
+        if "named" in prompt.lower():
+            match = re.search(r"named\s+['\"]?([^'\"\\s]+)['\"]?", prompt, re.IGNORECASE)
+            if match:
+                self.project_name = match.group(1)
+        
         # Append the new prompt to our running requirements
         if self.collected_requirements:
-            self.collected_requirements += "\\n" + prompt
+            self.collected_requirements += "\n" + prompt
         else:
             self.collected_requirements = prompt
             
@@ -133,14 +139,14 @@ class DevAgent:
                 final_status = f"✅ **Python App Scaffolded!**\\nYour script is ready at: `{target_dir}/src/main.py`"
                 
             else:
-                # Default HTML
                 print("[DevAgent] Scaffolding HTML app...")
                 os.makedirs(target_dir, exist_ok=True)
                 
+                # HTML
                 self._generate_and_write_file(
                     final_reqs,
                     os.path.join(target_dir, "index.html"),
-                    "Write a beautiful, modern standalone HTML file containing CSS and JS to meet these requirements. Make it look super premium. Output ONLY the raw HTML code."
+                    "Write a professional, beautiful standalone HTML file. Include deep CSS and JavaScript in the same file. It must fulfill every specific detail in the requirements, including specified titles, sections, and brand colors. Output ONLY raw code."
                 )
                 
                 final_status = f"✅ **HTML/JS App Scaffolded!**\\nYour webpage is ready at: `{target_dir}/index.html`"

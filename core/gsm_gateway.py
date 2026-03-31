@@ -19,6 +19,7 @@ class GSMGateway:
         self.baudrate = baudrate
         self.serial_conn: Optional[Any] = None
         self.is_connected = False
+        self.is_mock = False # New: Track if we're in virtual/mock mode
         self._listen_thread: Optional[threading.Thread] = None
         self._running = False
         self.on_call_incoming: Optional[Callable] = None
@@ -32,6 +33,7 @@ class GSMGateway:
         try:
             self.serial_conn = serial.Serial(self.port, self.baudrate, timeout=1)
             self.is_connected = True
+            self.is_mock = False
             print(f"[GSM Gateway] Successfully connected on {self.port} at {self.baudrate} baud.")
             
             # Send initial AT checks
@@ -47,14 +49,22 @@ class GSMGateway:
             
             return True
         except Exception as e:
-            print(f"[GSM Gateway] Failed to connect: {e}")
-            self.is_connected = False
-            return False
+            print(f"[GSM Gateway] Hardware missing or port {self.port} busy. Entering VIRTUAL MODE.")
+            self.is_connected = True # Virtual connected
+            self.is_mock = True
+            return True
 
     def _send_command(self, cmd: str) -> str:
         """Send an AT command and return the immediate response."""
-        if not self.is_connected or not self.serial_conn:
+        if not self.is_connected:
             return ""
+        if self.is_mock:
+            print(f"[GSM Gateway][MOCK] Sending: {cmd}")
+            return "OK"
+            
+        if not self.serial_conn:
+            return ""
+            
         try:
             self.serial_conn.write((cmd + "\r\n").encode())  
             time.sleep(0.2)

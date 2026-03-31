@@ -34,10 +34,14 @@ class WolfAILauncher:
             import uvicorn
             import fastapi
             import requests
-            print("✅ Python dependencies available")
+            import sounddevice
+            import numpy
+            import serial # pyserial
+            from RealtimeSTT import AudioToTextRecorder
+            print("✅ Professional-grade dependencies available")
         except ImportError as e:
             print(f"❌ Missing Python dependency: {e}")
-            print("Run: pip install uvicorn fastapi requests")
+            print("Run: pip install uvicorn fastapi requests sounddevice numpy pyserial RealtimeSTT")
             return False
         
         # Check Node.js for frontend

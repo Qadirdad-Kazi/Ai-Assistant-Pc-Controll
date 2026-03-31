@@ -484,6 +484,12 @@ Say "stop" or "quit" at any time to interrupt me."""
                 if app_key:
                     self._last_app_open_ts[app_key] = time.time()
 
+            # Emit detailed execution event for professional transparency
+            if result.get("success"):
+                self._emit_execution_event("pc_control_success", f"Successfully executed {action} on {target}", result=result)
+            else:
+                self._emit_execution_event("pc_control_error", f"Failed to execute {action}: {result.get('message')}", result=result)
+
             print(f"[FunctionExecutor] PC Control result: {result}")
             return result
         except Exception as e:
@@ -755,19 +761,30 @@ Say "stop" or "quit" at any time to interrupt me."""
         return receptionist.add_directive(caller, instructions)
 
     def _visual_agent(self, params: Dict):
-        """Handle visual UI interactions using VisionAgent."""
+        """Handle visual UI interactions using VisionAgent with detailed event logging."""
         task = params.get("task", "click on something")
         action = params.get("action", "click")
         
+        self._emit_execution_event("vision_start", f"Visual Proxy: {action} on '{task}'", task=task, action=action)
+        
+        res = {"success": False, "message": "Unknown action"}
         if action == "type":
-            return vision_agent._find_and_type_text(task)
+            res = vision_agent._find_and_type_text(task)
         elif action == "scroll":
-            return vision_agent._scroll_screen(task)
+            res = vision_agent._scroll_screen(task)
         elif action == "describe":
             msg = vision_agent._describe_screen()
-            return {"success": True, "message": msg}
+            res = {"success": True, "message": msg}
         else:
-            return vision_agent._find_and_click_element(task)
+            res = vision_agent._find_and_click_element(task)
+            
+        if res.get("success"):
+            thought = res.get("thought", "Action completed visually.")
+            self._emit_execution_event("vision_success", f"Vision Match: {thought}", result=res)
+        else:
+            self._emit_execution_event("vision_error", f"Vision Failed: {res.get('message')}", result=res)
+            
+        return res
 
     def _load_tasks(self):
         """Load tasks from JSON file."""
