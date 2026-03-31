@@ -4,6 +4,7 @@ import requests
 from typing import List, Dict, Any, Generator
 
 from core.settings_store import settings as app_settings
+from core.privacy_tracker import privacy_tracker
 from config import WEB_AGENT_MODEL
 
 class VLMClient:
@@ -109,6 +110,9 @@ class VLMClient:
                 stream=True
             )
             
+            # Privacy Log: Send
+            privacy_tracker.log_event("Ollama (VLM)", "SENT", "Visual Agent Chat", f"Model: {self.model_name}, Msgs: {len(messages)}", len(str(messages)))
+            
             full_response = ""
             full_thinking = ""
             
@@ -130,6 +134,9 @@ class VLMClient:
                         
                     if data.get("done"):
                         break
+            
+            # Privacy Log: Receive
+            privacy_tracker.log_event("Ollama (VLM)", "RECEIVED", "Visual Agent Response", f"Thinking: {len(full_thinking)} chars, Resp: {len(full_response)} chars", len(full_thinking) + len(full_response))
             
             print(f"\n[DEBUG] Full Thinking:\n{full_thinking}\n")
             print(f"[DEBUG] Full Model Response (No Thinking):\n{full_response}\n[DEBUG] End Response\n")

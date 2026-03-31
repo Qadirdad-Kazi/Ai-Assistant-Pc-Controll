@@ -1,5 +1,6 @@
 import json
 from typing import List, Dict, Any
+from core.privacy_tracker import privacy_tracker
 try:
     from duckduckgo_search import DDGS 
     DDGS_AVAILABLE = True
@@ -20,8 +21,15 @@ class SearchHandler:
 
         print(f"[SearchHandler] Searching for: {query}")
         try:
+            # Privacy Log: Send
+            privacy_tracker.log_event("DuckDuckGo", "SENT", "Web Search", f"Query: {query}", len(query))
+            
             with DDGS() as ddgs:
                 results = list(ddgs.text(query, max_results=limit))
+                
+                # Privacy Log: Receive
+                privacy_tracker.log_event("DuckDuckGo", "RECEIVED", "Search Results", f"Found {len(results)} results", len(json.dumps(results)))
+                
                 return [
                     {
                         "title": r.get("title"),

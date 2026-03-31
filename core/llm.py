@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional
 from config import (  
     OLLAMA_URL, LOCAL_ROUTER_PATH, GREEN, CYAN, YELLOW, GRAY, RESET, RESPONDER_MODEL
 )
+from core.privacy_tracker import privacy_tracker
 
 # Persistent Session for faster HTTP
 http_session = requests.Session()
@@ -92,13 +93,23 @@ def preload_models():
             # Send a minimal prompt to force the model to fully load into VRAM
             # The keep_alive ensures it stays loaded for 30 minutes
             print(f"{GRAY}[System] Loading responder model ({RESPONDER_MODEL})...{RESET}")
-            response = http_session.post(f"{OLLAMA_URL}/generate", json={
+            
+            payload = {
                 "model": RESPONDER_MODEL, 
                 "prompt": "hi",
                 "stream": False,
                 "keep_alive": "30m",
                 "options": {"num_predict": 1}  # Generate just 1 token to minimize wait
-            }, timeout=120)  # 2 minute timeout for initial model load
+            }
+            
+            # Privacy Log: Send
+            privacy_tracker.log_event("Ollama", "SENT", "Model Load/Heartbeat", f"Loading {RESPONDER_MODEL}", len(json.dumps(payload)))
+            
+            response = http_session.post(f"{OLLAMA_URL}/generate", json=payload, timeout=120)  # 2 minute timeout for initial model load
+            
+            # Privacy Log: Receive
+            privacy_tracker.log_event("Ollama", "RECEIVED", "Model Status", f"Response: {response.status_code}", len(response.content))
+            
             if response.status_code == 200:
                 print(f"{GRAY}[System] Responder model loaded successfully.{RESET}")
             else:

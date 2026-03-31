@@ -7,6 +7,8 @@ import Settings from './pages/Settings'
 import Media from './pages/Media'
 import CallLogs from './pages/CallLogs'
 import Diagnostics from './pages/Diagnostics'
+import Privacy from './pages/Privacy'
+import SafetyPrompt from './components/SafetyPrompt'
 import './App.css'
 
 function App() {
@@ -22,9 +24,11 @@ function App() {
             <Route path="/media" element={<Media />} />
             <Route path="/call-logs" element={<CallLogs />} />
             <Route path="/diagnostics" element={<Diagnostics />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
+        <SafetyPrompt />
       </div>
     </Router>
   )

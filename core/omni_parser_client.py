@@ -3,6 +3,7 @@ import json
 import base64
 import time
 from typing import List, Dict, Any, Optional
+from core.privacy_tracker import privacy_tracker
 
 class OmniParserClient:
     """
@@ -34,6 +35,9 @@ class OmniParserClient:
 
         try:
             start_time = time.time()
+            # Privacy Log: Send
+            privacy_tracker.log_event("OmniParser", "SENT", "Image Analysis", f"Parsing screen for UI elements", len(img_base64))
+            
             response = requests.post(
                 f"{self.base_url}/parse",
                 json={"image": img_base64},
@@ -41,6 +45,9 @@ class OmniParserClient:
             )
             response.raise_for_status()
             data = response.json()
+            
+            # Privacy Log: Receive
+            privacy_tracker.log_event("OmniParser", "RECEIVED", "UI Elements", f"Found {len(data.get('elements', []))} elements", len(response.content))
             
             latency = time.time() - start_time
             print(f"[OmniParser] Screen parsed in {latency:.2f}s. Found {len(data.get('elements', []))} elements.")

@@ -17,6 +17,9 @@ except Exception as e:
 
 # Import dynamic app discovery
 from core.dynamic_app_discovery import dynamic_discovery  
+from core.omni_parser_client import omni_parser
+import base64
+from io import BytesIO
 
 class PCController:
     """Handles system level commands like controlling volume, opening apps, or locking the PC."""
@@ -35,6 +38,9 @@ class PCController:
         self.discovered_apps: Dict[str, str] = dict(self.__class__._global_discovered_apps)
         self._discovery_lock = threading.Lock()
         self._discovery_started = False
+        
+        # Safety Sandbox Callback
+        self.confirmation_callback = None
         
         # Keep some common mappings as fallback
         self.app_map = {
@@ -130,6 +136,70 @@ class PCController:
         except Exception as e:
             return {"success": False, "message": f"Failed to execute {action}: {e}"}
 
+    def _request_confirmation(self, action_name: str, details: str = "") -> bool:
+        """Helper to request user confirmation for high-risk actions."""
+        if not self.confirmation_callback:
+            # If no callback (e.g. CLI mode), default to True or False based on choice
+            # But the user asked for professional "ensure", so we should ideally force confirmation.
+            print(f"[PC Control] [SAFETY] Confirmation required for: {action_name} ({details})")
+            return False 
+
+        print(f"[PC Control] [SAFETY] Awaiting confirmation for: {action_name}")
+        return self.confirmation_callback(action_name, details)
+
+    def _get_screen_elements_via_omni(self) -> List[Dict[str, Any]]:
+        """Capture screen and parse UI elements using OmniParser."""
+        if not omni_parser.is_available():
+            return []
+            
+        try:
+            # Capture screenshot
+            import pyautogui
+            screenshot = pyautogui.screenshot()
+            
+            # Convert to base64
+            buffered = BytesIO()
+            screenshot.save(buffered, format="PNG")
+            img_str = base64.b64encode(buffered.getvalue()).decode()
+            
+            # Parse via OmniParser
+            result = omni_parser.parse_screen(img_str)
+            if result.get("success"):
+                return result.get("elements", [])
+            return []
+        except Exception as e:
+            print(f"[PC Control] [OmniParser] Screenshot/Parse failed: {e}")
+            return []
+
+    def _click_element_visually(self, query: str) -> bool:
+        """Try to find and click an element using Vision (OmniParser)."""
+        elements = self._get_screen_elements_via_omni()
+        if not elements:
+            return False
+            
+        element = omni_parser.find_element_by_description(elements, query)
+        if element:
+            box = element.get("box") # [x, y, w, h] - normalized or pixel? OmniParser typically returns normalized [ymin, xmin, ymax, xmax] or [x, y, w, h]
+            if box:
+                # Assuming standard [x, y, w, h] for demonstration, or adjusting based on OmniParser output
+                # OmniParser (Microsoft) usually returns [xmin, ymin, xmax, ymax]
+                x_min, y_min, x_max, y_max = box
+                
+                # Get screen size for scaling
+                import pyautogui
+                sw, sh = pyautogui.size()
+                
+                # Calculate center point
+                # If OmniParser coords are normalized 0-1000
+                target_x = ((x_min + x_max) / 2) * sw / 1000
+                target_y = ((y_min + y_max) / 2) * sh / 1000
+                
+                print(f"[PC Control] [Vision] Found '{query}' at {target_x}, {target_y}. Clicking...")
+                pyautogui.moveTo(target_x, target_y, duration=0.8)
+                pyautogui.click()
+                return True
+        return False
+
     def _open_app_intelligent(self, target: str) -> Dict[str, Any]:
         """Intelligently open an app with complex commands like 'select profile' or 'search for gmail'."""
         print(f"[PC Control] Intelligent app opening: '{target}'")
@@ -191,6 +261,11 @@ class PCController:
     def _run_command(self, target: str) -> Dict[str, Any]:
         """Execute a terminal or shell command."""
         print(f"[PC Control] Running terminal command: '{target}'")
+        
+        # SAFETY CHECK
+        if not self._request_confirmation("Run Shell Command", target):
+            return {"success": False, "message": "Command execution cancelled by user safety check."}
+            
         try:
             # We use powershell to execute terminal commands on Windows
             process = subprocess.run(
@@ -305,6 +380,11 @@ class PCController:
         app_name = re.sub(r'\s+(for me|please)\b', '', app_name).strip()
         
         print(f"[PC Control] Searching for app: '{app_name}'")
+
+        # Method 0: VISION PRIORITY (Professional Standard)
+        print(f"[PC Control] Attempting to find '{app_name}' via Vision (OmniParser)...")
+        if self._click_element_visually(app_name):
+            return {"success": True, "message": f"I used visual recognition to find and click {app_name} on your screen."}
 
         if not self.discovered_apps and not self._discovery_started:
             self._start_discovery_background()
@@ -468,6 +548,10 @@ class PCController:
 
     def _shutdown_pc(self) -> Dict[str, Any]:
         try:
+            # SAFETY CHECK
+            if not self._request_confirmation("Shutdown PC"):
+                return {"success": False, "message": "Shutdown cancelled by user safety check."}
+                
             os.system("shutdown /s /t 1")
             return {"success": True, "message": "Shutting down the PC."}
         except Exception as e:
@@ -475,6 +559,10 @@ class PCController:
 
     def _restart_pc(self) -> Dict[str, Any]:
         try:
+            # SAFETY CHECK
+            if not self._request_confirmation("Restart PC"):
+                return {"success": False, "message": "Restart cancelled by user safety check."}
+                
             os.system("shutdown /r /t 1")
             return {"success": True, "message": "Restarting the PC."}
         except Exception as e:

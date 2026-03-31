@@ -15,6 +15,7 @@ from core.function_executor import executor as function_executor
 from core.database import db  
 from core.receptionist import receptionist  
 from core.settings_store import settings as settings_store  
+from core.privacy_tracker import privacy_tracker  
 from config import VOICE_ASSISTANT_ENABLED, OLLAMA_URL, LOCAL_ROUTER_PATH, CUSTOM_PPN_PATH  
 
 app = FastAPI(title="Wolf AI Backend API")
@@ -248,6 +249,31 @@ def run_single_diagnostic(key: str):
 def get_diagnostics_payload():
     return {"diagnostics": list(diagnostics_state.values())}
 
+# --- Safety Sandbox Bridge ---
+def sync_request_confirmation(action_name: str, details: str = "") -> bool:
+    """Sync wrapper to call the async confirmation from pc_control."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # This is tricky because we're likely in a thread or the loop itself.
+            # If we're in the loop, we can't block.
+            # But FunctionExecutor usually runs in a thread for voice tasks.
+            import concurrent.futures
+            future = asyncio.run_coroutine_threadsafe(
+                request_user_confirmation(action_name, details), 
+                loop
+            )
+            return future.result(timeout=35.0) # Wait slightly longer than the internal 30s timeout
+        else:
+            return False
+    except Exception as e:
+        print(f"[Safety Bridge] Error: {e}")
+        return False
+
+# Set the callback in pc_controller
+from core.pc_control import pc_controller
+pc_controller.confirmation_callback = sync_request_confirmation
+
 # Connect to the voice assistant's signals to dynamically update state
 if VOICE_ASSISTANT_ENABLED:
     def on_wake_word():
@@ -306,6 +332,99 @@ async def websocket_system_monitor(websocket: WebSocket):
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         pass
+
+@app.websocket("/ws/privacy")
+async def websocket_privacy_monitor(websocket: WebSocket):
+    """Real-time privacy log stream."""
+    await websocket.accept()
+    try:
+        last_log_count = 0
+        while True:
+            current_logs = privacy_tracker.get_logs()
+            if len(current_logs) != last_log_count:
+                await websocket.send_json({"logs": current_logs})
+                last_log_count = len(current_logs)
+            await asyncio.sleep(1.0)
+    except WebSocketDisconnect:
+        pass
+
+# --- Safety Sandbox Confirmation state ---
+class SafetyConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                pass
+
+safety_manager = SafetyConnectionManager()
+pending_confirmations: Dict[str, asyncio.Event] = {}
+confirmation_results: Dict[str, bool] = {}
+
+async def request_user_confirmation(action_name: str, details: str = "") -> bool:
+    """Trigger a frontend modal and wait for user response."""
+    import uuid
+    conf_id = str(uuid.uuid4())
+    
+    event = asyncio.Event()
+    pending_confirmations[conf_id] = event
+    
+    # Notify frontend
+    await safety_manager.broadcast({
+        "type": "CONFIRMATION_REQUIRED",
+        "id": conf_id,
+        "action": action_name,
+        "details": details
+    })
+    
+    print(f"[Safety Sandbox] Awaiting user approval for '{action_name}' (ID: {conf_id})...")
+    
+    try:
+        # Wait up to 30 seconds for a response
+        await asyncio.wait_for(event.wait(), timeout=30.0)
+        approved = confirmation_results.get(conf_id, False)
+        print(f"[Safety Sandbox] Confirmation result for {conf_id}: {'APPROVED' if approved else 'REJECTED'}")
+        return approved
+    except asyncio.TimeoutError:
+        print(f"[Safety Sandbox] Confirmation timed out for {conf_id}. System REJECTED.")
+        return False
+    finally:
+        # Cleanup
+        pending_confirmations.pop(conf_id, None)
+        confirmation_results.pop(conf_id, None)
+
+@app.websocket("/ws/safety")
+async def websocket_safety_confirmation(websocket: WebSocket):
+    """Safety sandbox confirmation stream."""
+    await safety_manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            conf_id = data.get("id")
+            approved = data.get("approved", False)
+            
+            if conf_id in pending_confirmations:
+                confirmation_results[conf_id] = approved
+                pending_confirmations[conf_id].set()
+    except WebSocketDisconnect:
+        safety_manager.disconnect(websocket)
+    except Exception:
+        safety_manager.disconnect(websocket)
+
+@app.get("/api/privacy/logs")
+async def get_privacy_logs():
+    return {"logs": privacy_tracker.get_logs()}
 
 @app.websocket("/ws/status")
 async def websocket_system_status(websocket: WebSocket):
