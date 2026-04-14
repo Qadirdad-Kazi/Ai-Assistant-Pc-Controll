@@ -82,9 +82,14 @@ class WolfAILauncher:
             print("Please install Node.js from https://nodejs.org/")
             return False
         
-        # Check npm (optional for frontend dev)
-        print("[INFO] npm check skipped - using pre-built frontend")
-        print("[OK] Frontend build available")
+        # Check for pre-built frontend
+        dist_dir = self.project_root / "frontend" / "dist"
+        if dist_dir.exists() and (dist_dir / "index.html").exists():
+            print("[OK] Production frontend build found")
+            self.frontend_port = 8000
+        else:
+            print("[INFO] Production build not found - using development mode (Port 5173)")
+            self.frontend_port = 5173
         
         return True
     
@@ -97,9 +102,10 @@ class WolfAILauncher:
             os.chdir(self.project_root)
             
             # Start backend server
+            # We don't pipe stdout/stderr so the user can see CUDA/VA logs in the terminal
             self.backend_process = subprocess.Popen([
                 sys.executable, 'main.py'
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            ])
             
             # Wait a moment for server to start
             time.sleep(3)
@@ -227,13 +233,14 @@ class WolfAILauncher:
         if backend_healthy and frontend_healthy:
             print("\n[SUCCESS] Wolf AI 2.0 is running!")
             print("\n[LIST] Services:")
-            print("   • Backend API: http://localhost:8000")
-            print("   • Frontend UI: http://localhost:8000 (served by backend)")
-            print("   • API Docs: http://localhost:8000/docs")
-            print("   • WebSocket: ws://localhost:8000/ws/status")
+            print(f"   • Backend API: http://localhost:8000")
+            print(f"   • Frontend UI: http://localhost:{self.frontend_port}")
+            print(f"   • API Docs: http://localhost:8000/docs")
+            print(f"   • WebSocket: ws://localhost:8000/ws/status")
             
             if open_browser:
-                self.open_browser("http://localhost:8000")
+                ui_url = f"http://localhost:{self.frontend_port}"
+                self.open_browser(ui_url)
             
             print("\n[VOICE]  Voice Assistant:")
             print("   • Say 'Hey Wolf' to activate")
