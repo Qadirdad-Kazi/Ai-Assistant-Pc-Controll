@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel  
 from typing import Optional, Dict, List, Any, cast
 from core.voice_assistant import voice_assistant  
+from core.tts import tts
 from core.function_executor import executor as function_executor  
 from core.productivity_suite import productivity_suite
 from core.analytics_engine import analytics_engine
@@ -110,14 +111,23 @@ def _check_local_database():
 
 
 def _check_tts_engine():
-    voice_dir = os.path.join("models", "piper", "voices")
+    """Verify primary Piper TTS engine status."""
+    voice_dir = os.path.join("models", "voices")
+    alt_dir = os.path.join("models", "piper", "voices")
     fallback_voice = os.path.join("voices", "en_GB-northern_english_male-medium.onnx")
-    has_voice_dir = os.path.isdir(voice_dir)
-    has_fallback = os.path.exists(fallback_voice)
-    if has_voice_dir or has_fallback:
-        where = voice_dir if has_voice_dir else fallback_voice
-        return _diagnostic_result(True, f"Piper assets found at {where}")
-    return _diagnostic_result(False, "Piper voice assets not found")
+    
+    # Check if executable exists
+    has_exe = tts.piper_exe and os.path.exists(tts.piper_exe)
+    
+    # Check if any voice files exist
+    has_voices = os.path.isdir(voice_dir) or os.path.isdir(alt_dir) or os.path.exists(fallback_voice)
+    
+    if has_exe and has_voices:
+        return _diagnostic_result(True, f"Piper engine and assets verified ({tts.piper_exe})")
+    elif not has_exe:
+        return _diagnostic_result(False, "Piper executable missing. Initialization failed.")
+    else:
+        return _diagnostic_result(False, "Piper voice assets missing. Check models/voices/")
 
 
 def _check_stt_engine():
@@ -161,15 +171,26 @@ def _check_ocr_vision():
 
 
 def _check_kokoro_tts():
-    """Check Kokoro TTS model availability."""
+    """Check Kokoro TTS model and library availability."""
     try:
+        # Check module first
+        try:
+            import kokoro # noqa: F401
+            has_lib = True
+        except ImportError:
+            has_lib = False
+            
         kokoro_path = os.path.join("models", "kokoro", "kokoro-v0_19.pth")
-        if os.path.exists(kokoro_path):
-            return _diagnostic_result(True, f"Kokoro model found at {kokoro_path}")
+        has_model = os.path.exists(kokoro_path)
+        
+        if has_lib and has_model:
+            return _diagnostic_result(True, "Kokoro engine and model verified")
+        elif not has_lib:
+            return _diagnostic_result(False, "kokoro library not installed (optional)")
         else:
-            return _diagnostic_result(False, f"Kokoro model not found at {kokoro_path}")
+            return _diagnostic_result(False, f"Kokoro model missing at {kokoro_path}")
     except Exception as e:
-        return _diagnostic_result(False, f"Kokoro TTS check failed: {e}")
+        return _diagnostic_result(False, f"Kokoro check error: {e}")
 
 
 def _check_omni_parser():
@@ -215,10 +236,13 @@ def _check_voice_assistant():
     """Check voice assistant initialization."""
     try:
         from core.voice_assistant import voice_assistant  
-        if hasattr(voice_assistant, 'is_initialized') and voice_assistant.is_initialized:
-            return _diagnostic_result(True, "Voice assistant initialized")
+        if not VOICE_ASSISTANT_ENABLED:
+            return _diagnostic_result(True, "Voice assistant is disabled in config")
+            
+        if hasattr(voice_assistant, 'initialized') and voice_assistant.initialized:
+            return _diagnostic_result(True, "Voice assistant engine active and listening")
         else:
-            return _diagnostic_result(False, "Voice assistant not initialized")
+            return _diagnostic_result(False, "Voice assistant engine still pre-loading or failed init")
     except Exception as e:
         return _diagnostic_result(False, f"Voice assistant check failed: {e}")
 

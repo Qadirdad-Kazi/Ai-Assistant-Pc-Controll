@@ -102,6 +102,7 @@ class VoiceAssistant(QObject):
                 tts.initialize()
                 print(f"{CYAN}[VoiceAssistant] ✓ TTS initialized{RESET}")
             
+            self.initialized = True
             print(f"{CYAN}[VoiceAssistant] ✓ Voice assistant initialized successfully{RESET}")
             return True
         except Exception as e:
