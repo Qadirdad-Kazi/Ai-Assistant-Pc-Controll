@@ -12,6 +12,12 @@ import threading
 warnings.simplefilter("ignore")
 os.environ["QT_API"] = "" # Disable any qt bindings
 
+# Force UTF-8 encoding for console output to handle emojis on Windows
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 from core.llm import preload_models
 from core.voice_assistant import voice_assistant
 from core.tts import tts

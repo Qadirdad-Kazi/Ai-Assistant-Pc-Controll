@@ -14,7 +14,7 @@ from core.voice_assistant import voice_assistant
 from core.function_executor import executor as function_executor  
 from core.productivity_suite import productivity_suite
 from core.analytics_engine import analytics_engine
-from core.model_manager import model_manager
+# from core.model_manager import model_manager  # Unused and broken import
 from core.database import db  
 from core.receptionist import receptionist  
 from core.settings_store import settings as settings_store  

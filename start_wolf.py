@@ -17,6 +17,12 @@ from typing import Optional
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+# Force UTF-8 encoding for console output to handle emojis on Windows
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 class WolfAILauncher:
     """Launches Wolf AI backend and frontend."""
     
@@ -27,7 +33,7 @@ class WolfAILauncher:
         
     def check_dependencies(self) -> bool:
         """Check if required dependencies are available."""
-        print("🔍 Checking dependencies...")
+        print("[CHECK] Checking dependencies...")
         
         # Check Python dependencies
         try:
@@ -38,7 +44,7 @@ class WolfAILauncher:
             import numpy
             import serial # pyserial
             from RealtimeSTT import AudioToTextRecorder
-            print("✅ Professional-grade dependencies available")
+            print("[OK] Professional-grade dependencies available")
         except ImportError as e:
             print(f"❌ Missing Python dependency: {e}")
             print("Run: pip install uvicorn fastapi requests sounddevice numpy pyserial RealtimeSTT")
@@ -49,7 +55,7 @@ class WolfAILauncher:
             result = subprocess.run(['node', '--version'], 
                                   capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
-                print("✅ Node.js available")
+                print("[OK] Node.js available")
             else:
                 print("Node.js not found, checking for alternative...")
                 # Try alternative Node.js paths
@@ -63,7 +69,7 @@ class WolfAILauncher:
                 node_found = False
                 for node_path in node_paths:
                     if Path(node_path).exists():
-                        print(f"✅ Node.js found at: {node_path}")
+                        print(f"[OK] Node.js found at: {node_path}")
                         node_found = True
                         break
                 
@@ -77,14 +83,14 @@ class WolfAILauncher:
             return False
         
         # Check npm (optional for frontend dev)
-        print("ℹ️  npm check skipped - using pre-built frontend")
-        print("✅ Frontend build available")
+        print("[INFO] npm check skipped - using pre-built frontend")
+        print("[OK] Frontend build available")
         
         return True
     
     def start_backend(self) -> bool:
         """Start the backend API server."""
-        print("🚀 Starting backend API server...")
+        print("[LAUNCH] Starting backend API server...")
         
         try:
             # Change to project root
@@ -100,7 +106,7 @@ class WolfAILauncher:
             
             # Check if backend is running
             if self.backend_process.poll() is None:
-                print("✅ Backend server started on http://localhost:8000")
+                print("[OK] Backend server started on http://localhost:8000")
                 return True
             else:
                 print("❌ Backend server failed to start")
@@ -114,7 +120,7 @@ class WolfAILauncher:
     
     def start_frontend(self) -> bool:
         """Start the frontend development server."""
-        print("🎨 Starting frontend development server...")
+        print("[THEME] Starting frontend development server...")
         
         try:
             frontend_dir = self.project_root / "frontend"
@@ -122,7 +128,7 @@ class WolfAILauncher:
             # Check if frontend is built
             dist_dir = frontend_dir / "dist"
             if dist_dir.exists():
-                print("📦 Frontend build found, serving static files...")
+                print("[OK] Frontend build found, serving static files...")
                 # Backend will serve the static files
                 return True
             
@@ -131,14 +137,14 @@ class WolfAILauncher:
             
             self.frontend_process = subprocess.Popen([
                 'npm', 'run', 'dev'
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
             
             # Wait for frontend to start
             time.sleep(5)
             
             # Check if frontend is running
             if self.frontend_process.poll() is None:
-                print("✅ Frontend started on http://localhost:5173")
+                print("[OK] Frontend started on http://localhost:5173")
                 return True
             else:
                 print("❌ Frontend failed to start")
@@ -177,13 +183,13 @@ class WolfAILauncher:
         """Open browser to specified URL."""
         try:
             webbrowser.open(url)
-            print(f"🌐 Opened browser to {url}")
+            print(f"[WEB] Opened browser to {url}")
         except Exception as e:
-            print(f"⚠️  Could not open browser: {e}")
+            print(f"[WARN] Could not open browser: {e}")
     
     def run(self, open_browser: bool = True):
         """Run the complete Wolf AI system."""
-        print("🐺 Wolf AI 2.0 Startup")
+        print("[WOLF] Wolf AI 2.0 Startup")
         print("=" * 50)
         
         # Check dependencies
@@ -195,10 +201,10 @@ class WolfAILauncher:
             return False
         
         # Wait for backend to be healthy
-        print("⏳ Waiting for backend to be healthy...")
+        print("[WAIT] Waiting for backend to be healthy...")
         for i in range(10):
             if self.check_backend_health():
-                print("✅ Backend is healthy!")
+                print("[OK] Backend is healthy!")
                 break
             time.sleep(1)
         else:
@@ -210,17 +216,17 @@ class WolfAILauncher:
             return False
         
         # Check services
-        print("\n🔍 Checking services...")
+        print("\n[CHECK] Checking services...")
         
         backend_healthy = self.check_backend_health()
         frontend_healthy = self.check_frontend_health()
         
-        print(f"Backend API: {'✅ Healthy' if backend_healthy else '❌ Unhealthy'}")
-        print(f"Frontend UI: {'✅ Healthy' if frontend_healthy else '❌ Unhealthy'}")
+        print(f"Backend API: {'[OK] Healthy' if backend_healthy else '[ERR] Unhealthy'}")
+        print(f"Frontend UI: {'[OK] Healthy' if frontend_healthy else '[ERR] Unhealthy'}")
         
         if backend_healthy and frontend_healthy:
-            print("\n🎉 Wolf AI 2.0 is running!")
-            print("\n📋 Services:")
+            print("\n[SUCCESS] Wolf AI 2.0 is running!")
+            print("\n[LIST] Services:")
             print("   • Backend API: http://localhost:8000")
             print("   • Frontend UI: http://localhost:8000 (served by backend)")
             print("   • API Docs: http://localhost:8000/docs")
@@ -229,7 +235,7 @@ class WolfAILauncher:
             if open_browser:
                 self.open_browser("http://localhost:8000")
             
-            print("\n🎙️  Voice Assistant:")
+            print("\n[VOICE]  Voice Assistant:")
             print("   • Say 'Hey Wolf' to activate")
             print("   • Press Ctrl+C to stop")
             
@@ -248,7 +254,7 @@ class WolfAILauncher:
                         break
                         
             except KeyboardInterrupt:
-                print("\n🛑 Stopping Wolf AI...")
+                print("\n[STOP] Stopping Wolf AI...")
                 
         else:
             print("❌ Some services failed to start")
@@ -260,25 +266,25 @@ class WolfAILauncher:
     
     def stop(self):
         """Stop all processes."""
-        print("🛑 Stopping services...")
+        print("[STOP] Stopping services...")
         
         if self.backend_process:
             try:
                 self.backend_process.terminate()
                 self.backend_process.wait(timeout=5)
-                print("✅ Backend stopped")
+                print("[OK] Backend stopped")
             except:
                 self.backend_process.kill()
-                print("✅ Backend killed")
+                print("[OK] Backend killed")
         
         if self.frontend_process:
             try:
                 self.frontend_process.terminate()
                 self.frontend_process.wait(timeout=5)
-                print("✅ Frontend stopped")
+                print("[OK] Frontend stopped")
             except:
                 self.frontend_process.kill()
-                print("✅ Frontend killed")
+                print("[OK] Frontend killed")
         
         print("👋 Wolf AI stopped. Goodbye!")
 
