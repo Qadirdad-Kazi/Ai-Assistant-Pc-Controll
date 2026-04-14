@@ -19,6 +19,7 @@ from core.database import db
 from core.receptionist import receptionist  
 from core.settings_store import settings as settings_store  
 from core.privacy_tracker import privacy_tracker  
+from core.advanced_task_executor import advanced_executor
 from config import VOICE_ASSISTANT_ENABLED, OLLAMA_URL, LOCAL_ROUTER_PATH, CUSTOM_PPN_PATH  
 
 app = FastAPI(title="Wolf AI Backend API")
@@ -60,7 +61,8 @@ system_status = {
     "System Control": "READY",
     "Neural Sonic": "STANDBY",
     "Dev Agent": "IDLE",
-    "Call Status": "IDLE"
+    "Call Status": "IDLE",
+    "active_workflow": None
 }
 
 from typing import Optional, Dict, List, Any
@@ -546,7 +548,17 @@ async def websocket_system_status(websocket: WebSocket):
                 system_status["Voice Core"] = "LISTENING" if system_status["isListening"] else "ACTIVE"
             
             # Neural Sonic status is already set by TTS in system_status
-            # Don't override it with media state which is for music playback
+            
+            # Populate real-time active workflow (HUD)
+            if advanced_executor.active_status != "idle":
+                system_status["active_workflow"] = {
+                    "status": advanced_executor.active_status,
+                    "currentStep": advanced_executor.current_step_index,
+                    "totalSteps": len(advanced_executor.active_plan),
+                    "steps": [s.get("action", "Step").replace("_", " ").title() for s in advanced_executor.active_plan]
+                }
+            else:
+                system_status["active_workflow"] = None
                 
             await websocket.send_json(system_status)
             await asyncio.sleep(0.5) # Send updates twice a second
@@ -856,6 +868,20 @@ async def get_knowledge():
             return {"heuristics": [dict(row) for row in rows]}
     except Exception as e:
         return {"heuristics": [], "error": str(e)}
+
+@app.delete("/api/knowledge/{heuristic_id}")
+async def delete_knowledge_heuristic(heuristic_id: int):
+    """Allow Wolf to forget a specific learned behavior."""
+    success = db.delete_heuristic(heuristic_id)
+    if success:
+        return {"success": True, "message": "Heuristic forgotten."}
+    raise HTTPException(status_code=500, detail="Failed to delete heuristic.")
+
+@app.delete("/api/privacy/logs")
+async def clear_privacy_logs():
+    """Clear the privacy tracking session."""
+    privacy_tracker.clear_logs()
+    return {"success": True, "message": "Privacy session cleared."}
 
 @app.get("/api/analytics/summary")
 async def get_analytics_summary():

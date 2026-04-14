@@ -245,7 +245,7 @@ class VoiceAssistant(QObject):
             if task_understanding["confidence"] < 0.3:
                 # Low confidence, fall back to regular processing
                 print(f"[VoiceAssistant] ⚠ Low confidence ({task_understanding['confidence']:.2f}), using regular processing")
-                return self._process_query_regular(user_text, stop_event, request_id)
+                return self._process_query(user_text, stop_event, request_id)
             
             # Execute the plan - pass user_text to enable learning loop
             execution_plan = task_understanding["execution_plan"]
@@ -284,7 +284,7 @@ class VoiceAssistant(QObject):
             
             self.processing_finished.emit()
     
-    def _process_query_regular(self, user_text: str, stop_event: threading.Event, request_id: int):
+    def _process_query(self, user_text: str, stop_event: threading.Event, request_id: int):
         """Fallback to regular query processing for simple tasks."""
         """Process user query through the pipeline with Chain-of-Thought reasoning and human-like thinking."""
         try:

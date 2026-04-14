@@ -4,6 +4,7 @@ Polls for upcoming 'Call' events and prepares the Receptionist.
 """
 import subprocess
 import threading
+import sys
 import time
 import re
 from datetime import datetime, timedelta
@@ -45,6 +46,10 @@ class CalendarManager:
 
     def sync_now(self):
         """Manual sync of calendar events."""
+        if sys.platform != "darwin":
+            # Skip macOS specific calendar sync on other platforms
+            return
+            
         print(f"{CYAN}[CalendarManager] Syncing with macOS Calendar...{RESET}")
         events = self._fetch_calendar_events()
         

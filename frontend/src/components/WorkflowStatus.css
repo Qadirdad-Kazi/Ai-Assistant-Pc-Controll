@@ -1,0 +1,149 @@
+.workflow-status-hud {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 320px;
+  background: rgba(13, 17, 23, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 255, 157, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 16px rgba(0, 255, 157, 0.1);
+  z-index: 1000;
+  animation: slideInHUD 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #e6edf3;
+  font-family: 'Inter', sans-serif;
+}
+
+@keyframes slideInHUD {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.workflow-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.pulse-icon {
+  background: rgba(0, 255, 157, 0.1);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.spin {
+  animation: spin 2s linear infinite;
+  color: #00ff9d;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.workflow-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.workflow-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: #00ff9d;
+  opacity: 0.8;
+  margin-bottom: 2px;
+}
+
+.workflow-task {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workflow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.workflow-step.completed {
+  opacity: 0.5;
+}
+
+.workflow-step.active {
+  transform: translateX(4px);
+}
+
+.workflow-step.pending {
+  opacity: 0.3;
+}
+
+.step-indicator {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workflow-step.completed .step-indicator {
+  color: #00ff9d;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #484f58;
+  border-radius: 50%;
+}
+
+.workflow-step.active .dot {
+  background: #00ff9d;
+  box-shadow: 0 0 8px #00ff9d;
+  animation: pulseDot 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.step-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.workflow-progress-bg {
+  height: 4px;
+  background: #21262d;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.workflow-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00ff9d, #00d4ff);
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 8px rgba(0, 255, 157, 0.4);
+}

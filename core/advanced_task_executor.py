@@ -26,6 +26,10 @@ class AdvancedTaskExecutor:
         # Learning Loop State
         self.last_failed_query = None
         self.recorded_steps_since_failure = []
+        # Workflow HUD tracking
+        self.active_plan: List[Dict[str, Any]] = []
+        self.current_step_index: int = -1 # -1 means no active plan
+        self.active_status: str = "idle" # idle, processing, complete
         
     def understand_task(self, user_input: str) -> Dict[str, Any]:
         """AI-powered task understanding with dynamic planning."""
@@ -366,18 +370,22 @@ class AdvancedTaskExecutor:
         """Execute plan with visual verification and autonomous learning loop."""
         print(f"[AdvancedTask] ⚡ Executing plan with {len(plan)} steps (Visual AI Mode)")
         
-        # If this is a correction of a previous failure, trigger learning
+        # Trigger learning
         is_learning_correction = False
         if original_query and self.last_failed_query and original_query != self.last_failed_query:
-            # Simple heuristic: if we have a failure on record and the user is giving a new multi-step plan,
-            # it might be the correction.
             is_learning_correction = True
             print(f"[LearningLoop] 🧠 Detected potential correction for: '{self.last_failed_query}'")
+
+        # Set HUD tracking state
+        self.active_plan = plan
+        self.current_step_index = 0
+        self.active_status = "processing"
 
         results = []
         success_count = 0
         
         for i, step in enumerate(plan, 1):
+            self.current_step_index = i - 1
             step_num = step["step"]
             action = step["action"]
             details = step["details"]
@@ -453,6 +461,10 @@ class AdvancedTaskExecutor:
                 self.last_failed_query = original_query
                 print(f"[LearningLoop] 📍 Recorded failure for: '{original_query}'")
 
+        # Update final HUD status
+        self.active_status = "complete"
+        # Reset HUD after a delay or let it stay for a bit
+        
         summary = f"Completed {success_count}/{len(plan)} steps successfully"
         if overall_success:
             summary += " - Task completed successfully!"

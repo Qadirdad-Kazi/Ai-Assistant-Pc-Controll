@@ -65,8 +65,16 @@ export default function Privacy() {
   };
 
   const clearLogs = async () => {
-      // In a real app, this would call an API
-      setLogs([]);
+    try {
+      const res = await fetch('http://localhost:8000/api/privacy/logs', {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setLogs([]);
+      }
+    } catch (err) {
+      console.error('Failed to clear privacy logs', err);
+    }
   };
 
   return (

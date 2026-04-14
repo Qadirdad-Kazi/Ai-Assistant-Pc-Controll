@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Dashboard from './components/Dashboard'
 import Sidebar from './components/Sidebar'
@@ -16,16 +17,27 @@ import SafetyPrompt from './components/SafetyPrompt'
 import ClarificationPrompt from './components/ClarificationPrompt'
 import CalendarReminder from './components/CalendarReminder'
 import WorkflowStatus from './components/WorkflowStatus'
-import './workflowStatus.css'
 import './App.css'
 
 function App() {
-  const [workflow, setWorkflow] = React.useState({
-    status: 'idle',
-    currentStep: 0,
-    totalSteps: 4,
-    steps: ["Create Project Folder", "Scaffold HTML/JS", "Launch VS Code", "Tile Workspace"]
-  });
+  const [workflow, setWorkflow] = useState(null);
+
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8000/ws/status');
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.active_workflow) {
+          setWorkflow(data.active_workflow);
+        } else {
+          setWorkflow(null);
+        }
+      } catch (err) {
+        console.error("Status WS error in App.jsx", err);
+      }
+    };
+    return () => ws.close();
+  }, []);
 
   return (
     <Router>

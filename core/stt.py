@@ -16,7 +16,8 @@ import os
 from typing import Optional, Callable, Any
 from config import (  
     WAKE_WORD, REALTIMESTT_MODEL, WAKE_WORD_SENSITIVITY,
-    CUSTOM_PPN_PATH, GRAY, RESET, CYAN, YELLOW, GREEN, RED
+    CUSTOM_PPN_PATH, GRAY, RESET, CYAN, YELLOW, GREEN, RED,
+    WAKE_WORD_DETECTION_METHOD
 )
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -45,7 +46,6 @@ class STTListener:
 
         self.running  = False
         self.recorder: Optional[Any] = None
-        self.conversation_recorder: Optional[Any] = None
         self.initialized = False
         self.listening_thread: Optional[threading.Thread] = None
 
@@ -159,10 +159,12 @@ class STTListener:
                     language="en",
                     device="cuda" if cuda_available else "cpu",
                     spinner=False,
-                    use_microphone=True
+                    use_microphone=True,
+                    wakeword_backend="none" if WAKE_WORD_DETECTION_METHOD == "transcription" else backend,
+                    wake_words=detect_word if WAKE_WORD_DETECTION_METHOD != "transcription" else "",
                 )
             except Exception as e:
-                print(f"{RED}[STT] ✗ Failed to initialize main recorder: {e}{RESET}")
+                print(f"{RED}[STT] ✗ Failed to initialize recorder: {e}{RESET}")
                 # Fallback to basic configuration
                 try:
                     self.recorder = AudioToTextRecorder(
@@ -170,26 +172,16 @@ class STTListener:
                         language="en", 
                         device="cpu",
                         spinner=False,
-                        use_microphone=True
+                        use_microphone=True,
+                        wakeword_backend="none"
                     )
                     print(f"{GREEN}[STT] ✓ Using fallback configuration{RESET}")
                 except Exception as fallback_error:
                     print(f"{RED}[STT] ✗ Complete STT failure: {fallback_error}{RESET}")
                     raise
 
-            # Dedicated recorder for conversation mode (wake word disabled).
-            self.conversation_recorder = AudioToTextRecorder(
-                model=REALTIMESTT_MODEL,
-                language="en",
-                device="cuda" if cuda_available else "cpu",
-                spinner=False,
-                wakeword_backend="none",
-                wake_words="",
-                wake_words_sensitivity=WAKE_WORD_SENSITIVITY,
-            )
-
             self.initialized = True
-            print(f"{CYAN}[STT] ✓ RealTimeSTT initialized (model: {REALTIMESTT_MODEL}, wake word: '{WAKE_WORD}'){RESET}")
+            print(f"{CYAN}[STT] ✓ RealTimeSTT initialized (model: {REALTIMESTT_MODEL}){RESET}")
             return True
 
         except ImportError:
@@ -247,8 +239,7 @@ class STTListener:
             print(f"{GRAY}[STT] 🔄 Starting transcription loop...{RESET}")
 
             while self.running:
-                active_recorder = self.conversation_recorder if self.in_conversation_mode and self.conversation_recorder else self.recorder
-                if not active_recorder:
+                if not self.recorder:
                     time.sleep(0.05)
                     continue
 
@@ -260,11 +251,17 @@ class STTListener:
 
                 t0   = time.time()
                 try:
-                    text = str(active_recorder.text() or "")  
-                except Exception:
+                    text = str(self.recorder.text() or "")  
+                except (BrokenPipeError, ConnectionError) as e:
+                    print(f"{RED}[STT] ✗ Broken Pipe detected: {e}. Attempting recovery...{RESET}")
+                    if self.running:
+                        self.initialize()  # Re-initialize recorder
+                    continue
+                except Exception as e:
+                    print(f"{RED}[STT] ✗ Recorder error: {e}{RESET}")
                     if not self.running:
                         break
-                    # Recorder may have just been swapped; continue with new one.
+                    time.sleep(0.5)
                     continue
                 elapsed = time.time() - t0
 
@@ -416,14 +413,9 @@ class STTListener:
             try:
                 print(f"{CYAN}[STT] Shutting down recorder...{RESET}")
                 self.recorder.shutdown()  
+                self.recorder = None
             except Exception as e:
                 print(f"{GRAY}[STT] Error stopping recorder: {e}{RESET}")
-        if self.conversation_recorder:
-            try:
-                print(f"{CYAN}[STT] Shutting down conversation recorder...{RESET}")
-                self.conversation_recorder.shutdown()  
-            except Exception as e:
-                print(f"{GRAY}[STT] Error stopping conversation recorder: {e}{RESET}")
         if self.listening_thread:
             self.listening_thread.join(timeout=2.0)  
         print(f"{CYAN}[STT] Listener stopped{RESET}")

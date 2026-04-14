@@ -24,9 +24,18 @@ const KnowledgeBase = () => {
 
     const handleDelete = async (id) => {
         if (window.confirm("Are you sure you want Wolf to forget this learned behavior?")) {
-            // In a real app, you'd call a delete endpoint here. 
-            // For now, we'll just filter it locally for the UI.
-            setHeuristics(heuristics.filter(h => h.id !== id));
+            try {
+                const res = await fetch(`http://localhost:8000/api/knowledge/${id}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    setHeuristics(heuristics.filter(h => h.id !== id));
+                } else {
+                    alert("Failed to forget heuristic.");
+                }
+            } catch (err) {
+                console.error("Delete heuristic failed", err);
+            }
         }
     };
 

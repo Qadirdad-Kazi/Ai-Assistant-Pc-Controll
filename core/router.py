@@ -16,6 +16,7 @@ from typing import Literal, Tuple, Dict, Any, Optional
 import time
 import re
 import json
+import torch
 from huggingface_hub import snapshot_download  
 
 # Suppress transformers logging
@@ -217,7 +218,6 @@ class FunctionGemmaRouter:
         
         if not self.use_ollama_fallback:
             # Lazy load heavy dependencies
-            import torch
             from transformers import AutoTokenizer, AutoModelForCausalLM, logging as transformers_logging
 
             # Suppress transformers logging

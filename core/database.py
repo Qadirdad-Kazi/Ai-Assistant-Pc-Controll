@@ -264,6 +264,17 @@ class WolfCoreDatabase:
         except Exception as e:
             print(f"[Database] Failed to increment heuristic success: {e}")
 
+    def delete_heuristic(self, heuristic_id: int):
+        """Remove a learned behavior by its ID."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute('DELETE FROM learned_heuristics WHERE id = ?', (heuristic_id,))
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"[Database] Failed to delete heuristic: {e}")
+            return False
+
     def get_tasks(self, status: str = 'pending', limit: int = 50) -> List[Dict[str, Any]]:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
