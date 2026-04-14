@@ -59,7 +59,7 @@ export default function Analytics() {
               <div className="metric-icon"><DollarSign size={24} /></div>
               <div className="metric-details">
                 <span className="label">Pipeline Value</span>
-                <h3 className="value">${data.metrics.pipeline_value.toLocaleString()}</h3>
+                <h3 className="value">${(data.metrics?.pipeline_value || 0).toLocaleString()}</h3>
               </div>
             </div>
             <div className="metric-card cyan">
@@ -102,14 +102,14 @@ export default function Analytics() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.top_clients.map((client, i) => (
+                  {(data.top_clients || []).map((client, i) => (
                     <tr key={i}>
                       <td className="client-name">{client.caller_id}</td>
-                      <td>{client.call_count}</td>
-                      <td className="value-cell">${client.total_value.toLocaleString()}</td>
+                      <td>{(client.call_count || 0).toLocaleString()}</td>
+                      <td className="value-cell">${(client.total_value || 0).toLocaleString()}</td>
                       <td>
                         <div className="sentiment-bar-bg">
-                          <div className="sentiment-bar-fill" style={{ width: `${client.avg_sentiment * 10}%` }}></div>
+                          <div className="sentiment-bar-fill" style={{ width: `${(client.avg_sentiment || 0) * 10}%` }}></div>
                         </div>
                       </td>
                     </tr>
@@ -125,16 +125,16 @@ export default function Analytics() {
                 <h4>PIPELINE HEALTH (BY MOOD)</h4>
               </div>
               <div className="heatmap-list">
-                {data.heatmap.map((item, i) => (
+                {(data.heatmap || []).map((item, i) => (
                   <div key={i} className="heatmap-item">
                     <div className="heatmap-label-row">
                       <span className="mood-label">{item.mood}</span>
-                      <span className="mood-value">${item.value.toLocaleString()}</span>
+                      <span className="mood-value">${(item.value || 0).toLocaleString()}</span>
                     </div>
                     <div className="heatmap-progress-bg">
                       <div
-                        className={`heatmap-progress-bar ${item.mood.toLowerCase()}`}
-                        style={{ width: `${(item.value / (data.metrics.pipeline_value || 1)) * 100}%` }}
+                        className={`heatmap-progress-bar ${item.mood?.toLowerCase() || ''}`}
+                        style={{ width: `${((item.value || 0) / (data.metrics?.pipeline_value || 1)) * 100}%` }}
                       ></div>
                     </div>
                   </div>

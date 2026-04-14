@@ -275,6 +275,16 @@ class WolfCoreDatabase:
             print(f"[Database] Failed to delete heuristic: {e}")
             return False
 
+    def get_action_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Retrieve the audit trail of system actions."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                'SELECT * FROM action_logs ORDER BY timestamp DESC LIMIT ?',
+                (limit,)
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
     def get_tasks(self, status: str = 'pending', limit: int = 50) -> List[Dict[str, Any]]:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
