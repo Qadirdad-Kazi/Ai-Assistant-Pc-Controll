@@ -11,9 +11,7 @@ import requests
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 warnings.filterwarnings("ignore", message=".*generation flags are not valid.*")
 
-import torch  
-from transformers import AutoTokenizer, AutoModelForCausalLM, logging as transformers_logging  
-from transformers.utils import get_json_schema  
+# Lazy imports for torch and transformers are inside the router class
 from typing import Literal, Tuple, Dict, Any, Optional
 import time
 import re
@@ -21,7 +19,7 @@ import json
 from huggingface_hub import snapshot_download  
 
 # Suppress transformers logging
-transformers_logging.set_verbosity_error()
+# transformers logging will be set during initialization
 
 from config import LOCAL_ROUTER_PATH, HF_ROUTER_REPO, OLLAMA_URL, RESPONDER_MODEL  
 
@@ -163,21 +161,8 @@ def recall_memory(query: str):
     """
     pass
 
-# Pre-compute tool schemas
-TOOLS = [
-    get_json_schema(pc_control),
-    get_json_schema(play_music),
-    get_json_schema(thinking),
-    get_json_schema(nonthinking),
-    get_json_schema(scaffold_website),
-    get_json_schema(set_call_directive),
-    get_json_schema(visual_agent),
-    get_json_schema(research_web),
-    get_json_schema(recall_memory),
-    get_json_schema(create_task),
-    get_json_schema(list_tasks),
-    get_json_schema(execute_task)
-]
+# Tool schemas will be pre-computed lazily inside the class
+TOOLS = None
 
 # All valid function names
 VALID_FUNCTIONS = {
@@ -231,6 +216,13 @@ class FunctionGemmaRouter:
         self.use_ollama_fallback = self.model_path is None
         
         if not self.use_ollama_fallback:
+            # Lazy load heavy dependencies
+            import torch
+            from transformers import AutoTokenizer, AutoModelForCausalLM, logging as transformers_logging
+
+            # Suppress transformers logging
+            transformers_logging.set_verbosity_error()
+
             device = "cuda" if torch.cuda.is_available() else "cpu"
             print(f"Loading FunctionGemma Router on {device.upper()}...")
             start = time.time()
@@ -268,6 +260,28 @@ class FunctionGemmaRouter:
             self.model = None
             self.tokenizer = None
             print("[Router] Initialized in Ollama Fallback mode.")
+        
+        self._tools = None
+
+    def _get_tools(self):
+        """Lazily compute tool schemas using transformers.utils.get_json_schema."""
+        if self._tools is None:
+            from transformers.utils import get_json_schema
+            self._tools = [
+                get_json_schema(pc_control),
+                get_json_schema(play_music),
+                get_json_schema(thinking),
+                get_json_schema(nonthinking),
+                get_json_schema(scaffold_website),
+                get_json_schema(set_call_directive),
+                get_json_schema(visual_agent),
+                get_json_schema(research_web),
+                get_json_schema(recall_memory),
+                get_json_schema(create_task),
+                get_json_schema(list_tasks),
+                get_json_schema(execute_task)
+            ]
+        return self._tools
     
     def _ollama_route(self, user_prompt: str) -> str:
         """Fallback routing using Ollama."""
@@ -338,7 +352,7 @@ class FunctionGemmaRouter:
         # Apply chat template
         prompt = self.tokenizer.apply_chat_template(
             messages,
-            tools=TOOLS,
+            tools=self._get_tools(),
             add_generation_prompt=True,
             tokenize=False
         )

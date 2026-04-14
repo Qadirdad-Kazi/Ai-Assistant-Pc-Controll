@@ -1,5 +1,50 @@
 [
   {
+    "id": 1776133785597,
+    "timestamp": "2026-04-13T19:29:45.597470",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 394
+  },
+  {
+    "id": 1776133783121,
+    "timestamp": "2026-04-13T19:29:43.121410",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776133749831,
+    "timestamp": "2026-04-13T19:29:09.831231",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776133688140,
+    "timestamp": "2026-04-13T19:28:08.140010",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 394
+  },
+  {
+    "id": 1776133685239,
+    "timestamp": "2026-04-13T19:28:05.239515",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
     "id": 1776133435906,
     "timestamp": "2026-04-13T19:23:55.906442",
     "service": "Ollama",

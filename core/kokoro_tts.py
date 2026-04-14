@@ -7,11 +7,7 @@ import sounddevice as sd
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
-try:
-    from kokoro import KModel, KPipeline 
-    KOKORO_AVAILABLE = True
-except ImportError:
-    KOKORO_AVAILABLE = False
+KOKORO_AVAILABLE = None # Will be determined at initialization
 
 class KokoroTTS:
     """
@@ -29,7 +25,9 @@ class KokoroTTS:
         
     def initialize(self):
         """Load the model and pipeline."""
-        if not KOKORO_AVAILABLE:
+        global KOKORO_AVAILABLE
+        
+        if KOKORO_AVAILABLE is False:
             print("[KokoroTTS] Library not installed. Run 'pip install kokoro'.")
             return False
             
@@ -38,8 +36,11 @@ class KokoroTTS:
             
         try:
             print(f"[KokoroTTS] Initializing Kokoro from {self.model_path}...")
+            # Lazy import to avoid loading torch at startup
+            from kokoro import KPipeline
+            KOKORO_AVAILABLE = True
+            
             # Note: Kokoro requires 'onnxruntime' or 'torch'
-            # This is a simplified initialization assuming the user has the model
             self.pipeline = KPipeline(lang_code='a') # 'a' for American English
             self.is_initialized = True
             
@@ -48,6 +49,10 @@ class KokoroTTS:
             if self.worker_thread:
                 self.worker_thread.start()
             return True
+        except ImportError:
+            KOKORO_AVAILABLE = False
+            print("[KokoroTTS] Library not installed. Run 'pip install kokoro'.")
+            return False
         except Exception as e:
             print(f"[KokoroTTS] Initialization failed: {e}")
             return False

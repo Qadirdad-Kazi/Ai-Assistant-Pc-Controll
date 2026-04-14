@@ -201,8 +201,8 @@ class WolfAILauncher:
             return False
         
         # Wait for backend to be healthy
-        print("[WAIT] Waiting for backend to be healthy...")
-        for i in range(10):
+        print(f"[WAIT] Waiting for backend to be healthy (timeout: 60s)...")
+        for i in range(60):
             if self.check_backend_health():
                 print("[OK] Backend is healthy!")
                 break

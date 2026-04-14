@@ -154,8 +154,10 @@ class VoiceAssistant(QObject):
         
         # Update system status to show listening
         try:
-            from backend_api import system_status
-            system_status["isListening"] = True
+            import sys
+            if "backend_api" in sys.modules:
+                from backend_api import system_status
+                system_status["isListening"] = True
         except ImportError:
             # Backend not available, skip status update
             pass
@@ -189,9 +191,11 @@ class VoiceAssistant(QObject):
         
         # Update system status to show not listening while processing
         try:
-            from backend_api import system_status
-            system_status["isListening"] = False
-            system_status["Voice Core"] = "PROCESSING"
+            import sys
+            if "backend_api" in sys.modules:
+                from backend_api import system_status
+                system_status["isListening"] = False
+                system_status["Voice Core"] = "PROCESSING"
         except ImportError:
             # Backend not available, skip status update
             pass

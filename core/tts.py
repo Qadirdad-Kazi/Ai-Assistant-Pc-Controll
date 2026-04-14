@@ -18,7 +18,7 @@ from typing import Dict, Any, Optional
 from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
 import requests
 import sounddevice as sd  
-from core.kokoro_tts import kokoro_tts 
+# kokoro_tts will be imported lazily
 
 # ANSI colors for console output
 GRAY = "\033[90m"
@@ -441,8 +441,15 @@ class UnifiedTTS:
     
     def __init__(self):
         self.piper = PiperTTS()
-        self.kokoro = kokoro_tts
+        self.kokoro = None # Will be initialized lazily
         self.engine = "piper" # default
+
+    def _get_kokoro(self):
+        """Lazy access to Kokoro TTS instance."""
+        if self.kokoro is None:
+            from core.kokoro_tts import kokoro_tts
+            self.kokoro = kokoro_tts
+        return self.kokoro
 
     @property
     def piper_exe(self):
@@ -452,20 +459,21 @@ class UnifiedTTS:
         from core.settings_store import settings
         self.engine = settings.get("tts.engine", "piper").lower()
         if self.engine == "kokoro":
-            return self.kokoro.initialize()
+            return self._get_kokoro().initialize()
         return self.piper.initialize()
 
     def speak(self, text: str):
         if self.engine == "kokoro":
             self._last_text_length = len(text)
-            # Set Neural Sonic status to PLAYING
             try:
-                from backend_api import system_status
-                system_status["Neural Sonic"] = "PLAYING"
+                import sys
+                if "backend_api" in sys.modules:
+                    from backend_api import system_status
+                    system_status["Neural Sonic"] = "PLAYING"
             except ImportError:
                 # Backend not available, skip status update
                 pass
-            return self.kokoro.speak(text)
+            return self._get_kokoro().speak(text)
         return self.piper.speak(text)
 
     def queue_sentence(self, sentence: str):
@@ -476,27 +484,31 @@ class UnifiedTTS:
                 self._last_text_length += current_length
             else:
                 self._last_text_length = current_length
-            # Set Neural Sonic status to PLAYING
             try:
-                from backend_api import system_status
-                system_status["Neural Sonic"] = "PLAYING"
+                import sys
+                if "backend_api" in sys.modules:
+                    from backend_api import system_status
+                    system_status["Neural Sonic"] = "PLAYING"
             except ImportError:
                 # Backend not available, skip status update
                 pass
-            return self.kokoro.speak(sentence)
+            return self._get_kokoro().speak(sentence)
         return self.piper.queue_sentence(sentence)
 
     def stop(self):
         # Reset Neural Sonic status
         try:
-            from backend_api import system_status
-            system_status["Neural Sonic"] = "STANDBY"
+            import sys
+            if "backend_api" in sys.modules:
+                from backend_api import system_status
+                system_status["Neural Sonic"] = "STANDBY"
         except ImportError:
             # Backend not available, skip status update
             pass
         
         self.piper.stop()
-        self.kokoro.stop()
+        kokoro = self._get_kokoro()
+        if kokoro: kokoro.stop()
 
     def set_completion_callback(self, callback):
         self.piper.set_completion_callback(callback)
@@ -513,6 +525,8 @@ class UnifiedTTS:
                 
                 # Since Kokoro doesn't expose is_speaking, we'll use a reasonable wait time
                 # based on text length (rough estimate: 0.1 seconds per character)
+                # Since Kokoro doesn't expose is_speaking, we'll use a reasonable wait time
+                # based on text length (rough estimate: 0.1 seconds per character)
                 if hasattr(self, '_last_text_length'):
                     wait_time = min(self._last_text_length * 0.05, 10.0)  # Max 10 seconds
                     print(f"[TTS] Waiting for Kokoro TTS completion ({wait_time:.1f}s)...")
@@ -521,8 +535,10 @@ class UnifiedTTS:
                     
                     # Reset Neural Sonic status when TTS finishes
                     try:
-                        from backend_api import system_status
-                        system_status["Neural Sonic"] = "STANDBY"
+                        import sys
+                        if "backend_api" in sys.modules:
+                            from backend_api import system_status
+                            system_status["Neural Sonic"] = "STANDBY"
                     except ImportError:
                         # Backend not available, skip status update
                         pass
@@ -537,7 +553,8 @@ class UnifiedTTS:
 
     def shutdown(self):
         self.piper.shutdown()
-        self.kokoro.stop()
+        kokoro = self._get_kokoro()
+        if kokoro: kokoro.stop()
 
 # Global TTS instance
 tts = UnifiedTTS()
