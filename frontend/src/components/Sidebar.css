@@ -51,6 +51,29 @@
   flex-direction: column;
   padding: 30px 15px;
   gap: 10px;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 242, 254, 0.2) transparent;
+}
+
+/* Sidebar Scrollbar Styling */
+.nav-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.nav-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav-menu::-webkit-scrollbar-thumb {
+  background: rgba(0, 242, 254, 0.1);
+  border-radius: 10px;
+  transition: background 0.3s;
+}
+
+.nav-menu:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 242, 254, 0.3);
 }
 
 .nav-item {

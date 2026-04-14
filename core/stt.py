@@ -154,15 +154,33 @@ class STTListener:
                 detect_word = ""
 
             try:
+                device = "cuda" if cuda_available else "cpu"
+                print(f"{CYAN}[STT] 🚀 Initializing recorder (device={device}, compute_type=int8)...{RESET}")
                 self.recorder = AudioToTextRecorder(
                     model=REALTIMESTT_MODEL,
                     language="en",
-                    device="cuda" if cuda_available else "cpu",
+                    device=device,
+                    compute_type="int8", # Dramatically reduces VRAM usage
                     spinner=False,
                     use_microphone=True,
                     wakeword_backend="none" if WAKE_WORD_DETECTION_METHOD == "transcription" else backend,
                     wake_words=detect_word if WAKE_WORD_DETECTION_METHOD != "transcription" else "",
                 )
+            except RuntimeError as e:
+                if "cudaErrorMemoryAllocation" in str(e) or "out of memory" in str(e).lower():
+                    print(f"{RED}[STT] ⚠️ CUDA Out of Memory! Falling back to CPU for STT...{RESET}")
+                    self.recorder = AudioToTextRecorder(
+                        model=REALTIMESTT_MODEL,
+                        language="en",
+                        device="cpu",
+                        compute_type="int8",
+                        spinner=False,
+                        use_microphone=True,
+                        wakeword_backend="none" if WAKE_WORD_DETECTION_METHOD == "transcription" else backend,
+                        wake_words=detect_word if WAKE_WORD_DETECTION_METHOD != "transcription" else "",
+                    )
+                else:
+                    raise e
             except Exception as e:
                 print(f"{RED}[STT] ✗ Failed to initialize recorder: {e}{RESET}")
                 # Fallback to basic configuration
