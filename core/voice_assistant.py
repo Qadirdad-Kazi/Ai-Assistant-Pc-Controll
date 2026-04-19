@@ -207,7 +207,7 @@ class VoiceAssistant(QObject):
         
         # Process in background thread
         thread = threading.Thread(
-            target=self._process_query,
+            target=self._process_query_regular,
             args=(text, stop_event, request_id),
             daemon=True
         )

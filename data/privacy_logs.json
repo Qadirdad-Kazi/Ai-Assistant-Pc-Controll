@@ -1,5 +1,23 @@
 [
   {
+    "id": 1776571541942,
+    "timestamp": "2026-04-18T21:05:41.942565",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 394
+  },
+  {
+    "id": 1776571539205,
+    "timestamp": "2026-04-18T21:05:39.205694",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
     "id": 1776570514746,
     "timestamp": "2026-04-18T20:48:34.746503",
     "service": "Ollama",

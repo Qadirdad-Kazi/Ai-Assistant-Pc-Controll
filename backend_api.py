@@ -64,13 +64,23 @@ async def serve_frontend():
 
 @app.get("/{filename}")
 async def serve_frontend_root_file(filename: str):
-    """Serve root-level static files from frontend dist (favicon/images)."""
+    """Serve root-level static files from frontend dist and SPA single-segment routes."""
     if "/" in filename or "\\" in filename:
         raise HTTPException(status_code=404, detail="Not found")
 
     file_path = FRONTEND_DIST / filename
     if file_path.exists() and file_path.is_file():
         return FileResponse(str(file_path))
+
+    # Support client-side routing for direct hits like /chat or /settings.
+    spa_routes = {
+        "chat", "tasks", "media", "call-logs", "activity", "knowledge",
+        "analytics", "diagnostics", "privacy", "settings"
+    }
+    if filename in spa_routes:
+        index_file = FRONTEND_DIST / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
 
     raise HTTPException(status_code=404, detail="Not found")
 
@@ -667,9 +677,23 @@ def _get_call_logs(limit: int = 100):
 @app.post("/api/chat")
 async def send_chat(message: ChatMessage):
     if VOICE_ASSISTANT_ENABLED:
-        # Simulate voice input with text
-        voice_assistant._on_speech(message.text)
-    return {"status": "processing"}
+        try:
+            # Ensure websocket clients observe a state change immediately.
+            voice_assistant.messages.append({"role": "user", "content": message.text})
+            # Simulate voice input with text
+            voice_assistant._on_speech(message.text)
+            return {"status": "processing"}
+        except Exception as e:
+            # Keep chat UI responsive even if the voice pipeline has runtime issues.
+            voice_assistant.messages.append(
+                {
+                    "role": "assistant",
+                    "content": f"I hit an internal processing error: {e}",
+                    "metadata": {"stages": [{"name": "error", "content": str(e)}]},
+                }
+            )
+            return {"status": "error", "error": str(e)}
+    return {"status": "offline", "message": "Voice assistant is disabled"}
 
 @app.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket):
