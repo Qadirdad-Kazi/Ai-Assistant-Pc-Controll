@@ -13,6 +13,7 @@ from PIL import Image
 import pyautogui
 import time
 from pathlib import Path
+from core.database import db
 
 class AdvancedTaskExecutor:
     """Handles complex task understanding and execution with AI reasoning."""
@@ -450,7 +451,6 @@ class AdvancedTaskExecutor:
             if is_learning_correction and self.last_failed_query:
                 # We successfully executed a plan after a failure. 
                 # Save this plan as the new HEURISTIC for the failed query!
-                from core.database import db
                 from core.tts import tts
                 db.save_experience(self.last_failed_query, plan)
                 tts.speak(f"I have successfully learned how to handle '{self.last_failed_query}' for next time.")
@@ -479,7 +479,7 @@ class AdvancedTaskExecutor:
             "screenshots_taken": len([r for r in results if r.get("screenshot")])
         }
     
-    def _execute_step(self, action: str, details: Dict) -> Dict[str, Any]:
+    def _execute_action(self, action: str, details: Dict) -> Dict[str, Any]:
         """Execute individual step with appropriate method."""
         try:
             if action == "navigate_to_path":
@@ -523,13 +523,21 @@ class AdvancedTaskExecutor:
     def _navigate_to_path(self, path: str) -> Dict[str, Any]:
         """Navigate to specified path using terminal."""
         try:
-            # Convert to proper Windows path format
-            if not path.startswith(("C:", "D:", "E:", "F:")):
-                # Assume relative path, add to Desktop
-                desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-                full_path = os.path.join(desktop_path, path)
-            else:
+            # Normalize path aliases
+            p_lower = path.lower().strip()
+            home = os.path.expanduser("~")
+            
+            if p_lower == "desktop":
+                full_path = os.path.join(home, "Desktop")
+            elif p_lower == "documents":
+                full_path = os.path.join(home, "Documents")
+            elif p_lower == "downloads":
+                full_path = os.path.join(home, "Downloads")
+            elif path.startswith(("C:", "D:", "E:", "F:")) or os.path.isabs(path):
                 full_path = path
+            else:
+                # Default to Desktop for relative paths
+                full_path = os.path.join(home, "Desktop", path)
             
             # Use PowerShell to navigate
             command = f'cd "{full_path}"'

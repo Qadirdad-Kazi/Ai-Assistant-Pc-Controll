@@ -13,13 +13,17 @@ class TestPCControl(unittest.TestCase):
         self.controller = PCController()
 
     @patch('subprocess.run')
-    def test_open_app_mock(self, mock_run):
-        """Test application launching via mocked subprocess."""
+    @patch('os.startfile')
+    @patch('core.vision_agent.vision_agent.human_launch_app')
+    @patch('core.dynamic_app_discovery.dynamic_discovery.find_app_by_name')
+    def test_open_app_mock(self, mock_discover, mock_human_launch, mock_start, mock_run):
+        """Test application launching via mocked components."""
         mock_run.return_value.returncode = 0
-        # Testing a generic app launch (using dynamic discovery fallback)
+        mock_human_launch.return_value = {"success": True}
+        
         result = self.controller.execute("open_app", "calculator")
         self.assertTrue(result["success"])
-        self.assertIn("opened", result["message"].lower())
+        self.assertIn("successfully", result["message"].lower())
 
     @patch('subprocess.run')
     def test_window_tiling_macos(self, mock_run):

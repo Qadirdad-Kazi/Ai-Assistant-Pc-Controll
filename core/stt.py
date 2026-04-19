@@ -55,6 +55,7 @@ class STTListener:
         self._last_activity = 0.0          # timestamp of last user speech
         self._timeout_timer: Optional[threading.Timer] = None
 
+        self._is_paused = False
         print(f"{CYAN}[STT] Initializing RealTimeSTT listener...{RESET}")
         print(f"{CYAN}[STT] Wake word: '{WAKE_WORD}'{RESET}")
         print(f"{CYAN}[STT] Detection method: RealTimeSTT built-in wake word detection{RESET}")
@@ -98,6 +99,18 @@ class STTListener:
     def in_conversation_mode(self) -> bool:
         with self._mode_lock:
             return self._mode == self.MODE_CONVERSATION
+
+    def pause_listening(self):
+        """Pause processing of incoming audio (used during TTS speaking)."""
+        self._is_paused = True
+        print(f"{YELLOW}[STT] ⏸ Listening paused (AI is speaking).{RESET}")
+
+    def resume_listening(self):
+        """Resume processing of incoming audio."""
+        self._is_paused = False
+        # Small delay to ensure any echo from speakers is gone
+        time.sleep(0.1)
+        print(f"{GREEN}[STT] ▶ Listening resumed.{RESET}")
 
     # ── Initialization ────────────────────────────────────────────────────────
 
@@ -281,7 +294,13 @@ class STTListener:
                         break
                     time.sleep(0.5)
                     continue
+
                 elapsed = time.time() - t0
+
+                if self._is_paused:
+                    # Continue the loop but discard everything until resumed
+                    # This prevents the feedback loop where AI hears itself
+                    continue
 
                 if not text or not text.strip():
                     if self.in_conversation_mode:
@@ -298,68 +317,6 @@ class STTListener:
 
                 # ── Stop / interrupt detection ────────────────────────────────
                 # Check for exact stop commands (optionally prefixed by wake word)
-                # This prevents accidentally dropping commands like "stop the music" or "quit vim"
-                check_text = text_lower
-                for alias in WOLF_ALIASES + ["hey wolf", "hey wolff"]:
-                    if check_text.startswith(alias):  
-                        check_text = check_text[len(alias):].strip()  
-                        break
-                
-                normalized = re.sub(r"[^a-z\s]", " ", check_text.lower())
-                normalized = re.sub(r"\s+", " ", normalized).strip()
-                
-                print(f"{YELLOW}[STT] Checking for stop command in: '{normalized}'{RESET}")
-                
-                is_stop = normalized in STOP_PHRASES
-                if not is_stop:
-                    natural_stop_patterns = [
-                        r"^(please\s+)?stop(\s+now)?$",
-                        r"^(please\s+)?(can you\s+)?stop(\s+talking)?(\s+please)?$",
-                        r"^(please\s+)?(be\s+quiet|shut\s+up|cancel|abort|halt)(\s+please)?$",
-                    ]
-                    is_stop = any(re.match(p, normalized) for p in natural_stop_patterns)
-                
-                if is_stop:
-                    print(f"{YELLOW}[STT] 🛑 Stop command detected! Text: '{check_text}'{RESET}")
-                    if self.stop_callback:
-                        print(f"{YELLOW}[STT] 📞 Calling stop callback...{RESET}")
-                        self.stop_callback()  
-                    # Keep follow-up listening open after interruption.
-                    self.enter_conversation_mode()
-                    continue
-
-                # ── Wake-word stripping ───────────────────────────────────────
-                found_alias = next((a for a in WOLF_ALIASES if a in text_lower), None)
-                if found_alias:
-                    pattern = re.compile(re.escape(found_alias), re.IGNORECASE)
-                    m = pattern.search(text_original)
-                    if m:
-                        text_clean = text_original[m.end():].strip()  
-                        print(f"{GREEN}[STT] ✨ Wake word '{found_alias}' stripped.{RESET}")
-
-                    # Fire wake-word callback if hardware hasn't already
-                    if not self.in_conversation_mode and self.wake_word_callback:
-                        self.wake_word_callback()  
-                    
-                    # Enter conversation mode immediately after wake word detection
-                    if not self.in_conversation_mode:
-                        self.enter_conversation_mode()
-
-                # ── Guard: only wake-word said, no command ────────────────────
-                if not text_clean:
-                    print(f"{GRAY}[STT] ⚠ Only wake word detected, waiting for command...{RESET}")
-                    continue
-
-                # ── Dispatch to voice assistant ───────────────────────────────
-                print(f"{CYAN}[STT] ✓ Transcription ({elapsed:.2f}s): '{text}'{RESET}")
-
-                text_lower    = text.lower().strip()
-                text_original = text.strip()
-                text_clean    = text_original
-
-                # ── Stop / interrupt detection ────────────────────────────────
-                # Check for exact stop commands (optionally prefixed by wake word)
-                # This prevents accidentally dropping commands like "stop the music" or "quit vim"
                 check_text = text_lower
                 for alias in WOLF_ALIASES + ["hey wolf", "hey wolff"]:
                     if check_text.startswith(alias):  
@@ -415,8 +372,7 @@ class STTListener:
                 if self.in_conversation_mode:
                     self._reset_timeout_timer()
 
-                self.speech_callback(text_clean)  
-
+                self.speech_callback(text_clean)
         except Exception as e:
             print(f"{GRAY}[STT] Listener error: {e}{RESET}")
             import traceback; traceback.print_exc()

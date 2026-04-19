@@ -15,7 +15,7 @@ class KokoroTTS:
     Provides human-like quality with low latency.
     """
     
-    def __init__(self, model_path: str = "models/kokoro/kokoro-v0_19.pth"):
+    def __init__(self, model_path: str = "models/kokoro/kokoro-v1_0.pth"):
         self.model_path = model_path
         self.pipeline = None
         self.is_initialized = False
@@ -27,20 +27,31 @@ class KokoroTTS:
         """Load the model and pipeline."""
         global KOKORO_AVAILABLE
         
-        if KOKORO_AVAILABLE is False:
-            print("[KokoroTTS] Library not installed. Run 'pip install kokoro'.")
-            return False
-            
         if self.is_initialized:
             return True
             
         try:
             print(f"[KokoroTTS] Initializing Kokoro from {self.model_path}...")
             # Lazy import to avoid loading torch at startup
-            from kokoro import KPipeline
+            try:
+                from kokoro import KPipeline
+            except ImportError:
+                KOKORO_AVAILABLE = False
+                print("[KokoroTTS] Library 'kokoro' not installed. Run 'pip install kokoro'.")
+                return False
+                
             KOKORO_AVAILABLE = True
             
+            # Check if model file exists
+            if not os.path.exists(self.model_path):
+                print(f"[KokoroTTS] Error: Model file not found at {self.model_path}")
+                # We don't set KOKORO_AVAILABLE = False here because the library is installed, 
+                # but the model is missing.
+                return False
+
             # Note: Kokoro requires 'onnxruntime' or 'torch'
+            # KPipeline handles model loading automatically, but we can provide the model if needed.
+            # For simplicity and compatibility with the current library version, we use the lang_code.
             self.pipeline = KPipeline(lang_code='a') # 'a' for American English
             self.is_initialized = True
             
@@ -49,12 +60,13 @@ class KokoroTTS:
             if self.worker_thread:
                 self.worker_thread.start()
             return True
-        except ImportError:
-            KOKORO_AVAILABLE = False
-            print("[KokoroTTS] Library not installed. Run 'pip install kokoro'.")
-            return False
         except Exception as e:
             print(f"[KokoroTTS] Initialization failed: {e}")
+            # If it's a specific missing dependency error, let the user know
+            if "onnxruntime" in str(e).lower():
+                print("[KokoroTTS] Hint: install onnxruntime-gpu or onnxruntime")
+            elif "torch" in str(e).lower():
+                print("[KokoroTTS] Hint: install torch")
             return False
 
     def speak(self, text: str):

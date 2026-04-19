@@ -18,7 +18,6 @@ from typing import Dict, Any, Optional
 from config import OLLAMA_URL, GREEN, CYAN, YELLOW, GRAY, RESET
 import requests
 import sounddevice as sd  
-# kokoro_tts will be imported lazily
 
 # ANSI colors for console output
 GRAY = "\033[90m"
@@ -127,22 +126,22 @@ class PiperTTS:
 
             if existing_exe:
                 self.piper_exe = existing_exe
-                print(f"{GREEN}[TTS] ✓ Piper executable found: {self.piper_exe}{RESET}")
+                print(f"[TTS] OK: Piper executable found: {self.piper_exe}")
                 return True
             else:
                 # Try to download Piper executable
-                print(f"{CYAN}[TTS] Piper executable not found. Downloading...{RESET}")
+                print(f"[TTS] INFO: Piper executable not found. Downloading...")
                 downloaded_exe = self._download_piper_executable()
                 if downloaded_exe and Path(downloaded_exe).exists():
                     self.piper_exe = str(Path(downloaded_exe).resolve())
-                    print(f"{GREEN}[TTS] ✓ Piper executable ready: {self.piper_exe}{RESET}")
+                    print(f"[TTS] OK: Piper executable ready: {self.piper_exe}")
                     return True
                 else:
-                    print(f"{YELLOW}[TTS] ⚠️ Could not download Piper executable{RESET}")
+                    print(f"[TTS] ERROR: Could not download Piper executable")
                     return False
                     
         except Exception as e:
-            print(f"{YELLOW}[TTS] Failed to initialize Piper: {e}{RESET}")
+            print(f"[TTS] ERROR: Failed to initialize Piper: {e}")
             return False
     
     def _load_voice_model(self):
@@ -150,16 +149,16 @@ class PiperTTS:
         try:
             model_path = self._download_model(self.voice_key)
             self.model_path = model_path
-            print(f"{GREEN}[TTS] ✓ Voice model loaded: {self.voice_key}{RESET}")
+            print(f"[TTS] OK: Voice model loaded: {self.voice_key}")
         except Exception as e:
-            print(f"{GRAY}[TTS] Failed to load voice model: {e}{RESET}")
+            print(f"[TTS] ERROR: Failed to load voice model: {e}")
             self.model_path = None
     
     def _download_piper_executable(self) -> Optional[str]:
         try:
             # Create piper directory if it doesn't exist
             self.piper_dir.mkdir(parents=True, exist_ok=True)
-            print(f"{CYAN}[TTS] Downloading Piper executable...{RESET}")
+            print(f"[TTS] INFO: Downloading Piper executable...")
             
             # Download URL for Windows
             piper_url = f"https://github.com/rhasspy/piper/releases/download/{self.PIPER_VERSION}/piper_windows_amd64.zip"
@@ -173,18 +172,18 @@ class PiperTTS:
                 import zipfile
                 with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
                     zip_ref.extractall(self.piper_dir)
-                    print(f"{GREEN}[TTS] ✓ Piper executable downloaded and extracted{RESET}")
+                    print(f"[TTS] OK: Piper executable downloaded and extracted")
                     detected_exe = self._find_piper_executable()
                     if detected_exe:
                         return detected_exe
-                    print(f"{YELLOW}[TTS] Piper extracted, but executable path was not found{RESET}")
+                    print(f"[TTS] ERROR: Piper extracted, but executable path was not found")
                     return None
             else:
-                print(f"{GRAY}[TTS] Failed to download Piper. Status: {response.status_code}{RESET}")
+                print(f"[TTS] ERROR: Failed to download Piper. Status: {response.status_code}")
                 return None
                 
         except Exception as e:
-            print(f"{YELLOW}[TTS] Failed to download Piper: {e}{RESET}")
+            print(f"[TTS] ERROR: Failed to download Piper: {e}")
             return None
     
     def _download_model(self, voice_key: str) -> Optional[str]:
@@ -199,7 +198,7 @@ class PiperTTS:
         config_path = self.models_dir / f"{model_name}.onnx.json"
         
         if not model_path.exists():
-            print(f"{CYAN}[TTS] Downloading voice model ({model_name})...{RESET}")
+            print(f"[TTS] INFO: Downloading voice model ({model_name})...")
             r = http_session.get(model_url, stream=True)
             r.raise_for_status()
             with open(model_path, 'wb') as f:
@@ -209,7 +208,7 @@ class PiperTTS:
             r.raise_for_status()
             with open(config_path, 'wb') as f:
                 f.write(r.content)
-            print(f"{GREEN}[TTS] ✓ Model downloaded!{RESET}")
+            print(f"[TTS] OK: Model downloaded!")
         
         return str(model_path)
     
@@ -223,18 +222,18 @@ class PiperTTS:
                 from core.settings_store import settings
                 current_voice = settings.get("tts.voice", "Male (Northern)")
 
-                print(f"{CYAN}[TTS] Initializing Piper TTS (executable mode)...{RESET}")
+                print(f"[TTS] INFO: Initializing Piper TTS (executable mode)...")
 
                 # Check if Piper executable already exists in any known layout.
                 existing_exe = self._find_piper_executable()
                 if existing_exe:
                     self.piper_exe = existing_exe
-                    print(f"{GREEN}[TTS] ✓ Piper executable found: {self.piper_exe}{RESET}")
+                    print(f"[TTS] OK: Piper executable found: {self.piper_exe}")
                 else:
-                    print(f"{CYAN}[TTS] Piper executable not found. Downloading...{RESET}")
+                    print(f"[TTS] INFO: Piper executable not found. Downloading...")
                     self.piper_exe = self._download_piper_executable()
                     if not self.piper_exe or not Path(self.piper_exe).exists():
-                        print(f"{YELLOW}[TTS] Could not set up Piper executable{RESET}")
+                        print(f"[TTS] ERROR: Could not set up Piper executable")
                         self.available = False
                         return False
 
@@ -254,9 +253,9 @@ class PiperTTS:
                         timeout=10,
                         cwd=str(Path(self.piper_exe).parent)
                     )
-                    print(f"{CYAN}[TTS] Piper version: {result.stdout.strip()}{RESET}")
+                    print(f"[TTS] OK: Piper version: {result.stdout.strip()}")
                 except Exception as e:
-                    print(f"{YELLOW}[TTS] Warning: Could not get Piper version: {e}{RESET}")
+                    print(f"[TTS] WARNING: Could not get Piper version: {e}")
 
                 # Start the worker thread
                 if not self.running:
@@ -266,13 +265,11 @@ class PiperTTS:
                 self.enabled = True
                 self.available = True
 
-                print(f"{GREEN}[TTS] [OK] Piper TTS ready ({current_voice}){RESET}")
+                print(f"[TTS] OK: Piper TTS ready ({current_voice})")
                 return True
 
             except Exception as e:
-                print(f"{YELLOW}[TTS] Failed to initialize: {e}{RESET}")
-                import traceback
-                traceback.print_exc()
+                print(f"[TTS] ERROR: Failed to initialize: {e}")
                 return False
     
     def _speech_worker(self):
@@ -338,7 +335,7 @@ class PiperTTS:
             
             if self.current_process.returncode != 0:
                 err_msg = stderr.decode('utf-8', errors='ignore').strip()
-                print(f"{YELLOW}[TTS] Piper error (code {self.current_process.returncode}): {err_msg}{RESET}")
+                print(f"[TTS] ERROR: Piper error (code {self.current_process.returncode}): {err_msg}")
                 self.current_process = None
                 return
             
@@ -351,14 +348,12 @@ class PiperTTS:
                     sd.play(data, samplerate=samplerate, blocking=True)
                 
         except subprocess.TimeoutExpired:
-            print(f"{YELLOW}[TTS] Synthesis timeout{RESET}")
+            print(f"[TTS] ERROR: Synthesis timeout")
             if self.current_process:
                 self.current_process.kill()
                 self.current_process = None
         except Exception as e:
-            print(f"{YELLOW}[TTS Error]: {e}{RESET}")
-            import traceback
-            traceback.print_exc()
+            print(f"[TTS] ERROR: {e}")
         finally:
             # Clean up temp file
             if tmp_wav and os.path.exists(tmp_wav):
@@ -420,7 +415,7 @@ class PiperTTS:
         """Switch to a different voice model."""
         if voice_key in PIPER_VOICES:
             self.model_path = self._download_model(voice_key)
-            print(f"{GREEN}[TTS] ✓ Switched to voice: {voice_key}{RESET}")
+            print(f"[TTS] OK: Switched to voice: {voice_key}")
 
     def toggle(self, enable):
         """Enable/disable TTS."""
@@ -443,6 +438,8 @@ class UnifiedTTS:
         self.piper = PiperTTS()
         self.kokoro = None # Will be initialized lazily
         self.engine = "piper" # default
+        self.on_speak_start = None
+        self.on_speak_end = None
 
     def _get_kokoro(self):
         """Lazy access to Kokoro TTS instance."""
@@ -463,6 +460,9 @@ class UnifiedTTS:
         return self.piper.initialize()
 
     def speak(self, text: str):
+        if self.on_speak_start:
+            self.on_speak_start()
+            
         if self.engine == "kokoro":
             self._last_text_length = len(text)
             try:
@@ -477,6 +477,9 @@ class UnifiedTTS:
         return self.piper.speak(text)
 
     def queue_sentence(self, sentence: str):
+        if self.on_speak_start:
+            self.on_speak_start()
+            
         if self.engine == "kokoro":
             # Accumulate total text length for accurate timing
             current_length = len(sentence)
@@ -510,6 +513,9 @@ class UnifiedTTS:
         kokoro = self._get_kokoro()
         if kokoro: kokoro.stop()
 
+        if self.on_speak_end:
+            self.on_speak_end()
+
     def set_completion_callback(self, callback):
         self.piper.set_completion_callback(callback)
         # For Kokoro we don't have a callback yet, but we could add it if needed
@@ -529,9 +535,9 @@ class UnifiedTTS:
                 # based on text length (rough estimate: 0.1 seconds per character)
                 if hasattr(self, '_last_text_length'):
                     wait_time = min(self._last_text_length * 0.05, 10.0)  # Max 10 seconds
-                    print(f"[TTS] Waiting for Kokoro TTS completion ({wait_time:.1f}s)...")
+                    print(f"[TTS] INFO: Waiting for Kokoro TTS completion ({wait_time:.1f}s)...")
                     time.sleep(wait_time)
-                    print(f"[TTS] Kokoro TTS should be finished now")
+                    print(f"[TTS] INFO: Kokoro TTS should be finished now")
                     
                     # Reset Neural Sonic status when TTS finishes
                     try:
@@ -544,6 +550,9 @@ class UnifiedTTS:
                         pass
             return
         self.piper.wait_for_completion()
+
+        if self.on_speak_end:
+            self.on_speak_end()
 
     def toggle(self, enable):
         """Enable/disable TTS."""

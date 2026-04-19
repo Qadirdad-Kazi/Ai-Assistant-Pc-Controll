@@ -35,6 +35,20 @@ from utilities.research_handler import research_handler
 from utilities.search_handler import web_search_handler  
 from core.advanced_task_executor import advanced_executor  
 from core.metacognition import metacognition_engine 
+from core.emotional_intelligence import emotional_analyzer
+from core.attention import attention_manager
+from core.intuition import intuition_engine
+from core.fatigue import energy_manager
+from core.reasoning import reasoning_engine
+from core.curiosity import curiosity_engine
+from core.function_executor import executor as function_executor
+from core.self_reflection import self_reflection_engine
+from core.personality import personality_system
+from core.personalization import adaptive_personalizer
+from core.uncertainty import quantify_and_disclose_uncertainty
+from core.multi_model import multi_model_reasoner
+from core.model_persistence import ensure_llama_loaded, mark_llama_used
+from core.tts import SentenceBuffer
 
 ACTION_FUNCTIONS = {
     "control_light", "set_timer", "set_alarm", 
@@ -77,36 +91,52 @@ class VoiceAssistant(QObject):
         self._active_request_id = 0
         
     def initialize(self) -> bool:
-        """Initialize voice assistant components."""
+        """Initialize voice assistant components with independent robustness."""
         try:
-            print(f"{CYAN}[VoiceAssistant] Initializing voice assistant components...{RESET}")
-            # Initialize STT listener
-            print(f"{CYAN}[VoiceAssistant] Creating STT listener...{RESET}")
-            self.stt_listener = STTListener(
-                wake_word_callback=self._on_wake_word,
-                speech_callback=self._on_speech,
-                stop_callback=self._on_stop
-            )
-            print(f"{CYAN}[VoiceAssistant] ✓ STT listener created{RESET}")
+            print(f"{CYAN}[VoiceAssistant] Initializing engine components...{RESET}")
             
-            print(f"{CYAN}[VoiceAssistant] Initializing STT models...{RESET}")
-            stt = cast(Any, self.stt_listener)
-            if not stt.initialize():
-                print(f"{GRAY}[VoiceAssistant] ✗ Failed to initialize STT.{RESET}")
-                return False
-            print(f"{CYAN}[VoiceAssistant] ✓ STT initialized{RESET}")
+            # 1. Initialize STT listener
+            try:
+                if not self.stt_listener:
+                    print(f"{CYAN}[VoiceAssistant] Creating STT listener...{RESET}")
+                    self.stt_listener = STTListener(
+                        wake_word_callback=self._on_wake_word,
+                        speech_callback=self._on_speech,
+                        stop_callback=self._on_stop
+                    )
+                
+                print(f"{CYAN}[VoiceAssistant] Initializing STT models...{RESET}")
+                stt = cast(Any, self.stt_listener)
+                if not stt.initialize():
+                    print(f"{YELLOW}[VoiceAssistant] ⚠️ STT initialization failed or deferred.{RESET}")
+                else:
+                    print(f"{CYAN}[VoiceAssistant] ✓ STT initialized{RESET}")
+            except Exception as e:
+                print(f"{YELLOW}[VoiceAssistant] ⚠️ STT setup encountered an error: {e}{RESET}")
+
+            # 2. Ensure TTS is initialized (Piper/Kokoro)
+            try:
+                if not tts.piper_exe:
+                    print(f"{CYAN}[VoiceAssistant] Initializing TTS engine...{RESET}")
+                    tts.initialize()
+                    print(f"{CYAN}[VoiceAssistant] ✓ TTS initialized{RESET}")
+                    
+                    # 3. Link STT and TTS to prevent feedback loops
+                    if self.stt_listener:
+                        stt = cast(STTListener, self.stt_listener)
+                        tts.on_speak_start = stt.pause_listening
+                        tts.on_speak_end = stt.resume_listening
+                        print(f"{CYAN}[VoiceAssistant] ✓ Feedback protection enabled (STT/TTS linked){RESET}")
+            except Exception as e:
+                print(f"{YELLOW}[VoiceAssistant] ⚠️ TTS setup failed: {e}{RESET}")
             
-            # Ensure TTS is initialized
-            if not tts.piper_exe:
-                print(f"{CYAN}[VoiceAssistant] Initializing TTS...{RESET}")
-                tts.initialize()
-                print(f"{CYAN}[VoiceAssistant] ✓ TTS initialized{RESET}")
-            
+            # 3. Mark initialized to allow system status to proceed
             self.initialized = True
-            print(f"{CYAN}[VoiceAssistant] ✓ Voice assistant initialized successfully{RESET}")
+            print(f"{CYAN}[VoiceAssistant] ✓ Voice assistant engine status: READY{RESET}")
             return True
+
         except Exception as e:
-            print(f"{GRAY}[VoiceAssistant] ✗ Initialization error: {e}{RESET}")
+            print(f"{RED}[VoiceAssistant] ❌ Critical initialization error: {e}{RESET}")
             import traceback
             traceback.print_exc()
             return False

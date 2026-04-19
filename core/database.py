@@ -1,20 +1,20 @@
 """
-The central unified database for Wolf AI 2.0.
-Managed via SQLite for zero-configuration persistence.
-Creates a single 'wolf_core.db' file in the data/ directory.
+Central database management for Wolf AI.
+Handles persistence for chat sessions, messages, receptionist logs, and learned heuristics.
 """
 
 import sqlite3
 import uuid
 import datetime
+import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-DB_DIR = "data"
-DB_PATH = f"{DB_DIR}/wolf_core.db"
+# Constants
+DB_PATH = "data/wolf_core.db"
 
 class WolfCoreDatabase:
-    """Master manager for all application data storage."""
+    """Persistent storage engine for Wolf AI."""
 
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
@@ -140,60 +140,50 @@ class WolfCoreDatabase:
             )
             conn.commit()
 
-    def toggle_pin(self, session_id: str) -> bool:
+    def delete_session(self, session_id: str):
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT pinned FROM chat_sessions WHERE id = ?', (session_id,))
-            row = cursor.fetchone()
-            new_pinned = 0 if (row and row[0]) else 1
-            cursor.execute('UPDATE chat_sessions SET pinned = ? WHERE id = ?', (new_pinned, session_id))
+            # Foreign key cascade handles messages
+            conn.execute('DELETE FROM chat_sessions WHERE id = ?', (session_id,))
             conn.commit()
-            return bool(new_pinned)
 
-    def add_message(self, session_id: str, role: str, content: str):
+    def get_sessions(self) -> List[Dict[str, Any]]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM chat_sessions ORDER BY pinned DESC, updated_at DESC')
+            return [dict(row) for row in cursor.fetchall()]
+
+    def save_message(self, session_id: str, role: str, content: str):
         now = datetime.datetime.now().isoformat()
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
                 'INSERT INTO chat_messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)',
                 (session_id, role, content, now)
             )
-            conn.execute(
-                'UPDATE chat_sessions SET updated_at = ? WHERE id = ?',
-                (now, session_id)
-            )
+            # Update parent session's update time
+            conn.execute('UPDATE chat_sessions SET updated_at = ? WHERE id = ?', (now, session_id))
             conn.commit()
 
-    def get_sessions(self) -> List[Dict[str, Any]]:
+    def get_messages(self, session_id: str) -> List[Dict[str, Any]]:
         with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute('SELECT id, title, created_at, pinned FROM chat_sessions ORDER BY pinned DESC, updated_at DESC')
-            return [{'id': row[0], 'title': row[1], 'created_at': row[2], 'pinned': bool(row[3])} for row in cursor.fetchall()]
+            cursor.execute('SELECT role, content, timestamp FROM chat_messages WHERE session_id = ? ORDER BY timestamp ASC', (session_id,))
+            return [dict(row) for row in cursor.fetchall()]
 
-    def get_messages(self, session_id: str) -> List[Dict[str, str]]:
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY id ASC', (session_id,))
-            return [{'role': row[0], 'content': row[1]} for row in cursor.fetchall()]
-
-    def delete_session(self, session_id: str):
-        with sqlite3.connect(self.db_path) as conn:
-            # PRAGMA foreign_keys = ON; will auto-delete messages if standard sqlite is configured, 
-            # but to be safe we explicitly delete messages first
-            conn.execute('DELETE FROM chat_messages WHERE session_id = ?', (session_id,))
-            conn.execute('DELETE FROM chat_sessions WHERE id = ?', (session_id,))
-            conn.commit()
 
     # =========================================================================
-    # RECEPTIONIST CALL LOGS API
+    # RECEPTIONIST & AUDIT LOGS
     # =========================================================================
 
-    def log_call(self, caller_id: str, status: str, intent: str, transcript: str, 
-                 sentiment_score: int = 5, client_mood: str = "Neutral", estimated_deal_size: float = 0.0, document_path: str = None):
+    def log_call(self, caller_id: str, status: str, transcript: str = "", intent: str = "", mood: str = "Neutral", sentiment: int = 5) -> int:
         now = datetime.datetime.now().isoformat(timespec="seconds")
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute(
-                'INSERT INTO call_logs (caller_id, status, intent_executed, transcript, sentiment_score, client_mood, estimated_deal_size, document_path, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                (caller_id, status, intent, transcript, sentiment_score, client_mood, estimated_deal_size, document_path, now)
+            cursor = conn.cursor()
+            cursor.execute(
+                '''INSERT INTO call_logs (caller_id, status, transcript, intent_executed, client_mood, sentiment_score, timestamp) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (caller_id, status, transcript, intent, mood, sentiment, now)
             )
             conn.commit()
             return cursor.lastrowid
@@ -232,7 +222,7 @@ class WolfCoreDatabase:
                     (query.lower().strip(), plan_json, now)
                 )
                 conn.commit()
-                print(f"[Database] ✓ Learned new heuristic for: '{query}'")
+                print(f"[Database] OK: Learned new heuristic for: '{query}'")
         except Exception as e:
             print(f"[Database] Failed to save experience: {e}")
 
@@ -247,13 +237,12 @@ class WolfCoreDatabase:
                 row = cursor.fetchone()
                 if row:
                     return json.loads(row['learned_plan'])
-                return None
+            return None
         except Exception as e:
             print(f"[Database] Error retrieving heuristic: {e}")
             return None
 
     def increment_heuristic_success(self, query: str):
-        """Reinforce a learned behavior."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute(
@@ -262,61 +251,8 @@ class WolfCoreDatabase:
                 )
                 conn.commit()
         except Exception as e:
-            print(f"[Database] Failed to increment heuristic success: {e}")
+            print(f"[Database] Failed to increment success: {e}")
 
-    def delete_heuristic(self, heuristic_id: int):
-        """Remove a learned behavior by its ID."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.execute('DELETE FROM learned_heuristics WHERE id = ?', (heuristic_id,))
-                conn.commit()
-                return True
-        except Exception as e:
-            print(f"[Database] Failed to delete heuristic: {e}")
-            return False
 
-    def get_action_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """Retrieve the audit trail of system actions."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute(
-                'SELECT * FROM action_logs ORDER BY timestamp DESC LIMIT ?',
-                (limit,)
-            )
-            return [dict(row) for row in cursor.fetchall()]
-
-    def get_tasks(self, status: str = 'pending', limit: int = 50) -> List[Dict[str, Any]]:
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute(
-                'SELECT * FROM tasks WHERE status = ? ORDER BY created_at DESC LIMIT ?',
-                (status, limit)
-            )
-            return [dict(row) for row in cursor.fetchall()]
-
-    def get_call_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT caller_id, status, intent_executed, transcript, timestamp FROM call_logs ORDER BY id DESC LIMIT ?', (limit,))
-            return [{
-                "caller": row[0], 
-                "status": row[1], 
-                "instructions": row[2], 
-                "transcript": row[3], 
-                "timestamp": row[4]
-            } for row in cursor.fetchall()]
-
-    # =========================================================================
-    # BUG WATCHER API
-    # =========================================================================
-
-    def log_bug(self, error_type: str, context: str):
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute(
-                'INSERT INTO bug_reports (error_type, detected_text, timestamp) VALUES (?, ?, ?)',
-                (error_type, context, datetime.datetime.now().isoformat())
-            )
-            conn.commit()
-
-# Expose a global connection instance for the entire app
+# Global database instance
 db = WolfCoreDatabase()

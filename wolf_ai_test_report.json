@@ -1,73 +1,15 @@
 {
-  "timestamp": "2026-03-12T18:21:41.403284",
-  "total_duration": 178.33016562461853,
-  "summary": {
-    "total_tests": 66,
-    "passed": 66,
-    "failed": 0,
+    "timestamp": "2026-04-18 17:04:25",
+    "duration_seconds": 326.09,
+    "total_tests": 22,
+    "successful": false,
+    "failures": 1,
+    "errors": 0,
     "skipped": 0,
-    "success_rate": 100.0
-  },
-  "test_suites": [
-    {
-      "suite_name": "Vision Agent",
-      "total_tests": 12,
-      "passed": 12,
-      "failed": 0,
-      "skipped": 0,
-      "duration": 31.753800630569458,
-      "status": "PASSED",
-      "exit_code": 1,
-      "output": "============================= test session starts =============================\ncollecting ... collected 13 items\n\ntests\\test_vision_agent.py::TestVisionAgent::test_screen_capture PASSED  [  7%]\ntests\\test_vision_agent.py::TestVisionAgent::test_omni_parser_integration PASSED [ 15%]\ntests\\test_vision_agent.py::TestVisionAgent::test_ui_grounding_click_action PASSED [ 23%]\ntests\\test_vision_agent.py::TestVisionAgent::test_screen_description PASSED [ 30%]\ntests\\test_vision_agent.py::TestVisionAgent::test_element_not_found_handling PASSED [ 38%]\ntests\\test_vision_agent.py::TestVisionAgent::test_vision_error_handling PASSED [ 46%]\ntests\\test_vision_agent.py::TestVisionAgent::test_vision_agent_initialization PASSED [ 53%]\ntests\\test_vision_agent.py::TestVisionAgent::test_screen_capture_functionality PASSED [ 61%]\ntests\\test_vision_agent.py::TestVisionAgent::test_find_and_click_element PASSED [ 69%]\ntests\\test_vision_agent.py::TestVisionAgent::test_find_and_type_text PASSED [ 76%]\ntests\\test_vision_agent.py::TestVisionAgent::test_scroll_screen PASSED   [ 84%]\ntests\\test_vision_agent.py::TestVisionAgent::test_describe_screen PASSED [ 92%]\ntests\\test_vision_agent.py::TestVisionIntegration::test_full_vision_workflow ERROR [100%]\n\n================== 12 passed, 2 warnings, 1 error in 25.28s ===================\n",
-      "errors": "C:\\Users\\p\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\requests\\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.1.0)/charset_normalizer (3.4.4) doesn't match a supported version!\n  warnings.warn(\n"
-    },
-    {
-      "suite_name": "Neural Sonic TTS",
-      "total_tests": 15,
-      "passed": 15,
-      "failed": 0,
-      "skipped": 0,
-      "duration": 20.03650736808777,
-      "status": "PASSED",
-      "exit_code": 1,
-      "output": "============================= test session starts =============================\ncollecting ... collected 17 items\n\ntests\\test_neural_sonic.py::TestNeuralSonic::test_kokoro_initialization PASSED [  5%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_model_loading PASSED   [ 11%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_text_to_speech_basic PASSED [ 17%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_text_to_speech_empty_string PASSED [ 23%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_text_to_speech_special_chars PASSED [ 29%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_audio_quality_validation PASSED [ 35%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_speech_speed_control PASSED [ 41%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_voice_variations PASSED [ 47%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_tts_integration_with_main_system PASSED [ 52%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_concurrent_synthesis PASSED [ 58%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_memory_cleanup PASSED  [ 64%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_error_handling_invalid_input PASSED [ 70%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_model_download_simulation PASSED [ 76%]\ntests\\test_neural_sonic.py::TestNeuralSonic::test_tts_settings_integration PASSED [ 82%]\ntests\\test_neural_sonic.py::TestNeuralSonicIntegration::test_real_kokoro_synthesis ERROR [ 88%]\ntests\\test_neural_sonic.py::TestNeuralSonicIntegration::test_tts_engine_switching PASSED [ 94%]\ntests\\test_neural_sonic.py::TestNeuralSonicIntegration::test_audio_output_validation ERROR [100%]\n\n================== 15 passed, 2 warnings, 2 errors in 13.47s ==================\n",
-      "errors": "C:\\Users\\p\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\requests\\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.1.0)/charset_normalizer (3.4.4) doesn't match a supported version!\n  warnings.warn(\n"
-    },
-    {
-      "suite_name": "Memory Recall",
-      "total_tests": 4,
-      "passed": 4,
-      "failed": 0,
-      "skipped": 0,
-      "duration": 22.27618908882141,
-      "status": "PASSED",
-      "exit_code": 1,
-      "output": "============================= test session starts =============================\ncollecting ... collected 14 items\n\ntests\\test_memory_recall.py::TestMemoryRecall::test_memory_storage PASSED [  7%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_preference_recall ERROR [ 14%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_memory_search_by_keywords ERROR [ 21%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_interaction_history_browsing PASSED [ 28%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_memory_tagging ERROR [ 35%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_context_aware_recall ERROR [ 42%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_memory_persistence PASSED [ 50%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_memory_cleanup ERROR [ 57%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_memory_embedding_storage PASSED [ 64%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_memory_recall_accuracy ERROR [ 71%]\ntests\\test_memory_recall.py::TestMemoryRecall::test_concurrent_memory_operations ERROR [ 78%]\ntests\\test_memory_recall.py::TestMemoryRecallIntegration::test_real_memory_storage SKIPPED [ 85%]\ntests\\test_memory_recall.py::TestMemoryRecallIntegration::test_preference_learning_workflow SKIPPED [ 92%]\ntests\\test_memory_recall.py::TestMemoryRecallIntegration::test_cross_session_memory SKIPPED [100%]\n\n============= 4 passed, 3 skipped, 2 warnings, 7 errors in 15.62s =============\n",
-      "errors": "C:\\Users\\p\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\requests\\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.1.0)/charset_normalizer (3.4.4) doesn't match a supported version!\n  warnings.warn(\n"
-    },
-    {
-      "suite_name": "Deep Research",
-      "total_tests": 20,
-      "passed": 20,
-      "failed": 0,
-      "skipped": 0,
-      "duration": 82.40015935897827,
-      "status": "PASSED",
-      "exit_code": 0,
-      "output": "============================= test session starts =============================\ncollecting ... collected 20 items\n\ntests\\test_deep_research.py::TestDeepResearch::test_web_search_basic PASSED [  5%]\ntests\\test_deep_research.py::TestDeepResearch::test_real_time_search PASSED [ 10%]\ntests\\test_deep_research.py::TestDeepResearch::test_url_scraping PASSED  [ 15%]\ntests\\test_deep_research.py::TestDeepResearch::test_content_extraction PASSED [ 20%]\ntests\\test_deep_research.py::TestDeepResearch::test_research_summary_generation PASSED [ 25%]\ntests\\test_deep_research.py::TestDeepResearch::test_deep_research_workflow PASSED [ 30%]\ntests\\test_deep_research.py::TestDeepResearch::test_overlay_bypass PASSED [ 35%]\ntests\\test_deep_research.py::TestDeepResearch::test_javascript_rendering PASSED [ 40%]\ntests\\test_deep_research.py::TestDeepResearch::test_multi_url_research PASSED [ 45%]\ntests\\test_deep_research.py::TestDeepResearch::test_content_filtering PASSED [ 50%]\ntests\\test_deep_research.py::TestDeepResearch::test_error_handling_invalid_url PASSED [ 55%]\ntests\\test_deep_research.py::TestDeepResearch::test_rate_limiting PASSED [ 60%]\ntests\\test_deep_research.py::TestDeepResearch::test_search_query_optimization PASSED [ 65%]\ntests\\test_deep_research.py::TestDeepResearch::test_content_caching PASSED [ 70%]\ntests\\test_deep_research.py::TestDeepResearch::test_research_report_generation PASSED [ 75%]\ntests\\test_deep_research.py::TestDeepResearchIntegration::test_real_web_search PASSED [ 80%]\ntests\\test_deep_research.py::TestDeepResearchIntegration::test_real_url_scraping PASSED [ 85%]\ntests\\test_deep_research.py::TestDeepResearchIntegration::test_ollama_docs_research PASSED [ 90%]\ntests\\test_deep_research.py::TestDeepResearchIntegration::test_comprehensive_research_workflow PASSED [ 95%]\ntests\\test_deep_research.py::TestDeepResearchIntegration::test_bitcoin_price_search PASSED [100%]\n\n================== 20 passed, 4 warnings in 77.56s (0:01:17) ==================\n",
-      "errors": "C:\\Users\\p\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\requests\\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.1.0)/charset_normalizer (3.4.4) doesn't match a supported version!\n  warnings.warn(\n"
-    },
-    {
-      "suite_name": "Bug Watcher",
-      "total_tests": 15,
-      "passed": 15,
-      "failed": 0,
-      "skipped": 0,
-      "duration": 21.85856819152832,
-      "status": "PASSED",
-      "exit_code": 0,
-      "output": "============================= test session starts =============================\ncollecting ... collected 19 items\n\ntests\\test_bug_watcher.py::TestBugWatcher::test_bug_watcher_initialization PASSED [  5%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_error_detection_ocr PASSED [ 10%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_no_error_detection PASSED [ 15%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_error_pattern_matching PASSED [ 21%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_confidence_scoring PASSED [ 26%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_proactive_monitoring_start_stop PASSED [ 31%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_continuous_monitoring PASSED [ 36%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_error_alert_generation PASSED [ 42%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_vision_agent_integration PASSED [ 47%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_error_logging PASSED     [ 52%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_false_positive_filtering PASSED [ 57%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_custom_error_patterns PASSED [ 63%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_monitoring_frequency_adjustment PASSED [ 68%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_error_categorization PASSED [ 73%]\ntests\\test_bug_watcher.py::TestBugWatcher::test_notification_system PASSED [ 78%]\ntests\\test_bug_watcher.py::TestBugWatcherIntegration::test_real_screen_capture SKIPPED [ 84%]\ntests\\test_bug_watcher.py::TestBugWatcherIntegration::test_real_ocr_processing SKIPPED [ 89%]\ntests\\test_bug_watcher.py::TestBugWatcherIntegration::test_proactive_bug_watcher_workflow SKIPPED [ 94%]\ntests\\test_bug_watcher.py::TestBugWatcherIntegration::test_error_detection_with_vision_confirmation SKIPPED [100%]\n\n================= 15 passed, 4 skipped, 2 warnings in 15.41s ==================\n",
-      "errors": "C:\\Users\\p\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\requests\\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.1.0)/charset_normalizer (3.4.4) doesn't match a supported version!\n  warnings.warn(\n"
+    "details": {
+        "failures": [
+            "test_handle_call_logic (test_receptionist.TestReceptionist.test_handle_call_logic)"
+        ],
+        "errors": []
     }
-  ]
 }

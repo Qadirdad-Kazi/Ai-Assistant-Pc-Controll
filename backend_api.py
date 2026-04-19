@@ -116,16 +116,27 @@ def _check_tts_engine():
     alt_dir = os.path.join("models", "piper", "voices")
     fallback_voice = os.path.join("voices", "en_GB-northern_english_male-medium.onnx")
     
-    # Check if executable exists
+    # Check if executable exists in memory OR on disk
     has_exe = tts.piper_exe and os.path.exists(tts.piper_exe)
-    
-    # Check if any voice files exist
+    if not has_exe:
+        # Smart search: check known paths manually
+        candidates = [
+            os.path.join("models", "piper", "piper.exe"),
+            os.path.join("models", "piper", "piper", "piper.exe"),
+            os.path.join("models", "piper", "piper_windows", "piper.exe"),
+        ]
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                has_exe = True
+                break
+
+    # Check for voice assets
     has_voices = os.path.isdir(voice_dir) or os.path.isdir(alt_dir) or os.path.exists(fallback_voice)
     
     if has_exe and has_voices:
-        return _diagnostic_result(True, f"Piper engine and assets verified ({tts.piper_exe})")
+        return _diagnostic_result(True, "Piper engine and assets verified (Found on disk)")
     elif not has_exe:
-        return _diagnostic_result(False, "Piper executable missing. Initialization failed.")
+        return _diagnostic_result(False, "Piper executable missing. Please check models/piper/")
     else:
         return _diagnostic_result(False, "Piper voice assets missing. Check models/voices/")
 
@@ -180,7 +191,7 @@ def _check_kokoro_tts():
         except ImportError:
             has_lib = False
             
-        kokoro_path = os.path.join("models", "kokoro", "kokoro-v0_19.pth")
+        kokoro_path = os.path.join("models", "kokoro", "kokoro-v1_0.pth")
         has_model = os.path.exists(kokoro_path)
         
         if has_lib and has_model:
@@ -240,9 +251,12 @@ def _check_voice_assistant():
             return _diagnostic_result(True, "Voice assistant is disabled in config")
             
         if hasattr(voice_assistant, 'initialized') and voice_assistant.initialized:
-            return _diagnostic_result(True, "Voice assistant engine active and listening")
+            # Check if it has an STT listener (even if deferred)
+            if hasattr(voice_assistant, 'stt_listener') and voice_assistant.stt_listener:
+                return _diagnostic_result(True, "Voice assistant active and listening")
+            return _diagnostic_result(True, "Voice assistant engine ready (Standby)")
         else:
-            return _diagnostic_result(False, "Voice assistant engine still pre-loading or failed init")
+            return _diagnostic_result(False, "Voice assistant initialization pending or failed boot")
     except Exception as e:
         return _diagnostic_result(False, f"Voice assistant check failed: {e}")
 

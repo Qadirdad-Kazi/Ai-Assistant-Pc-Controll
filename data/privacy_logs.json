@@ -1,5 +1,185 @@
 [
   {
+    "id": 1776559937909,
+    "timestamp": "2026-04-18T17:52:17.909361",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 394
+  },
+  {
+    "id": 1776559935338,
+    "timestamp": "2026-04-18T17:52:15.338381",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776559738543,
+    "timestamp": "2026-04-18T17:48:58.543411",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 398
+  },
+  {
+    "id": 1776559723988,
+    "timestamp": "2026-04-18T17:48:43.988903",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776558652697,
+    "timestamp": "2026-04-18T17:30:52.697295",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 394
+  },
+  {
+    "id": 1776558650155,
+    "timestamp": "2026-04-18T17:30:50.155636",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776558147513,
+    "timestamp": "2026-04-18T17:22:27.513325",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 394
+  },
+  {
+    "id": 1776558144882,
+    "timestamp": "2026-04-18T17:22:24.882457",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776557780256,
+    "timestamp": "2026-04-18T17:16:20.256102",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 392
+  },
+  {
+    "id": 1776557777767,
+    "timestamp": "2026-04-18T17:16:17.767940",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776557399752,
+    "timestamp": "2026-04-18T17:09:59.752634",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 393
+  },
+  {
+    "id": 1776557397215,
+    "timestamp": "2026-04-18T17:09:57.215793",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776555062670,
+    "timestamp": "2026-04-18T16:31:02.670907",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 398
+  },
+  {
+    "id": 1776555047948,
+    "timestamp": "2026-04-18T16:30:47.948286",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776528541786,
+    "timestamp": "2026-04-18T09:09:01.786499",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 396
+  },
+  {
+    "id": 1776528532352,
+    "timestamp": "2026-04-18T09:08:52.352246",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776137377516,
+    "timestamp": "2026-04-13T20:29:37.516518",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 398
+  },
+  {
+    "id": 1776137358909,
+    "timestamp": "2026-04-13T20:29:18.909059",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776137066280,
+    "timestamp": "2026-04-13T20:24:26.280071",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 394
+  },
+  {
+    "id": 1776137063100,
+    "timestamp": "2026-04-13T20:24:23.100146",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
     "id": 1776136658558,
     "timestamp": "2026-04-13T20:17:38.558263",
     "service": "Ollama",

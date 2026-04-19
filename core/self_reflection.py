@@ -351,7 +351,7 @@ Provide individual scores and overall quality assessment:"""
         scores = {}
         
         for dim in dimensions:
-            pattern = f"{dim}[:\s]*(\d+)"
+            pattern = rf"{dim}[:\s]*(\d+)"
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 scores[dim] = float(match.group(1))

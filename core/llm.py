@@ -50,7 +50,7 @@ def route_query(user_input):
             router = FunctionGemmaRouter(model_path=LOCAL_ROUTER_PATH, compile_model=False)
         except Exception as e:
             print(f"{GRAY}[Router Init Error: {e}]{RESET}")
-            return "nonthinking", {"prompt": user_input}
+            return [("nonthinking", {"prompt": user_input})]
 
     try:
         # Route using the fine-tuned model - returns List[(func_name, params)]
