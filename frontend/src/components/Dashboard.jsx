@@ -4,6 +4,7 @@ import StatusCard from './StatusCard'
 import SystemMonitor from './SystemMonitor'
 import { useState, useEffect } from 'react'
 import { Mic, Monitor, Music, Code, Phone } from 'lucide-react'
+import { wsUrl } from '../utils/api'
 
 export default function Dashboard() {
   const [isListening, setIsListening] = useState(false);
@@ -18,7 +19,7 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/status');
+    const ws = new WebSocket(wsUrl('/ws/status'));
     
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);

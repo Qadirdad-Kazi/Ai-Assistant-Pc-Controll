@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Activity as ActivityIcon, CheckCircle, XCircle, Clock, Info } from 'lucide-react';
 import './Activity.css';
+import { apiUrl } from '../utils/api';
 
 const Activity = () => {
     const [logs, setLogs] = useState([]);
@@ -10,7 +11,7 @@ const Activity = () => {
     useEffect(() => {
         const fetchLogs = async () => {
             try {
-                const response = await axios.get('http://localhost:8000/api/action-logs');
+                const response = await axios.get(apiUrl('/api/action-logs'));
                 setLogs(response.data.logs || []);
             } catch (error) {
                 console.error("Failed to fetch action logs:", error);
@@ -25,7 +26,7 @@ const Activity = () => {
     }, []);
 
     const getStatusIcon = (status) => {
-        switch (status.toLowerCase()) {
+        switch (String(status || '').toLowerCase()) {
             case 'success': return <CheckCircle size={18} color="#00ff9d" />;
             case 'failed': return <XCircle size={18} color="#ff4b4b" />;
             case 'started': return <Clock size={18} color="#00f3ff" className="spin" />;
@@ -53,7 +54,7 @@ const Activity = () => {
                 ) : (
                     <div className="logs-list">
                         {logs.map((log) => (
-                            <div key={log.id} className={`log-card ${log.status}`}>
+                            <div key={log.id} className={`log-card ${String(log.status || 'unknown').toLowerCase()}`}>
                                 <div className="log-icon">{getStatusIcon(log.status)}</div>
                                 <div className="log-content">
                                     <div className="log-main">
@@ -62,7 +63,7 @@ const Activity = () => {
                                     </div>
                                     <div className="log-details">{log.details}</div>
                                 </div>
-                                <div className={`log-badge ${log.status}`}>{log.status}</div>
+                                <div className={`log-badge ${String(log.status || 'unknown').toLowerCase()}`}>{log.status || 'unknown'}</div>
                             </div>
                         ))}
                     </div>

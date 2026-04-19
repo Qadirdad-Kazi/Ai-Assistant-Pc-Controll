@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Cpu, HardDrive, Wifi } from 'lucide-react';
 import './SystemMonitor.css';
+import { wsUrl } from '../utils/api';
 
 export default function SystemMonitor() {
   const [cpu, setCpu] = useState(0);
@@ -10,7 +11,7 @@ export default function SystemMonitor() {
 
   useEffect(() => {
     // Connect to WebSocket backend
-    const ws = new WebSocket('ws://localhost:8000/ws/system');
+    const ws = new WebSocket(wsUrl('/ws/system'));
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);

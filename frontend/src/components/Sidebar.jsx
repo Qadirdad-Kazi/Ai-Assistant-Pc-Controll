@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, MessageSquare, Settings, Music, Activity, FileText, CheckSquare, PhoneCall, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Home, MessageSquare, Settings, Music, Activity, CheckSquare, PhoneCall, ShieldCheck, TrendingUp, Brain } from 'lucide-react';
 import './Sidebar.css';
 
 export default function Sidebar() {

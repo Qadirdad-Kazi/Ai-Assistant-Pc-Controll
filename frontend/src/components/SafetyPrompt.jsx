@@ -1,13 +1,14 @@
 import { AlertTriangle, Check, X, ShieldAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import './SafetyPrompt.css';
+import { wsUrl } from '../utils/api';
 
 export default function SafetyPrompt() {
   const [activePrompt, setActivePrompt] = useState(null);
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/safety');
+    const ws = new WebSocket(wsUrl('/ws/safety'));
     
     ws.onopen = () => {
       console.log('[Safety] Connected to safety sandbox stream');

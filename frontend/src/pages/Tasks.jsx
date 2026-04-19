@@ -1,6 +1,7 @@
 import { Plus, Play, Edit, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import './Tasks.css';
+import { apiUrl, wsUrl } from '../utils/api';
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -18,7 +19,7 @@ export default function Tasks() {
 
   const fetchTasks = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/tasks');
+      const res = await fetch(apiUrl('/api/tasks'));
       const data = await res.json();
       setTasks(data.tasks || []);
     } catch (e) {
@@ -31,7 +32,7 @@ export default function Tasks() {
   }, []);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/execution');
+    const ws = new WebSocket(wsUrl('/ws/execution'));
 
     ws.onmessage = (event) => {
       try {
@@ -80,14 +81,14 @@ export default function Tasks() {
     try {
       if (editTaskId) {
         // Edit existing task
-        await fetch(`http://localhost:8000/api/tasks/${editTaskId}`, {
+        await fetch(apiUrl(`/api/tasks/${editTaskId}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: newTaskTitle, description: newTaskDesc })
         });
       } else {
         // Create new task
-        await fetch('http://localhost:8000/api/tasks', {
+        await fetch(apiUrl('/api/tasks'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: newTaskTitle, description: newTaskDesc })
@@ -123,7 +124,7 @@ export default function Tasks() {
     if (!confirm("Delete this task?")) return;
     
     try {
-      await fetch(`http://localhost:8000/api/tasks/${taskId}`, { method: 'DELETE' });
+      await fetch(apiUrl(`/api/tasks/${taskId}`), { method: 'DELETE' });
       if (selectedTask?.id === taskId) {
         setSelectedTask(null);
       }
@@ -143,7 +144,7 @@ export default function Tasks() {
     setExecutionLog(`[${timeNow}] Starting task execution...\n[${timeNow}] Waiting for live execution events...`);
     
     try {
-      const res = await fetch(`http://localhost:8000/api/tasks/${selectedTask.id}/execute`, { method: 'POST' });
+      const res = await fetch(apiUrl(`/api/tasks/${selectedTask.id}/execute`), { method: 'POST' });
       const data = await res.json();
       
       const timeDone = new Date().toLocaleTimeString();

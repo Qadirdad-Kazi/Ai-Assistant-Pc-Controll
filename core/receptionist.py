@@ -9,7 +9,6 @@ import datetime
 from config import OLLAMA_URL, RESPONDER_MODEL  
 from core.tts import tts  
 from core.database import db  
-from backend_api import sync_request_confirmation
 
 class Receptionist:
     def __init__(self):
@@ -111,6 +110,7 @@ class Receptionist:
                     audio_bridge.announce_to_user(f"{matched_caller} is asking to speak with you on the GSM line.")
                     
                     # USE SAFETY BRIDGE INSTEAD OF TERMINAL INPUT
+                    from backend_api import sync_request_confirmation
                     approved = sync_request_confirmation(
                         action=f"Incoming Call Handover: {matched_caller}",
                         details=f"Caller said: '{caller_speech}'\nDo you want to take over the call?"

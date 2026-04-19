@@ -1,6 +1,7 @@
 import { Save, RefreshCw, Phone, Cable, Wifi, Eye, LayoutDashboard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import './Settings.css';
+import { apiUrl } from '../utils/api';
 
 export default function Settings() {
   const [form, setForm] = useState({
@@ -31,7 +32,7 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/settings');
+      const res = await fetch(apiUrl('/api/settings'));
       const data = await res.json();
       const s = data.settings || {};
       setForm({
@@ -121,7 +122,7 @@ export default function Settings() {
         },
       };
 
-      const res = await fetch('http://localhost:8000/api/settings', {
+      const res = await fetch(apiUrl('/api/settings'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -138,7 +139,7 @@ export default function Settings() {
 
   const resetDefaults = async () => {
     try {
-      await fetch('http://localhost:8000/api/settings/reset', { method: 'POST' });
+      await fetch(apiUrl('/api/settings/reset'), { method: 'POST' });
       await loadSettings();
       setNotice('Settings reset to defaults.');
     } catch (err) {
@@ -149,7 +150,7 @@ export default function Settings() {
 
   const runValidation = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/settings/validate');
+      const res = await fetch(apiUrl('/api/settings/validate'));
       const data = await res.json();
       setValidation(data.checks || null);
     } catch (err) {

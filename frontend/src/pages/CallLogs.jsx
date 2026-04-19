@@ -1,6 +1,7 @@
 import { RefreshCw, PhoneForwarded } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import './CallLogs.css';
+import { apiUrl, wsUrl } from '../utils/api';
 
 export default function CallLogs() {
   const [logs, setLogs] = useState([]);
@@ -10,7 +11,7 @@ export default function CallLogs() {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/call-logs?limit=200');
+      const res = await fetch(apiUrl('/api/call-logs?limit=200'));
       const data = await res.json();
       setLogs(data.logs || []);
     } catch (err) {
@@ -25,7 +26,7 @@ export default function CallLogs() {
   }, []);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/call-logs');
+    const ws = new WebSocket(wsUrl('/ws/call-logs'));
     ws.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
@@ -101,12 +102,12 @@ export default function CallLogs() {
               <div className="log-header">
                 <div className="caller-info">
                   <PhoneForwarded size={16} />
-                  <strong>[GSM GATEWAY] Incoming Call from {log.caller.toUpperCase()}</strong>
+                  <strong>[GSM GATEWAY] Incoming Call from {String(log.caller || 'Unknown').toUpperCase()}</strong>
                 </div>
                 <div className="log-time">{formatTime(log.timestamp)}</div>
               </div>
               <div className="log-meta-row">
-                <span className={`status-chip status-${String(log.status || 'unknown').toLowerCase().replace(/\s+/g, '-')}`}>{log.status}</span>
+                <span className={`status-chip status-${String(log.status || 'unknown').toLowerCase().replace(/\s+/g, '-')}`}>{log.status || 'Unknown'}</span>
                 <span className="log-meta">Intent: {log.instructions || 'No instructions'}</span>
                 {log.client_mood && (
                   <span className={`mood-chip mood-${String(log.client_mood).toLowerCase()}`}>
@@ -114,7 +115,12 @@ export default function CallLogs() {
                   </span>
                 )}
                 {log.document_path && (
-                  <a href={`http://localhost:8000/api/documents/proposals/${log.document_path.split('/').pop()}`} target="_blank" className="proposal-link">
+                  <a
+                    href={apiUrl(`/api/documents/proposals/${encodeURIComponent((String(log.document_path).split('/').pop() || '').trim())}`)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="proposal-link"
+                  >
                     View Proposal
                   </a>
                 )}

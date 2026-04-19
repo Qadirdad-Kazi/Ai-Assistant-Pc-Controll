@@ -1,6 +1,7 @@
 import { Play, Activity, CheckCircle, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import './Diagnostics.css';
+import { apiUrl, wsUrl } from '../utils/api';
 
 export default function Diagnostics() {
   const [diagnostics, setDiagnostics] = useState([]);
@@ -9,7 +10,7 @@ export default function Diagnostics() {
 
   const fetchDiagnostics = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/diagnostics');
+      const res = await fetch(apiUrl('/api/diagnostics'));
       const data = await res.json();
       setDiagnostics(data.diagnostics || []);
     } catch (err) {
@@ -22,7 +23,7 @@ export default function Diagnostics() {
   }, []);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/diagnostics');
+    const ws = new WebSocket(wsUrl('/ws/diagnostics'));
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -43,7 +44,7 @@ export default function Diagnostics() {
     if (!key) return;
     setRunningKey(key);
     try {
-      await fetch('http://localhost:8000/api/diagnostics/run', {
+      await fetch(apiUrl('/api/diagnostics/run'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key })
@@ -59,7 +60,7 @@ export default function Diagnostics() {
   const runAll = async () => {
     setIsRunningAll(true);
     try {
-      await fetch('http://localhost:8000/api/diagnostics/run', {
+      await fetch(apiUrl('/api/diagnostics/run'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})

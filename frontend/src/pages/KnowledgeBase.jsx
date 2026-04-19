@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Brain, Zap, Trash2, Shield, Calendar, Terminal } from 'lucide-react';
 import './KnowledgeBase.css';
+import { apiUrl } from '../utils/api';
 
 const KnowledgeBase = () => {
     const [heuristics, setHeuristics] = useState([]);
@@ -13,7 +14,7 @@ const KnowledgeBase = () => {
 
     const fetchHeuristics = async () => {
         try {
-            const response = await axios.get('http://localhost:8000/api/knowledge');
+            const response = await axios.get(apiUrl('/api/knowledge'));
             setHeuristics(response.data.heuristics || []);
         } catch (error) {
             console.error("Failed to fetch knowledge base:", error);

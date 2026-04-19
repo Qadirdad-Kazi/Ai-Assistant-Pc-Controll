@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, Users, CheckCircle, PieChart, DollarSign, Activity } from 'lucide-react';
 import './Analytics.css';
+import { apiUrl } from '../utils/api';
 
 export default function Analytics() {
   const [data, setData] = useState({
@@ -12,7 +13,7 @@ export default function Analytics() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/analytics/summary');
+      const res = await fetch(apiUrl('/api/analytics/summary'));
       const json = await res.json();
       setData(json);
     } catch (e) {
@@ -91,12 +92,12 @@ export default function Analytics() {
             <tbody>
               {data.top_clients.map((client, i) => (
                 <tr key={i}>
-                  <td className="client-name">{client.caller_id}</td>
-                  <td>{client.call_count}</td>
-                  <td className="value-cell">${client.total_value.toLocaleString()}</td>
+                  <td className="client-name">{client.caller_id || 'Unknown'}</td>
+                  <td>{client.call_count ?? 0}</td>
+                  <td className="value-cell">${Number(client.total_value || 0).toLocaleString()}</td>
                   <td>
                     <div className="sentiment-bar-bg">
-                      <div className="sentiment-bar-fill" style={{width: `${client.avg_sentiment * 10}%`}}></div>
+                      <div className="sentiment-bar-fill" style={{width: `${Number(client.avg_sentiment || 0) * 10}%`}}></div>
                     </div>
                   </td>
                 </tr>
@@ -115,13 +116,13 @@ export default function Analytics() {
             {data.heatmap.map((item, i) => (
               <div key={i} className="heatmap-item">
                 <div className="heatmap-label-row">
-                  <span className="mood-label">{item.mood}</span>
-                  <span className="mood-value">${item.value.toLocaleString()}</span>
+                  <span className="mood-label">{item.mood || 'Unknown'}</span>
+                  <span className="mood-value">${Number(item.value || 0).toLocaleString()}</span>
                 </div>
                 <div className="heatmap-progress-bg">
                    <div 
-                    className={`heatmap-progress-bar ${item.mood.toLowerCase()}`} 
-                    style={{width: `${(item.value / (data.metrics.pipeline_value || 1)) * 100}%`}}
+                    className={`heatmap-progress-bar ${String(item.mood || 'unknown').toLowerCase()}`} 
+                    style={{width: `${(Number(item.value || 0) / (data.metrics.pipeline_value || 1)) * 100}%`}}
                    ></div>
                 </div>
               </div>

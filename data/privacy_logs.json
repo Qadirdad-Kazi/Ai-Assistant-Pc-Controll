@@ -1,0 +1,128 @@
+[
+  {
+    "id": 1776570514746,
+    "timestamp": "2026-04-18T20:48:34.746503",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 393
+  },
+  {
+    "id": 1776570512155,
+    "timestamp": "2026-04-18T20:48:32.155518",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776570098950,
+    "timestamp": "2026-04-18T20:41:38.950390",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 396
+  },
+  {
+    "id": 1776570096487,
+    "timestamp": "2026-04-18T20:41:36.487337",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776569935683,
+    "timestamp": "2026-04-18T20:38:55.683608",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 394
+  },
+  {
+    "id": 1776569933246,
+    "timestamp": "2026-04-18T20:38:53.246372",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776569898257,
+    "timestamp": "2026-04-18T20:38:18.257504",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 393
+  },
+  {
+    "id": 1776569895846,
+    "timestamp": "2026-04-18T20:38:15.846411",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776569656480,
+    "timestamp": "2026-04-18T20:34:16.480314",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776569481933,
+    "timestamp": "2026-04-18T20:31:21.933678",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776569442176,
+    "timestamp": "2026-04-18T20:30:42.176363",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776569403153,
+    "timestamp": "2026-04-18T20:30:03.153993",
+    "service": "Ollama",
+    "direction": "RECEIVED",
+    "type": "Model Status",
+    "summary": "Response: 200",
+    "size": 396
+  },
+  {
+    "id": 1776569393403,
+    "timestamp": "2026-04-18T20:29:53.403936",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  },
+  {
+    "id": 1776569224262,
+    "timestamp": "2026-04-18T20:27:04.262872",
+    "service": "Ollama",
+    "direction": "SENT",
+    "type": "Model Load/Heartbeat",
+    "summary": "Loading llama3.2:3b",
+    "size": 109
+  }
+]

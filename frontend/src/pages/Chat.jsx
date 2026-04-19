@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, User, Bot, ChevronDown, ChevronUp, Terminal, Zap } from 'lucide-react';
 import './Chat.css';
+import { apiUrl, wsUrl } from '../utils/api';
 
 export default function Chat() {
   const [messages, setMessages] = useState([
@@ -21,7 +22,7 @@ export default function Chat() {
 
   useEffect(() => {
     // Main Chat WebSocket
-    const chatWs = new WebSocket('ws://localhost:8000/ws/chat');
+    const chatWs = new WebSocket(wsUrl('/ws/chat'));
     chatWs.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.messages) {
@@ -35,7 +36,7 @@ export default function Chat() {
     };
 
     // Execution Events WebSocket
-    const execWs = new WebSocket('ws://localhost:8000/ws/execution');
+    const execWs = new WebSocket(wsUrl('/ws/execution'));
     execWs.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.events) {
@@ -62,7 +63,7 @@ export default function Chat() {
     ]);
     
     try {
-      await fetch('http://localhost:8000/api/chat', {
+      await fetch(apiUrl('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: textToSend })

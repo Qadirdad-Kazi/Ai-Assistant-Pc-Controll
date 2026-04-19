@@ -2,6 +2,7 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, Music as MusicIcon } from 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Visualizer from '../components/Visualizer';
 import './Media.css';
+import { apiUrl, wsUrl } from '../utils/api';
 
 export default function Media() {
   const audioRef = useRef(null);
@@ -21,7 +22,7 @@ export default function Media() {
   });
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/media');
+    const ws = new WebSocket(wsUrl('/ws/media'));
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -47,7 +48,7 @@ export default function Media() {
 
     const element = audioRef.current;
     const src = state.streamUrl
-      ? (state.streamUrl.startsWith('http') ? state.streamUrl : `http://localhost:8000${state.streamUrl}`)
+      ? (state.streamUrl.startsWith('http') ? state.streamUrl : apiUrl(state.streamUrl))
       : '';
 
     if (src && element.src !== src) {
@@ -82,7 +83,7 @@ export default function Media() {
 
   const sendControl = async (action, extra = {}) => {
     try {
-      await fetch('http://localhost:8000/api/media/control', {
+      await fetch(apiUrl('/api/media/control'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, ...extra })

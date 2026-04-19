@@ -9,6 +9,7 @@ import sys
 import time
 import subprocess
 import threading
+import shutil
 from pathlib import Path
 import webbrowser
 from typing import Optional
@@ -23,7 +24,37 @@ class WolfAILauncher:
     def __init__(self):
         self.backend_process: Optional[subprocess.Popen] = None
         self.frontend_process: Optional[subprocess.Popen] = None
+        self.backend_log_handle = None
+        self.frontend_log_handle = None
+        self.node_cmd: Optional[str] = None
+        self.npm_cmd: Optional[str] = None
         self.project_root = project_root
+        self.logs_dir = self.project_root / "logs"
+
+    def _resolve_executable(self, names, fallback_paths=None) -> Optional[str]:
+        """Find an executable in PATH or known Windows install locations."""
+        fallback_paths = fallback_paths or []
+
+        for name in names:
+            resolved = shutil.which(name)
+            if resolved:
+                return resolved
+
+        for candidate in fallback_paths:
+            if Path(candidate).exists():
+                return candidate
+
+        return None
+
+    def _tail_log(self, file_path: Path, lines: int = 30) -> str:
+        """Return the tail of a log file for debugging startup failures."""
+        try:
+            if not file_path.exists():
+                return "(log file not found)"
+            content = file_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+            return "\n".join(content[-lines:]) if content else "(log file is empty)"
+        except Exception as e:
+            return f"(failed to read log: {e})"
         
     def check_dependencies(self) -> bool:
         """Check if required dependencies are available."""
@@ -45,40 +76,47 @@ class WolfAILauncher:
             return False
         
         # Check Node.js for frontend
-        try:
-            result = subprocess.run(['node', '--version'], 
-                                  capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                print("✅ Node.js available")
-            else:
-                print("Node.js not found, checking for alternative...")
-                # Try alternative Node.js paths
-                node_paths = [
-                    r"C:\Program Files\nodejs\node.exe",
-                    r"C:\Program Files (x86)\nodejs\node.exe",
-                    r"C:\Program Files\nodejs\node.cmd",
-                    r"C:\Program Files (x86)\nodejs\node.cmd"
-                ]
-                
-                node_found = False
-                for node_path in node_paths:
-                    if Path(node_path).exists():
-                        print(f"✅ Node.js found at: {node_path}")
-                        node_found = True
-                        break
-                
-                if not node_found:
-                    print("❌ Node.js not found")
-                    print("Please install Node.js from https://nodejs.org/")
-                    return False
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+        node_fallbacks = [
+            r"C:\Program Files\nodejs\node.exe",
+            r"C:\Program Files (x86)\nodejs\node.exe",
+            r"C:\Program Files\nodejs\node.cmd",
+            r"C:\Program Files (x86)\nodejs\node.cmd",
+        ]
+        self.node_cmd = self._resolve_executable(["node", "node.exe", "node.cmd"], node_fallbacks)
+
+        if not self.node_cmd:
             print("❌ Node.js not found")
             print("Please install Node.js from https://nodejs.org/")
             return False
+        print(f"✅ Node.js available ({self.node_cmd})")
         
-        # Check npm (optional for frontend dev)
-        print("ℹ️  npm check skipped - using pre-built frontend")
-        print("✅ Frontend build available")
+        frontend_dir = self.project_root / "frontend"
+        dist_dir = frontend_dir / "dist"
+
+        npm_fallbacks = [
+            r"C:\Program Files\nodejs\npm.cmd",
+            r"C:\Program Files (x86)\nodejs\npm.cmd",
+            r"C:\Program Files\nodejs\npm.exe",
+            r"C:\Program Files (x86)\nodejs\npm.exe",
+        ]
+
+        # If node was found in a known location, prefer sibling npm.cmd.
+        if self.node_cmd:
+            node_path = Path(self.node_cmd)
+            sibling_npm_cmd = node_path.parent / "npm.cmd"
+            sibling_npm_exe = node_path.parent / "npm.exe"
+            npm_fallbacks = [str(sibling_npm_cmd), str(sibling_npm_exe)] + npm_fallbacks
+
+        self.npm_cmd = self._resolve_executable(["npm", "npm.cmd", "npm.exe"], npm_fallbacks)
+
+        if dist_dir.exists():
+            print("✅ Frontend build available")
+        elif self.npm_cmd:
+            print(f"✅ npm available for frontend dev server ({self.npm_cmd})")
+        else:
+            print("❌ Frontend build missing and npm not found")
+            print("Install npm/Node.js or build frontend (frontend/dist) before launching.")
+            return False
         
         return True
     
@@ -89,11 +127,15 @@ class WolfAILauncher:
         try:
             # Change to project root
             os.chdir(self.project_root)
+
+            self.logs_dir.mkdir(parents=True, exist_ok=True)
+            backend_log = self.logs_dir / "backend_startup.log"
+            self.backend_log_handle = open(backend_log, "w", encoding="utf-8", buffering=1)
             
             # Start backend server
             self.backend_process = subprocess.Popen([
                 sys.executable, 'main.py'
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            ], stdout=self.backend_log_handle, stderr=subprocess.STDOUT, text=True)
             
             # Wait a moment for server to start
             time.sleep(3)
@@ -101,11 +143,11 @@ class WolfAILauncher:
             # Check if backend is running
             if self.backend_process.poll() is None:
                 print("✅ Backend server started on http://localhost:8000")
+                print(f"📝 Backend logs: {backend_log}")
                 return True
             else:
                 print("❌ Backend server failed to start")
-                stdout, stderr = self.backend_process.communicate()
-                print(f"Error: {stderr}")
+                print(self._tail_log(backend_log))
                 return False
                 
         except Exception as e:
@@ -128,10 +170,25 @@ class WolfAILauncher:
             
             # Start development server
             os.chdir(frontend_dir)
+
+            self.logs_dir.mkdir(parents=True, exist_ok=True)
+            frontend_log = self.logs_dir / "frontend_startup.log"
+            self.frontend_log_handle = open(frontend_log, "w", encoding="utf-8", buffering=1)
+
+            npm_cmd = self.npm_cmd or self._resolve_executable(
+                ["npm", "npm.cmd", "npm.exe"],
+                [
+                    r"C:\Program Files\nodejs\npm.cmd",
+                    r"C:\Program Files (x86)\nodejs\npm.cmd",
+                ],
+            )
+            if not npm_cmd:
+                print("❌ Could not locate npm executable to start frontend dev server")
+                return False
             
             self.frontend_process = subprocess.Popen([
-                'npm', 'run', 'dev'
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                npm_cmd, 'run', 'dev'
+            ], stdout=self.frontend_log_handle, stderr=subprocess.STDOUT, text=True)
             
             # Wait for frontend to start
             time.sleep(5)
@@ -139,11 +196,11 @@ class WolfAILauncher:
             # Check if frontend is running
             if self.frontend_process.poll() is None:
                 print("✅ Frontend started on http://localhost:5173")
+                print(f"📝 Frontend logs: {frontend_log}")
                 return True
             else:
                 print("❌ Frontend failed to start")
-                stdout, stderr = self.frontend_process.communicate()
-                print(f"Error: {stderr}")
+                print(self._tail_log(frontend_log))
                 return False
                 
         except Exception as e:
@@ -196,13 +253,19 @@ class WolfAILauncher:
         
         # Wait for backend to be healthy
         print("⏳ Waiting for backend to be healthy...")
-        for i in range(10):
+        max_wait_seconds = 45
+        for i in range(max_wait_seconds):
+            if self.backend_process and self.backend_process.poll() is not None:
+                print("❌ Backend process exited before becoming healthy")
+                print(self._tail_log(self.logs_dir / "backend_startup.log"))
+                return False
             if self.check_backend_health():
                 print("✅ Backend is healthy!")
                 break
             time.sleep(1)
         else:
             print("❌ Backend failed to become healthy")
+            print(self._tail_log(self.logs_dir / "backend_startup.log"))
             return False
         
         # Start frontend
@@ -279,6 +342,20 @@ class WolfAILauncher:
             except:
                 self.frontend_process.kill()
                 print("✅ Frontend killed")
+
+        if self.backend_log_handle:
+            try:
+                self.backend_log_handle.close()
+            except Exception:
+                pass
+            self.backend_log_handle = None
+
+        if self.frontend_log_handle:
+            try:
+                self.frontend_log_handle.close()
+            except Exception:
+                pass
+            self.frontend_log_handle = None
         
         print("👋 Wolf AI stopped. Goodbye!")
 

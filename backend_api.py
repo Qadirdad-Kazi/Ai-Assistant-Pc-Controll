@@ -2,19 +2,22 @@ import asyncio
 import os
 import sqlite3
 import shutil
+import datetime
 import psutil  
 import requests  
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect  
 from fastapi import HTTPException  
 from fastapi.middleware.cors import CORSMiddleware  
 from fastapi.responses import FileResponse  
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel  
+from pathlib import Path
+from urllib.parse import unquote
 from typing import Optional, Dict, List, Any, cast
 from core.voice_assistant import voice_assistant  
 from core.function_executor import executor as function_executor  
 from core.productivity_suite import productivity_suite
 from core.analytics_engine import analytics_engine
-from core.model_manager import model_manager
 from core.database import db  
 from core.receptionist import receptionist  
 from core.settings_store import settings as settings_store  
@@ -22,6 +25,9 @@ from core.privacy_tracker import privacy_tracker
 from config import VOICE_ASSISTANT_ENABLED, OLLAMA_URL, LOCAL_ROUTER_PATH, CUSTOM_PPN_PATH  
 
 app = FastAPI(title="Wolf AI Backend API")
+
+FRONTEND_DIST = Path(__file__).resolve().parent / "frontend" / "dist"
+FRONTEND_ASSETS = FRONTEND_DIST / "assets"
 
 # Setup CORS to allow the frontend to connect
 app.add_middleware(
@@ -31,6 +37,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if FRONTEND_ASSETS.exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_ASSETS)), name="frontend-assets")
 
 @app.get("/health")
 async def health_check():
@@ -45,13 +54,25 @@ async def get_system_status():
 @app.get("/")
 async def serve_frontend():
     """Serve the frontend index.html."""
-    frontend_dist = os.path.join(os.path.dirname(__file__), "frontend", "dist")
-    index_file = os.path.join(frontend_dist, "index.html")
+    index_file = FRONTEND_DIST / "index.html"
     
-    if os.path.exists(index_file):
-        return FileResponse(index_file)
+    if index_file.exists():
+        return FileResponse(str(index_file))
     else:
         return {"message": "Frontend not built. Run 'cd frontend && npm run build'"}
+
+
+@app.get("/{filename}")
+async def serve_frontend_root_file(filename: str):
+    """Serve root-level static files from frontend dist (favicon/images)."""
+    if "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    file_path = FRONTEND_DIST / filename
+    if file_path.exists() and file_path.is_file():
+        return FileResponse(str(file_path))
+
+    raise HTTPException(status_code=404, detail="Not found")
 
 # Global status tracking dictionary mimicking actual backend state
 system_status = {
@@ -832,14 +853,6 @@ async def get_call_logs(limit: int = 100):
     safe_limit = max(1, min(limit, 500))
     return {"logs": _get_call_logs(limit=safe_limit), "count": safe_limit}
 
-@app.get("/api/tasks")
-async def get_tasks(status: str = "pending"):
-    try:
-        tasks = db.get_tasks(status=status)
-        return {"tasks": tasks}
-    except Exception as e:
-        return {"tasks": [], "error": str(e)}
-
 @app.get("/api/action-logs")
 async def get_action_logs(limit: int = 50):
     return {"logs": db.get_action_logs(limit)}
@@ -888,6 +901,22 @@ async def get_proposals():
         return {"proposals": sorted(files, key=lambda x: x['created_at'], reverse=True)}
     except Exception as e:
         return {"proposals": [], "error": str(e)}
+
+@app.get("/api/documents/proposals/{filename}")
+async def get_proposal_file(filename: str):
+    safe_name = Path(unquote(filename)).name
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    doc_dir = Path("data/documents/proposals").resolve()
+    file_path = (doc_dir / safe_name).resolve()
+
+    if doc_dir not in file_path.parents:
+        raise HTTPException(status_code=403, detail="Forbidden path")
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Proposal not found")
+
+    return FileResponse(str(file_path), media_type="text/markdown", filename=safe_name)
 
 @app.post("/api/media/control")
 async def control_media(req: MediaControlRequest):

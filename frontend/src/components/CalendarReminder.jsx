@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, Bell, X, PhoneCall, CheckCircle } from 'lucide-react';
 import './CalendarReminder.css';
+import { wsUrl } from '../utils/api';
 
 export default function CalendarReminder() {
   const [reminder, setReminder] = useState(null);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/safety'); // Listening on safety stream for reminders
+    const ws = new WebSocket(wsUrl('/ws/safety')); // Listening on safety stream for reminders
     
     ws.onmessage = (event) => {
       try {

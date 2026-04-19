@@ -1,6 +1,7 @@
 import { HelpCircle, Check, X, MousePointer2 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import './ClarificationPrompt.css';
+import { wsUrl } from '../utils/api';
 
 export default function ClarificationPrompt() {
   const [activePrompt, setActivePrompt] = useState(null);
@@ -9,7 +10,7 @@ export default function ClarificationPrompt() {
 
   useEffect(() => {
     // Port 8000 is our FastAPI backend
-    const ws = new WebSocket('ws://localhost:8000/ws/clarification');
+    const ws = new WebSocket(wsUrl('/ws/clarification'));
     
     ws.onopen = () => {
       console.log('[Clarification] Connected to visual bridge');

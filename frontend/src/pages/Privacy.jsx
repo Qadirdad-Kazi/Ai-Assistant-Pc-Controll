@@ -1,6 +1,7 @@
 import { Shield, ArrowUp, ArrowDown, Database, Activity, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import './Privacy.css';
+import { apiUrl, wsUrl } from '../utils/api';
 
 export default function Privacy() {
   const [logs, setLogs] = useState([]);
@@ -8,7 +9,7 @@ export default function Privacy() {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/privacy/logs');
+      const res = await fetch(apiUrl('/api/privacy/logs'));
       const data = await res.json();
       setLogs(data.logs || []);
     } catch (err) {
@@ -22,7 +23,7 @@ export default function Privacy() {
     fetchLogs();
     
     // Subscribe to real-time logs
-    const ws = new WebSocket('ws://localhost:8000/ws/privacy');
+    const ws = new WebSocket(wsUrl('/ws/privacy'));
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -142,11 +143,11 @@ export default function Privacy() {
                 logs.map((log) => (
                   <tr key={log.id}>
                     <td className="time-col">{new Date(log.timestamp).toLocaleTimeString()}</td>
-                    <td><span className={`service-pill pill-${log.service.toLowerCase().replace(/\s+/g, '-')}`}>{log.service}</span></td>
+                    <td><span className={`service-pill pill-${String(log.service || 'unknown').toLowerCase().replace(/\s+/g, '-')}`}>{log.service || 'Unknown'}</span></td>
                     <td>
-                      <span className={`direction-pill ${log.direction.toLowerCase()}`}>
-                        {log.direction === 'SENT' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                        {log.direction}
+                      <span className={`direction-pill ${String(log.direction || 'unknown').toLowerCase()}`}>
+                        {String(log.direction || '').toUpperCase() === 'SENT' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                        {log.direction || 'UNKNOWN'}
                       </span>
                     </td>
                     <td>{log.type}</td>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Dashboard from './components/Dashboard'
 import Sidebar from './components/Sidebar'
@@ -20,7 +21,7 @@ import './workflowStatus.css'
 import './App.css'
 
 function App() {
-  const [workflow, setWorkflow] = React.useState({
+  const [workflow, setWorkflow] = useState({
     status: 'idle',
     currentStep: 0,
     totalSteps: 4,
@@ -50,7 +51,6 @@ function App() {
         <CalendarReminder />
         <SafetyPrompt />
         <ClarificationPrompt />
-        <CalendarReminder />
       </div>
     </Router>
   )

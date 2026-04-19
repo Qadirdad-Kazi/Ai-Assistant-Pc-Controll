@@ -7,7 +7,7 @@ import subprocess
 import time
 import shutil
 import threading
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 try:
     import pyautogui  
